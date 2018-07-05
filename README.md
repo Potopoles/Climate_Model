@@ -1,2 +1,2 @@
-# Sigma_python
-Hydrostatic global atmospheric model with sigma vertical coordinates in Python
+# SW_python
+2D shallow water model on the sphere in Python
