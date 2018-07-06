@@ -1,15 +1,15 @@
 import numpy as np
 from boundaries import exchange_BC
-from constants import con_g
+from constants import con_Rd
 
 
-def masspoint_flux_tendency_upstream(GR, UFLXMP, VFLXMP, HGHT,
+def masspoint_flux_tendency_upstream(GR, UFLXMP, VFLXMP, COLP, PHI,
                             UWIND, VWIND,
                             UUFLX, VUFLX, UVFLX, VVFLX,
-                            HSURF):
+                            TAIR):
 
-    UFLXMP[GR.iijj] = HGHT[GR.iijj]*(UWIND[GR.iijj] + UWIND[GR.iijj_ip1])/2
-    VFLXMP[GR.iijj] = HGHT[GR.iijj]*(VWIND[GR.iijj] + VWIND[GR.iijj_jp1])/2
+    UFLXMP[GR.iijj] = COLP[GR.iijj]*(UWIND[GR.iijj] + UWIND[GR.iijj_ip1])/2
+    VFLXMP[GR.iijj] = COLP[GR.iijj]*(VWIND[GR.iijj] + VWIND[GR.iijj_jp1])/2
     UFLXMP = exchange_BC(GR, UFLXMP)
     VFLXMP = exchange_BC(GR, VFLXMP)
 
@@ -23,14 +23,14 @@ def masspoint_flux_tendency_upstream(GR, UFLXMP, VFLXMP, HGHT,
     VVFLX[GR.iijjs] = GR.dxjs[GR.iijjs] * ( np.maximum(VWIND[GR.iijjs],0) * VFLXMP[GR.iijjs_jm1] + \
                                             np.minimum(VWIND[GR.iijjs],0) * VFLXMP[GR.iijjs] )  
 
-    corx = GR.corf[GR.iijj] * HGHT[GR.iijj] * (VWIND[GR.iijj] + VWIND[GR.iijj_jp1])/2
-    cory = GR.corf[GR.iijj] * HGHT[GR.iijj] * (UWIND[GR.iijj] + UWIND[GR.iijj_ip1])/2
+    corx = GR.corf[GR.iijj] * COLP[GR.iijj] * (VWIND[GR.iijj] + VWIND[GR.iijj_jp1])/2
+    cory = GR.corf[GR.iijj] * COLP[GR.iijj] * (UWIND[GR.iijj] + UWIND[GR.iijj_ip1])/2
 
     dUFLXMPdt = - ( UUFLX[GR.iijj_ip1] - UUFLX[GR.iijj] + VUFLX[GR.iijj_jp1] - VUFLX[GR.iijj]) / GR.A[GR.iijj] + \
-            - con_g*HGHT[GR.iijj]*( HSURF[GR.iijj_ip1] - HSURF[GR.iijj_im1] + \
-                                    HGHT[GR.iijj_ip1] - HGHT[GR.iijj_im1] ) / (2*GR.dx[GR.iijj]) + corx
+            - con_Rd*TAIR[GR.iijj]*( COLP[GR.iijj_ip1] - COLP[GR.iijj_im1] ) / (2*GR.dx[GR.iijj]) + corx \
+            - COLP[GR.iijj]*( PHI[GR.iijj_ip1] - PHI[GR.iijj_im1] ) / (2*GR.dx[GR.iijj]) 
     dVFLXMPdt = - ( UVFLX[GR.iijj_ip1] - UVFLX[GR.iijj] + VVFLX[GR.iijj_jp1] - VVFLX[GR.iijj]) / GR.A[GR.iijj] + \
-            - con_g*HGHT[GR.iijj]*( HSURF[GR.iijj_jp1] - HSURF[GR.iijj_jm1] + \
-                                    HGHT[GR.iijj_jp1] - HGHT[GR.iijj_jm1] ) / (2*GR.dy) - cory
+            - con_Rd*TAIR[GR.iijj]*( COLP[GR.iijj_jp1] - COLP[GR.iijj_jm1] ) / (2*GR.dy) - cory \
+            - COLP[GR.iijj]*( PHI[GR.iijj_jp1] - PHI[GR.iijj_jm1] ) / (2*GR.dy)
 
     return(dUFLXMPdt, dVFLXMPdt)

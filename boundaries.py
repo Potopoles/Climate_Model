@@ -5,23 +5,23 @@ def exchange_BC(GR, FIELD):
     FIELD = exchange_BC_rigid_y(GR, FIELD)
     return(FIELD)
 
-def exchange_BC_all(GR, HGHT, UWIND, VWIND, TRACER):
+def exchange_BC_all(GR, COLP, UWIND, VWIND, TAIR):
 
     #VWIND[GR.ii,1] = 1
     #VWIND[GR.ii,2] = 2
     #VWIND[GR.ii,6] = 6
     
-    HGHT = exchange_BC_periodic_x(GR, HGHT)
+    COLP = exchange_BC_periodic_x(GR, COLP)
     UWIND = exchange_BC_periodic_x(GR, UWIND)
     VWIND = exchange_BC_periodic_x(GR, VWIND)
-    TRACER = exchange_BC_periodic_x(GR, TRACER)
+    TAIR = exchange_BC_periodic_x(GR, TAIR)
 
-    HGHT = exchange_BC_rigid_y(GR, HGHT)
+    COLP = exchange_BC_rigid_y(GR, COLP)
     UWIND = exchange_BC_rigid_y(GR, UWIND)
     VWIND = exchange_BC_rigid_y(GR, VWIND)
-    TRACER = exchange_BC_rigid_y(GR, TRACER)
+    TAIR = exchange_BC_rigid_y(GR, TAIR)
 
-    return(HGHT, UWIND, VWIND, TRACER)
+    return(COLP, UWIND, VWIND, TAIR)
 
 
 

@@ -16,7 +16,7 @@ def load_topo(GR):
     HSURF = exchange_BC_periodic_x(GR, HSURF)
     HSURF = exchange_BC_rigid_y(GR, HSURF)
 
-    n_smooth = 20
+    n_smooth = 50
     tau = 0.2
     for i in range(0,n_smooth):
         HSURF[GR.iijj] = HSURF[GR.iijj] + tau*(HSURF[GR.iijj_im1] + HSURF[GR.iijj_ip1] + \
@@ -28,8 +28,8 @@ def load_topo(GR):
     return(HSURF)
 
 
-def output_to_NC(GR, outCounter, HGHT, HTOP, UWIND, VWIND, WIND,
-                HSURF, TRACER,
+def output_to_NC(GR, outCounter, COLP, UWIND, VWIND, WIND,
+                HSURF, TAIR, PHI,
                 mean_ekin):
     filename = '../output/out'+str(outCounter).zfill(4)+'.nc'
 
@@ -62,23 +62,23 @@ def output_to_NC(GR, outCounter, HGHT, HTOP, UWIND, VWIND, WIND,
     lats[:] = GR.latjs_rad[GR.nb+1,GR.jjs]
 
     # VARIABLES
-    HGHT_out = ncf.createVariable('HGHT', 'f4', ('time', 'lat', 'lon',) )
-    HTOP_out = ncf.createVariable('HTOP', 'f4', ('time', 'lat', 'lon',) )
+    COLP_out = ncf.createVariable('COLP', 'f4', ('time', 'lat', 'lon',) )
+    PHI_out = ncf.createVariable('PHI', 'f4', ('time', 'lat', 'lon',) )
     UWIND_out = ncf.createVariable('UWIND', 'f4', ('time', 'lat', 'lons',) )
     VWIND_out = ncf.createVariable('VWIND', 'f4', ('time', 'lats', 'lon',) )
     WIND_out = ncf.createVariable('WIND', 'f4', ('time', 'lat', 'lon',) )
     HSURF_out = ncf.createVariable('HSURF', 'f4', ('bnds', 'lat', 'lon',) )
-    TRACER_out = ncf.createVariable('TRACER', 'f4', ('time', 'lat', 'lon',) )
+    TAIR_out = ncf.createVariable('TAIR', 'f4', ('time', 'lat', 'lon',) )
     mean_ekin_out = ncf.createVariable('mean_ekin', 'f4', ('time', 'bnds',) )
 
-    HGHT_out[-1,:,:] = HGHT[GR.iijj].T
-    HTOP_out[-1,:,:] = HTOP[GR.iijj].T
+    COLP_out[-1,:,:] = COLP[GR.iijj].T
+    PHI_out[-1,:,:] = PHI[GR.iijj].T
     UWIND_out[-1,:,:] = UWIND[GR.iisjj].T
     VWIND_out[-1,:,:] = VWIND[GR.iijjs].T
     WIND_out[-1,:,:] = WIND[GR.iijj].T
     HSURF_out[0,:,:] = HSURF[GR.iijj].T
     HSURF_out[1,:,:] = HSURF[GR.iijj].T
-    TRACER_out[-1,:,:] = TRACER[GR.iijj].T
+    TAIR_out[-1,:,:] = TAIR[GR.iijj].T
     mean_ekin_out[-1,:] = mean_ekin
 
     ncf.close()
