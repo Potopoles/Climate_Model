@@ -1,86 +1,132 @@
 import copy
 import numpy as np
-from continuity import colp_tendency_upstream
-from wind import masspoint_flux_tendency_upstream
-from temperature import temperature_tendency_upstream
-from geopotential import diag_geopotential
 from boundaries import exchange_BC
+from upwind import tendencies_upwind, proceed_timestep_upwind, diagnose_fields_upwind
+from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
+                    diagnose_fields_jacobson, interp_COLPA
 
-def tendencies(GR, COLP, PHI, TAIR,
-                    UWIND, VWIND,
-                    UFLX, VFLX, UFLXMP, VFLXMP,
-                    UUFLX, UVFLX, VUFLX, VVFLX):
-    # PROGNOSE COLP
-    dCOLPdt = colp_tendency_upstream(GR, COLP, UWIND, VWIND, UFLX, VFLX)
+######################################################################################
+######################################################################################
+######################################################################################
 
-    # PROGNOSE WIND
-    dUFLXMPdt, dVFLXMPdt = masspoint_flux_tendency_upstream(GR, UFLXMP, VFLXMP, COLP, PHI,
-                                                    UWIND, VWIND,
-                                                    UUFLX, VUFLX, UVFLX, VVFLX,
-                                                    TAIR)
-    # PROGNOSE TAIR
-    dTAIRdt = temperature_tendency_upstream(GR, TAIR, COLP, UWIND, VWIND, UFLX, VFLX, dCOLPdt)
-
-
-    return(dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt)
-
-
-def proceed_timestep(GR, UFLXMP, VFLXMP, COLP, TAIR,
-                    dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt):
-
-    # TIME STEPPING
-    UFLXMP[GR.iijj] = UFLXMP[GR.iijj] + GR.dt*dUFLXMPdt
-    VFLXMP[GR.iijj] = VFLXMP[GR.iijj] + GR.dt*dVFLXMPdt
-    COLP[GR.iijj] = COLP[GR.iijj] + GR.dt*dCOLPdt
-    TAIR[GR.iijj] = TAIR[GR.iijj] + GR.dt*dTAIRdt
-
-    UFLXMP = exchange_BC(GR, UFLXMP)
-    VFLXMP = exchange_BC(GR, VFLXMP)
-    COLP = exchange_BC(GR, COLP)
-    TAIR = exchange_BC(GR, TAIR)
-
-    return(UFLXMP, VFLXMP, COLP, TAIR)
-
-
-def diagnose_fields(GR, COLP, PHI, TAIR,
-                    UWIND, VWIND, UFLXMP, VFLXMP, HSURF):
-
-    # DIAGNOSTICS 
-    UWIND[GR.iisjj] = ( UFLXMP[GR.iisjj_im1] + UFLXMP[GR.iisjj] ) \
-                    / ( COLP[GR.iisjj_im1] + COLP[GR.iisjj] )
-    VWIND[GR.iijjs] = ( VFLXMP[GR.iijjs_jm1] + VFLXMP[GR.iijjs] ) \
-                    / ( COLP[GR.iijjs_jm1] + COLP[GR.iijjs] )
-    UWIND = exchange_BC(GR, UWIND)
-    VWIND = exchange_BC(GR, VWIND)
-
-    PHI = diag_geopotential(GR, PHI, HSURF, TAIR, COLP)
-
-    return(UWIND, VWIND, PHI)
-
-
-
-
-
-
-def euler_forward(GR, COLP, PHI, TAIR,
-                    UWIND, VWIND,
+def euler_forward(GR, COLP, PHI, POTT,
+                    UWIND, VWIND, WIND,
                     UFLX, VFLX, UFLXMP, VFLXMP,
                     UUFLX, UVFLX, VUFLX, VVFLX,
-                    HSURF):
+                    HSURF, PVTF, PVTFVB, i_spatial_discretization):
 
-    dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt = tendencies(GR, 
-                    COLP, PHI, TAIR,
-                    UWIND, VWIND,
+    if i_spatial_discretization == 'UPWIND':
+        dCOLPdt, dUFLXMPdt, dVFLXMPdt, dPOTTdt = tendencies_upwind(GR, 
+                        COLP, POTT, HSURF,
+                        UWIND, VWIND, WIND,
+                        UFLX, VFLX, UFLXMP, VFLXMP,
+                        UUFLX, UVFLX, VUFLX, VVFLX)
+
+        UFLXMP, VFLXMP, COLP, POTT = proceed_timestep_upwind(GR, UFLXMP, VFLXMP, 
+                                            COLP, POTT, dCOLPdt, dUFLXMPdt, 
+                                            dVFLXMPdt, dPOTTdt)
+
+        UWIND, VWIND = diagnose_fields_upwind(GR, COLP, POTT,
+                        UWIND, VWIND, UFLXMP, VFLXMP, HSURF)
+
+    elif i_spatial_discretization == 'JACOBSON':
+        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt = tendencies_jacobson(GR, COLP, POTT, HSURF,
+                                                                    UWIND, VWIND, WIND,
+                                                                    UFLX, VFLX, PHI, PVTF, PVTFVB)
+
+        UWIND, VWIND, COLP, POTT = proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
+                                                    POTT,
+                                                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt)
+
+        PHI, PVTF, PVTFVB = diagnose_fields_jacobson(GR, PHI, COLP, POTT, HSURF, PVTF, PVTFVB)
+
+
+    return(COLP, PHI, POTT,
+            UWIND, VWIND,
+            UFLX, VFLX, UFLXMP, VFLXMP,
+            UUFLX, UVFLX, VUFLX, VVFLX,
+            HSURF)
+
+
+
+
+######################################################################################
+######################################################################################
+######################################################################################
+
+def matsuno(GR, COLP, PHI, POTT,
+                    UWIND, VWIND, WIND,
                     UFLX, VFLX, UFLXMP, VFLXMP,
-                    UUFLX, UVFLX, VUFLX, VVFLX)
+                    UUFLX, UVFLX, VUFLX, VVFLX,
+                    HSURF, PVTF, PVTFVB, i_spatial_discretization):
 
-    UFLXMP, VFLXMP, COLP, TAIR = proceed_timestep(GR, UFLXMP, VFLXMP, COLP, TAIR,
-                                                dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt)
+    if i_spatial_discretization == 'UPWIND':
+        ########## ESTIMATE
+        dCOLPdt, dUFLXMPdt, dVFLXMPdt, dPOTTdt = tendencies_upwind(GR, 
+                        COLP, POTT, HSURF,
+                        UWIND, VWIND, WIND,
+                        UFLX, VFLX, UFLXMP, VFLXMP,
+                        UUFLX, UVFLX, VUFLX, VVFLX)
 
-    UWIND, VWIND, PHI = diagnose_fields(GR, COLP, PHI, TAIR,
-                    UWIND, VWIND, UFLXMP, VFLXMP, HSURF)
+        # has to happen after masspoint_flux_tendency function
+        UFLXMP_OLD = copy.deepcopy(UFLXMP)
+        VFLXMP_OLD = copy.deepcopy(VFLXMP)
+        COLP_OLD = copy.deepcopy(COLP)
+        POTT_OLD = copy.deepcopy(POTT)
 
-    return(COLP, PHI, TAIR,
+
+        UFLXMP, VFLXMP, COLP, POTT = proceed_timestep_upwind(GR, UFLXMP, VFLXMP, COLP,
+                                            POTT, dCOLPdt, dUFLXMPdt, dVFLXMPdt,
+                                            dPOTTdt)
+
+        UWIND, VWIND = diagnose_fields_upwind(GR, COLP, POTT,
+                        UWIND, VWIND, UFLXMP, VFLXMP, HSURF)
+
+        ########## FINAL
+        dCOLPdt, dUFLXMPdt, dVFLXMPdt, dPOTTdt = tendencies_upwind(GR, 
+                        COLP, POTT, HSURF,
+                        UWIND, VWIND, WIND,
+                        UFLX, VFLX, UFLXMP, VFLXMP,
+                        UUFLX, UVFLX, VUFLX, VVFLX)
+
+        UFLXMP, VFLXMP, COLP, POTT = proceed_timestep_upwind(GR, UFLXMP_OLD,
+                                            VFLXMP_OLD, COLP_OLD, POTT_OLD,
+                                            dCOLPdt, dUFLXMPdt, dVFLXMPdt, dPOTTdt)
+
+        UWIND, VWIND = diagnose_fields_upwind(GR, COLP, POTT,
+                        UWIND, VWIND, UFLXMP, VFLXMP, HSURF)
+
+
+    elif i_spatial_discretization == 'JACOBSON':
+        ########## ESTIMATE
+        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt = tendencies_jacobson(GR, COLP, POTT, HSURF,
+                                                                    UWIND, VWIND, WIND,
+                                                                    UFLX, VFLX, PHI, PVTF, PVTFVB)
+
+        # has to happen after masspoint_flux_tendency function
+        UWIND_OLD = copy.deepcopy(UWIND)
+        VWIND_OLD = copy.deepcopy(VWIND)
+        COLP_OLD = copy.deepcopy(COLP)
+        POTT_OLD = copy.deepcopy(POTT)
+
+        UWIND, VWIND, COLP, POTT = proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
+                                                    POTT,
+                                                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt)
+
+        PHI, PVTF, PVTFVB = diagnose_fields_jacobson(GR, PHI, COLP, POTT, HSURF, PVTF, PVTFVB)
+
+        ########## FINAL
+        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt = tendencies_jacobson(GR, COLP, POTT, HSURF,
+                                                                    UWIND, VWIND, WIND,
+                                                                    UFLX, VFLX, PHI, PVTF, PVTFVB)
+
+        UWIND, VWIND, COLP, POTT = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
+                                                    COLP_OLD, POTT_OLD,
+                                                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt)
+
+        PHI, PVTF, PVTFVB = diagnose_fields_jacobson(GR, PHI, COLP, POTT, HSURF, PVTF, PVTFVB)
+
+    return(COLP, PHI, POTT,
             UWIND, VWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
             UUFLX, UVFLX, VUFLX, VVFLX,
@@ -90,185 +136,298 @@ def euler_forward(GR, COLP, PHI, TAIR,
 
 
 
-def matsuno(GR, COLP, PHI, TAIR,
-                    UWIND, VWIND,
+
+######################################################################################
+######################################################################################
+######################################################################################
+
+def RK4(GR, COLP, PHI, POTT,
+                    UWIND, VWIND, WIND,
                     UFLX, VFLX, UFLXMP, VFLXMP,
                     UUFLX, UVFLX, VUFLX, VVFLX,
-                    HSURF):
+                    HSURF, PVTF, PVTFVB, i_spatial_discretization):
 
-    ########## ESTIMATE
-    dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt = tendencies(GR, 
-                    COLP, PHI, TAIR,
-                    UWIND, VWIND,
-                    UFLX, VFLX, UFLXMP, VFLXMP,
-                    UUFLX, UVFLX, VUFLX, VVFLX)
+    if i_spatial_discretization == 'UPWIND':
+        ########## level 1
+        dCOLPdt, dUFLXMPdt, dVFLXMPdt, dPOTTdt = tendencies_upwind(GR, 
+                        COLP, POTT, HSURF,
+                        UWIND, VWIND, WIND,
+                        UFLX, VFLX, UFLXMP, VFLXMP,
+                        UUFLX, UVFLX, VUFLX, VVFLX)
 
-    # has to happen after masspoint_flux_tendency function
-    UFLXMP_OLD = copy.deepcopy(UFLXMP)
-    VFLXMP_OLD = copy.deepcopy(VFLXMP)
-    COLP_OLD = copy.deepcopy(COLP)
-    TAIR_OLD = copy.deepcopy(TAIR)
+        # has to happen after masspoint_flux_tendency function
+        UFLXMP_OLD = copy.deepcopy(UFLXMP)
+        VFLXMP_OLD = copy.deepcopy(VFLXMP)
+        COLP_OLD = copy.deepcopy(COLP)
+        POTT_OLD = copy.deepcopy(POTT)
 
-    UFLXMP, VFLXMP, COLP, TAIR = proceed_timestep(GR, UFLXMP, VFLXMP, COLP, TAIR,
-                                                dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt)
+        UFLXMP_INT = copy.deepcopy(UFLXMP)
+        VFLXMP_INT = copy.deepcopy(VFLXMP)
+        COLP_INT = copy.deepcopy(COLP)
+        POTT_INT = copy.deepcopy(POTT)
 
-    UWIND, VWIND, PHI = diagnose_fields(GR, COLP, PHI, TAIR,
-                    UWIND, VWIND, UFLXMP, VFLXMP, HSURF)
+        dUFLXMP = GR.dt*dUFLXMPdt
+        dVFLXMP = GR.dt*dVFLXMPdt
+        dCOLP = GR.dt*dCOLPdt
+        dPOTT = GR.dt*dPOTTdt
 
-    ########## FINAL
-    dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt = tendencies(GR, 
-                    COLP, PHI, TAIR,
-                    UWIND, VWIND,
-                    UFLX, VFLX, UFLXMP, VFLXMP,
-                    UUFLX, UVFLX, VUFLX, VVFLX)
+        UFLXMP_INT[GR.iijj] = UFLXMP_OLD[GR.iijj] + dUFLXMP/2
+        VFLXMP_INT[GR.iijj] = VFLXMP_OLD[GR.iijj] + dVFLXMP/2
+        COLP_INT[GR.iijj] = COLP_OLD[GR.iijj] + dCOLP/2
+        POTT_INT[GR.iijj] = POTT_OLD[GR.iijj] + dPOTT/2
+        UFLXMP_INT = exchange_BC(GR, UFLXMP_INT)
+        VFLXMP_INT = exchange_BC(GR, VFLXMP_INT)
+        COLP_INT = exchange_BC(GR, COLP_INT)
+        POTT_INT = exchange_BC(GR, POTT_INT)
 
-    UFLXMP, VFLXMP, COLP, TAIR = proceed_timestep(GR, UFLXMP_OLD, VFLXMP_OLD, COLP_OLD, TAIR_OLD,
-                                                dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt)
+        UFLXMP[GR.iijj] = UFLXMP_OLD[GR.iijj] + dUFLXMP/6
+        VFLXMP[GR.iijj] = VFLXMP_OLD[GR.iijj] + dVFLXMP/6
+        COLP[GR.iijj] = COLP_OLD[GR.iijj] + dCOLP/6
+        POTT[GR.iijj] = POTT_OLD[GR.iijj] + dPOTT/6
+        
+        UWIND, VWIND = diagnose_fields_upwind(GR, COLP_INT, POTT_INT,
+                        UWIND, VWIND, UFLXMP_INT, VFLXMP_INT, HSURF)
 
-    UWIND, VWIND, PHI = diagnose_fields(GR, COLP, PHI, TAIR,
-                    UWIND, VWIND, UFLXMP, VFLXMP, HSURF)
+        ########## level 2
+        dCOLPdt, dUFLXMPdt, dVFLXMPdt, dPOTTdt = tendencies_upwind(GR, 
+                        COLP_INT, POTT_INT, HSURF,
+                        UWIND, VWIND, WIND,
+                        UFLX, VFLX, UFLXMP_INT, VFLXMP_INT,
+                        UUFLX, UVFLX, VUFLX, VVFLX)
 
-    return(COLP, PHI, TAIR,
-            UWIND, VWIND,
-            UFLX, VFLX, UFLXMP, VFLXMP,
-            UUFLX, UVFLX, VUFLX, VVFLX,
-            HSURF)
+        dUFLXMP = GR.dt*dUFLXMPdt
+        dVFLXMP = GR.dt*dVFLXMPdt
+        dCOLP = GR.dt*dCOLPdt
+        dPOTT = GR.dt*dPOTTdt
+
+        UFLXMP_INT[GR.iijj] = UFLXMP_OLD[GR.iijj] + dUFLXMP/2
+        VFLXMP_INT[GR.iijj] = VFLXMP_OLD[GR.iijj] + dVFLXMP/2
+        COLP_INT[GR.iijj] = COLP_OLD[GR.iijj] + dCOLP/2
+        POTT_INT[GR.iijj] = POTT_OLD[GR.iijj] + dPOTT/2
+        UFLXMP_INT = exchange_BC(GR, UFLXMP_INT)
+        VFLXMP_INT = exchange_BC(GR, VFLXMP_INT)
+        COLP_INT = exchange_BC(GR, COLP_INT)
+        POTT_INT = exchange_BC(GR, POTT_INT)
+
+        UFLXMP[GR.iijj] = UFLXMP[GR.iijj] + dUFLXMP/3
+        VFLXMP[GR.iijj] = VFLXMP[GR.iijj] + dVFLXMP/3
+        COLP[GR.iijj] = COLP[GR.iijj] + dCOLP/3
+        POTT[GR.iijj] = POTT[GR.iijj] + dPOTT/3
+        
+        UWIND, VWIND = diagnose_fields_upwind(GR, COLP_INT, POTT_INT,
+                        UWIND, VWIND, UFLXMP_INT, VFLXMP_INT, HSURF)
+
+        ########## level 3
+        dCOLPdt, dUFLXMPdt, dVFLXMPdt, dPOTTdt = tendencies_upwind(GR, 
+                        COLP_INT, POTT_INT, HSURF,
+                        UWIND, VWIND, WIND,
+                        UFLX, VFLX, UFLXMP_INT, VFLXMP_INT,
+                        UUFLX, UVFLX, VUFLX, VVFLX)
+
+        dUFLXMP = GR.dt*dUFLXMPdt
+        dVFLXMP = GR.dt*dVFLXMPdt
+        dCOLP = GR.dt*dCOLPdt
+        dPOTT = GR.dt*dPOTTdt
+
+        UFLXMP_INT[GR.iijj] = UFLXMP_OLD[GR.iijj] + dUFLXMP
+        VFLXMP_INT[GR.iijj] = VFLXMP_OLD[GR.iijj] + dVFLXMP
+        COLP_INT[GR.iijj] = COLP_OLD[GR.iijj] + dCOLP
+        POTT_INT[GR.iijj] = POTT_OLD[GR.iijj] + dPOTT
+        UFLXMP_INT = exchange_BC(GR, UFLXMP_INT)
+        VFLXMP_INT = exchange_BC(GR, VFLXMP_INT)
+        COLP_INT = exchange_BC(GR, COLP_INT)
+        POTT_INT = exchange_BC(GR, POTT_INT)
+
+        UFLXMP[GR.iijj] = UFLXMP[GR.iijj] + dUFLXMP/3
+        VFLXMP[GR.iijj] = VFLXMP[GR.iijj] + dVFLXMP/3
+        COLP[GR.iijj] = COLP[GR.iijj] + dCOLP/3
+        POTT[GR.iijj] = POTT[GR.iijj] + dPOTT/3
+        
+        UWIND, VWIND = diagnose_fields_upwind(GR, COLP_INT, POTT_INT,
+                        UWIND, VWIND, UFLXMP_INT, VFLXMP_INT, HSURF)
+
+        ########## level 4
+        dCOLPdt, dUFLXMPdt, dVFLXMPdt, dPOTTdt = tendencies_upwind(GR, 
+                        COLP_INT, POTT_INT, HSURF,
+                        UWIND, VWIND, WIND,
+                        UFLX, VFLX, UFLXMP_INT, VFLXMP_INT,
+                        UUFLX, UVFLX, VUFLX, VVFLX)
+
+        dUFLXMP = GR.dt*dUFLXMPdt
+        dVFLXMP = GR.dt*dVFLXMPdt
+        dCOLP = GR.dt*dCOLPdt
+        dPOTT = GR.dt*dPOTTdt
+
+        UFLXMP[GR.iijj] = UFLXMP[GR.iijj] + dUFLXMP/6
+        VFLXMP[GR.iijj] = VFLXMP[GR.iijj] + dVFLXMP/6
+        COLP[GR.iijj] = COLP[GR.iijj] + dCOLP/6
+        POTT[GR.iijj] = POTT[GR.iijj] + dPOTT/6
+        UFLXMP = exchange_BC(GR, UFLXMP)
+        VFLXMP = exchange_BC(GR, VFLXMP)
+        COLP = exchange_BC(GR, COLP)
+        POTT = exchange_BC(GR, POTT)
+        
+        UWIND, VWIND = diagnose_fields_upwind(GR, COLP, POTT,
+                        UWIND, VWIND, UFLXMP, VFLXMP, HSURF)
 
 
+    elif i_spatial_discretization == 'JACOBSON':
+        ########## level 1
+        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt = tendencies_jacobson(GR, COLP, POTT, HSURF,
+                                                                    UWIND, VWIND, WIND,
+                                                                    UFLX, VFLX, PHI, PVTF, PVTFVB)
 
+        # has to happen after masspoint_flux_tendency function
+        UWIND_START = copy.deepcopy(UWIND)
+        VWIND_START = copy.deepcopy(VWIND)
+        COLP_START = copy.deepcopy(COLP)
+        POTT_START = copy.deepcopy(POTT)
 
+        UWIND_INT = copy.deepcopy(UWIND)
+        VWIND_INT = copy.deepcopy(VWIND)
+        COLP_INT = copy.deepcopy(COLP)
+        POTT_INT = copy.deepcopy(POTT)
 
+        dUFLX = GR.dt*dUFLXdt
+        dVFLX = GR.dt*dVFLXdt
+        dCOLP = GR.dt*dCOLPdt
+        dPOTT = GR.dt*dPOTTdt
 
+        # TIME STEPPING
+        COLPA_is_START, COLPA_js_START = interp_COLPA(GR, COLP_START)
+        COLP_INT[GR.iijj] = COLP_START[GR.iijj] + dCOLP/2
+        COLP_INT = exchange_BC(GR, COLP_INT)
+        COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP_INT)
+        UWIND_INT[GR.iisjj] = UWIND_START[GR.iisjj] * COLPA_is_START/COLPA_is_NEW \
+                            + dUFLX/2/COLPA_is_NEW
+        VWIND_INT[GR.iijjs] = VWIND_START[GR.iijjs] * COLPA_js_START/COLPA_js_NEW \
+                            + dVFLX/2/COLPA_js_NEW
+        UWIND_INT = exchange_BC(GR, UWIND_INT)
+        VWIND_INT = exchange_BC(GR, VWIND_INT)
+        POTT_INT[GR.iijj] = POTT_START[GR.iijj] + dPOTT/2
+        POTT_INT = exchange_BC(GR, POTT_INT)
 
-def RK4(GR, COLP, PHI, TAIR,
-                    UWIND, VWIND,
-                    UFLX, VFLX, UFLXMP, VFLXMP,
-                    UUFLX, UVFLX, VUFLX, VVFLX,
-                    HSURF):
+        COLPA_is_START, COLPA_js_START = interp_COLPA(GR, COLP_START)
+        COLP[GR.iijj] = COLP_START[GR.iijj] + dCOLP/6
+        COLP = exchange_BC(GR, COLP)
+        COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP)
+        UWIND[GR.iisjj] = UWIND_START[GR.iisjj] * COLPA_is_START/COLPA_is_NEW \
+                        + dUFLX/6/COLPA_is_NEW
+        VWIND[GR.iijjs] = VWIND_START[GR.iijjs] * COLPA_js_START/COLPA_js_NEW \
+                            + dVFLX/6/COLPA_js_NEW
+        UWIND = exchange_BC(GR, UWIND)
+        VWIND = exchange_BC(GR, VWIND)
+        POTT[GR.iijj] = POTT_START[GR.iijj] + dPOTT/6
+        POTT = exchange_BC(GR, POTT)
 
-    ########## level 1
-    dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt = tendencies(GR, 
-                    COLP, PHI, TAIR,
-                    UWIND, VWIND,
-                    UFLX, VFLX, UFLXMP, VFLXMP,
-                    UUFLX, UVFLX, VUFLX, VVFLX)
+        PHI, PVTF, PVTFVB = diagnose_fields_jacobson(GR, PHI, COLP_INT, POTT_INT, HSURF,
+                                                    PVTF, PVTFVB)
 
-    # has to happen after masspoint_flux_tendency function
-    UFLXMP_OLD = copy.deepcopy(UFLXMP)
-    VFLXMP_OLD = copy.deepcopy(VFLXMP)
-    COLP_OLD = copy.deepcopy(COLP)
-    TAIR_OLD = copy.deepcopy(TAIR)
+        ########## level 2
+        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt = tendencies_jacobson(GR, COLP_INT, POTT_INT,
+                                                    HSURF, UWIND_INT, VWIND_INT, WIND,
+                                                    UFLX, VFLX, PHI, PVTF, PVTFVB)
 
-    UFLXMP_INT = copy.deepcopy(UFLXMP)
-    VFLXMP_INT = copy.deepcopy(VFLXMP)
-    COLP_INT = copy.deepcopy(COLP)
-    TAIR_INT = copy.deepcopy(TAIR)
+        dUFLX = GR.dt*dUFLXdt
+        dVFLX = GR.dt*dVFLXdt
+        dCOLP = GR.dt*dCOLPdt
+        dPOTT = GR.dt*dPOTTdt
 
-    dUFLXMP = GR.dt*dUFLXMPdt
-    dVFLXMP = GR.dt*dVFLXMPdt
-    dCOLP = GR.dt*dCOLPdt
-    dTAIR = GR.dt*dTAIRdt
+        COLP_INT[GR.iijj] = COLP_START[GR.iijj] + dCOLP/2
+        COLP_INT = exchange_BC(GR, COLP_INT)
+        COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP_INT)
+        UWIND_INT[GR.iisjj] = UWIND_START[GR.iisjj] * COLPA_is_START/COLPA_is_NEW \
+                            + dUFLX/2/COLPA_is_NEW
+        VWIND_INT[GR.iijjs] = VWIND_START[GR.iijjs] * COLPA_js_START/COLPA_js_NEW \
+                            + dVFLX/2/COLPA_js_NEW
+        UWIND_INT = exchange_BC(GR, UWIND_INT)
+        VWIND_INT = exchange_BC(GR, VWIND_INT)
+        POTT_INT[GR.iijj] = POTT_START[GR.iijj] + dPOTT/2
+        POTT_INT = exchange_BC(GR, POTT_INT)
 
-    UFLXMP_INT[GR.iijj] = UFLXMP_OLD[GR.iijj] + dUFLXMP/2
-    VFLXMP_INT[GR.iijj] = VFLXMP_OLD[GR.iijj] + dVFLXMP/2
-    COLP_INT[GR.iijj] = COLP_OLD[GR.iijj] + dCOLP/2
-    TAIR_INT[GR.iijj] = TAIR_OLD[GR.iijj] + dTAIR/2
-    UFLXMP_INT = exchange_BC(GR, UFLXMP_INT)
-    VFLXMP_INT = exchange_BC(GR, VFLXMP_INT)
-    COLP_INT = exchange_BC(GR, COLP_INT)
-    TAIR_INT = exchange_BC(GR, TAIR_INT)
+        COLP_OLD = copy.deepcopy(COLP)
+        COLPA_is_OLD, COLPA_js_OLD = interp_COLPA(GR, COLP_OLD)
+        COLP[GR.iijj] = COLP[GR.iijj] + dCOLP/3
+        COLP = exchange_BC(GR, COLP)
+        COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP)
+        UWIND[GR.iisjj] = UWIND[GR.iisjj] * COLPA_is_OLD/COLPA_is_NEW \
+                        + dUFLX/3/COLPA_is_NEW
+        VWIND[GR.iijjs] = VWIND[GR.iijjs] * COLPA_js_OLD/COLPA_js_NEW \
+                            + dVFLX/3/COLPA_js_NEW
+        UWIND = exchange_BC(GR, UWIND)
+        VWIND = exchange_BC(GR, VWIND)
+        POTT[GR.iijj] = POTT[GR.iijj] + dPOTT/3
+        POTT = exchange_BC(GR, POTT)
+        
+        PHI, PVTF, PVTFVB = diagnose_fields_jacobson(GR, PHI, COLP_INT, POTT_INT, HSURF,
+                                                        PVTF, PVTFVB)
 
-    UFLXMP[GR.iijj] = UFLXMP_OLD[GR.iijj] + dUFLXMP/6
-    VFLXMP[GR.iijj] = VFLXMP_OLD[GR.iijj] + dVFLXMP/6
-    COLP[GR.iijj] = COLP_OLD[GR.iijj] + dCOLP/6
-    TAIR[GR.iijj] = TAIR_OLD[GR.iijj] + dTAIR/6
-    
-    UWIND, VWIND, PHI = diagnose_fields(GR, COLP_INT, PHI, TAIR_INT,
-                    UWIND, VWIND, UFLXMP_INT, VFLXMP_INT, HSURF)
+        ########## level 3
+        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt = tendencies_jacobson(GR, COLP_INT, POTT_INT,
+                                                    HSURF, UWIND_INT, VWIND_INT, WIND,
+                                                    UFLX, VFLX, PHI, PVTF, PVTFVB)
 
-    ########## level 2
-    dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt = tendencies(GR, 
-                    COLP_INT, PHI, TAIR_INT,
-                    UWIND, VWIND,
-                    UFLX, VFLX, UFLXMP_INT, VFLXMP_INT,
-                    UUFLX, UVFLX, VUFLX, VVFLX)
+        dUFLX = GR.dt*dUFLXdt
+        dVFLX = GR.dt*dVFLXdt
+        dCOLP = GR.dt*dCOLPdt
+        dPOTT = GR.dt*dPOTTdt
 
-    dUFLXMP = GR.dt*dUFLXMPdt
-    dVFLXMP = GR.dt*dVFLXMPdt
-    dCOLP = GR.dt*dCOLPdt
-    dTAIR = GR.dt*dTAIRdt
+        COLP_INT[GR.iijj] = COLP_START[GR.iijj] + dCOLP
+        COLP_INT = exchange_BC(GR, COLP_INT)
+        COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP_INT)
+        UWIND_INT[GR.iisjj] = UWIND_START[GR.iisjj] * COLPA_is_START/COLPA_is_NEW \
+                            + dUFLX/COLPA_is_NEW
+        VWIND_INT[GR.iijjs] = VWIND_START[GR.iijjs] * COLPA_js_START/COLPA_js_NEW \
+                            + dVFLX/COLPA_js_NEW
+        UWIND_INT = exchange_BC(GR, UWIND_INT)
+        VWIND_INT = exchange_BC(GR, VWIND_INT)
+        POTT_INT[GR.iijj] = POTT_START[GR.iijj] + dPOTT
+        POTT_INT = exchange_BC(GR, POTT_INT)
 
-    UFLXMP_INT[GR.iijj] = UFLXMP_OLD[GR.iijj] + dUFLXMP/2
-    VFLXMP_INT[GR.iijj] = VFLXMP_OLD[GR.iijj] + dVFLXMP/2
-    COLP_INT[GR.iijj] = COLP_OLD[GR.iijj] + dCOLP/2
-    TAIR_INT[GR.iijj] = TAIR_OLD[GR.iijj] + dTAIR/2
-    UFLXMP_INT = exchange_BC(GR, UFLXMP_INT)
-    VFLXMP_INT = exchange_BC(GR, VFLXMP_INT)
-    COLP_INT = exchange_BC(GR, COLP_INT)
-    TAIR_INT = exchange_BC(GR, TAIR_INT)
+        COLP_OLD = copy.deepcopy(COLP)
+        COLPA_is_OLD, COLPA_js_OLD = interp_COLPA(GR, COLP_OLD)
+        COLP[GR.iijj] = COLP[GR.iijj] + dCOLP/3
+        COLP = exchange_BC(GR, COLP)
+        COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP)
+        UWIND[GR.iisjj] = UWIND[GR.iisjj] * COLPA_is_OLD/COLPA_is_NEW \
+                        + dUFLX/3/COLPA_is_NEW
+        VWIND[GR.iijjs] = VWIND[GR.iijjs] * COLPA_js_OLD/COLPA_js_NEW \
+                            + dVFLX/3/COLPA_js_NEW
+        UWIND = exchange_BC(GR, UWIND)
+        VWIND = exchange_BC(GR, VWIND)
+        POTT[GR.iijj] = POTT[GR.iijj] + dPOTT/3
+        POTT = exchange_BC(GR, POTT)
+        
+        PHI, PVTF, PVTFVB = diagnose_fields_jacobson(GR, PHI, COLP_INT, POTT_INT, HSURF,
+                                                        PVTF, PVTFVB)
 
-    UFLXMP[GR.iijj] = UFLXMP[GR.iijj] + dUFLXMP/3
-    VFLXMP[GR.iijj] = VFLXMP[GR.iijj] + dVFLXMP/3
-    COLP[GR.iijj] = COLP[GR.iijj] + dCOLP/3
-    TAIR[GR.iijj] = TAIR[GR.iijj] + dTAIR/3
-    
-    UWIND, VWIND, PHI = diagnose_fields(GR, COLP_INT, PHI, TAIR_INT,
-                    UWIND, VWIND, UFLXMP_INT, VFLXMP_INT, HSURF)
+        ########## level 4
+        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt = tendencies_jacobson(GR, COLP_INT, POTT_INT,
+                                                    HSURF, UWIND_INT, VWIND_INT, WIND,
+                                                    UFLX, VFLX, PHI, PVTF, PVTFVB)
 
-    ########## level 3
-    dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt = tendencies(GR, 
-                    COLP_INT, PHI, TAIR_INT,
-                    UWIND, VWIND,
-                    UFLX, VFLX, UFLXMP_INT, VFLXMP_INT,
-                    UUFLX, UVFLX, VUFLX, VVFLX)
+        dUFLX = GR.dt*dUFLXdt
+        dVFLX = GR.dt*dVFLXdt
+        dCOLP = GR.dt*dCOLPdt
+        dPOTT = GR.dt*dPOTTdt
 
-    dUFLXMP = GR.dt*dUFLXMPdt
-    dVFLXMP = GR.dt*dVFLXMPdt
-    dCOLP = GR.dt*dCOLPdt
-    dTAIR = GR.dt*dTAIRdt
+        COLP_OLD = copy.deepcopy(COLP)
+        COLPA_is_OLD, COLPA_js_OLD = interp_COLPA(GR, COLP_OLD)
+        COLP[GR.iijj] = COLP[GR.iijj] + dCOLP/6
+        COLP = exchange_BC(GR, COLP)
+        COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP)
+        UWIND[GR.iisjj] = UWIND[GR.iisjj] * COLPA_is_OLD/COLPA_is_NEW \
+                        + dUFLX/6/COLPA_is_NEW
+        VWIND[GR.iijjs] = VWIND[GR.iijjs] * COLPA_js_OLD/COLPA_js_NEW \
+                            + dVFLX/6/COLPA_js_NEW
+        UWIND = exchange_BC(GR, UWIND)
+        VWIND = exchange_BC(GR, VWIND)
+        POTT[GR.iijj] = POTT[GR.iijj] + dPOTT/6
+        POTT = exchange_BC(GR, POTT)
 
-    UFLXMP_INT[GR.iijj] = UFLXMP_OLD[GR.iijj] + dUFLXMP
-    VFLXMP_INT[GR.iijj] = VFLXMP_OLD[GR.iijj] + dVFLXMP
-    COLP_INT[GR.iijj] = COLP_OLD[GR.iijj] + dCOLP
-    TAIR_INT[GR.iijj] = TAIR_OLD[GR.iijj] + dTAIR
-    UFLXMP_INT = exchange_BC(GR, UFLXMP_INT)
-    VFLXMP_INT = exchange_BC(GR, VFLXMP_INT)
-    COLP_INT = exchange_BC(GR, COLP_INT)
-    TAIR_INT = exchange_BC(GR, TAIR_INT)
+        PHI, PVTF, PVTFVB = diagnose_fields_jacobson(GR, PHI, COLP, POTT, HSURF, PVTF, PVTFVB)
 
-    UFLXMP[GR.iijj] = UFLXMP[GR.iijj] + dUFLXMP/3
-    VFLXMP[GR.iijj] = VFLXMP[GR.iijj] + dVFLXMP/3
-    COLP[GR.iijj] = COLP[GR.iijj] + dCOLP/3
-    TAIR[GR.iijj] = TAIR[GR.iijj] + dTAIR/3
-    
-    UWIND, VWIND, PHI = diagnose_fields(GR, COLP_INT, PHI, TAIR_INT,
-                    UWIND, VWIND, UFLXMP_INT, VFLXMP_INT, HSURF)
-
-    ########## level 4
-    dCOLPdt, dUFLXMPdt, dVFLXMPdt, dTAIRdt = tendencies(GR, 
-                    COLP_INT, PHI, TAIR_INT,
-                    UWIND, VWIND,
-                    UFLX, VFLX, UFLXMP_INT, VFLXMP_INT,
-                    UUFLX, UVFLX, VUFLX, VVFLX)
-
-    dUFLXMP = GR.dt*dUFLXMPdt
-    dVFLXMP = GR.dt*dVFLXMPdt
-    dCOLP = GR.dt*dCOLPdt
-    dTAIR = GR.dt*dTAIRdt
-
-    UFLXMP[GR.iijj] = UFLXMP[GR.iijj] + dUFLXMP/6
-    VFLXMP[GR.iijj] = VFLXMP[GR.iijj] + dVFLXMP/6
-    COLP[GR.iijj] = COLP[GR.iijj] + dCOLP/6
-    TAIR[GR.iijj] = TAIR[GR.iijj] + dTAIR/6
-    UFLXMP = exchange_BC(GR, UFLXMP)
-    VFLXMP = exchange_BC(GR, VFLXMP)
-    COLP = exchange_BC(GR, COLP)
-    TAIR = exchange_BC(GR, TAIR)
-    
-    UWIND, VWIND, PHI = diagnose_fields(GR, COLP, PHI, TAIR,
-                    UWIND, VWIND, UFLXMP, VFLXMP, HSURF)
-
-    return(COLP, PHI, TAIR,
+    return(COLP, PHI, POTT,
             UWIND, VWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
             UUFLX, UVFLX, VUFLX, VVFLX,
