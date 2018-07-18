@@ -13,6 +13,10 @@ class Grid:
             self.__dict__ = loadGR.__dict__
             self.i_sim_n_days = i_sim_n_days
             self.nts = i_sim_n_days*3600*24/self.dt
+            self.i_out_nth_hour = i_out_nth_hour
+            self.i_out_nth_ts = int(self.i_out_nth_hour*3600 / self.dt)
+            self.i_restart_nth_day = i_restart_nth_day
+            self.i_restart_nth_ts = self.i_restart_nth_day*24/self.i_out_nth_hour*self.i_out_nth_ts
         else:
 
             # GRID DEFINITION IN DEGREES 
@@ -32,6 +36,8 @@ class Grid:
             self.dlat_rad = self.dlat_deg/180*np.pi
 
             # NUMBER OF GRID POINTS IN EACH DIMENSION
+            self.nz = nz
+            self.nzs = nz+1
             self.nx = int((self.lon1_deg - self.lon0_deg)/self.dlon_deg)
             self.nxs = self.nx + 1
             self.ny = int((self.lat1_deg - self.lat0_deg)/self.dlat_deg)
@@ -139,23 +145,14 @@ class Grid:
             self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb), np.nan)
             for i in self.ii:
                 for j in self.jj:
-                    #lon0 = self.lonis_rad[i,j]
-                    #lon1 = self.lonis_rad[i+1,j]
-                    #lat0 = self.latjs_rad[i,j]
-                    #lat1 = self.latjs_rad[i,j+1]
-                    #self.A[i,j] = lat_lon_recangle_area(lon0,lon1,lat0,lat1, i_curved_earth)
                     self.A[i,j] = lat_lon_recangle_area(self.lat_rad[i,j],
                                         self.dlon_rad, self.dlat_rad, i_curved_earth)
             self.A = exchange_BC(self, self.A)
 
-            #import matplotlib.pyplot as plt
-            #plt.plot(self.A[3,:])
-            #plt.grid()
-            #plt.show()
-            #quit()
-
-            print('fraction of earth covered: ' + str(np.round(np.sum(self.A[self.iijj])/(4*np.pi*con_rE**2),2)))
-            print('fraction of cylinder covered: ' + str(np.round(np.sum(self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
+            print('fraction of earth covered: ' + \
+                    str(np.round(np.sum(self.A[self.iijj])/(4*np.pi*con_rE**2),2)))
+            print('fraction of cylinder covered: ' + \
+                    str(np.round(np.sum(self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
 
             # CORIOLIS FORCE
             self.corf    = np.full( (self.nx +2*self.nb, self.ny +2*self.nb), np.nan)
@@ -166,8 +163,11 @@ class Grid:
             #self.corf_js[self.iijjs] = 2*con_omega*np.sin(self.latjs_rad[self.iijjs])
 
             # SIGMA LEVELS
-            self.sigma_vb = np.linspace(0, 1, 2)
-            self.dsigma = np.diff(self.sigma_vb)
+            #self.sigma_vb = np.linspace(0, 1, self.nzs)
+            #self.sigma = self.sigma_vb[:-1] + np.diff(self.sigma_vb)/2
+            #self.dsigma = np.diff(self.sigma_vb)
+            self.level = np.arange(0,self.nz)
+            self.levels = np.arange(0,self.nzs)
 
             # TIME STEP
             mindx = np.nanmin(self.dx)
@@ -181,19 +181,13 @@ class Grid:
             self.ts = 0
             self.i_out_nth_ts = int(self.i_out_nth_hour*3600 / self.dt)
             self.i_restart_nth_day = i_restart_nth_day
-            self.i_restart_nth_ts = self.i_restart_nth_day*24/self.i_out_nth_hour*self.i_out_nth_ts
+            self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
+                    self.i_out_nth_hour*self.i_out_nth_ts
 
 
 
 
 
-#def lat_lon_recangle_area(lon0,lon1,lat0,lat1, i_curved_earth):
-#    if i_curved_earth:
-#        A = 2*np.pi * np.abs(np.sin(lat0) - np.sin(lat1)) * \
-#                np.abs(lon0 - lon1)/(2*np.pi) * con_rE**2
-#    else:
-#        A = np.abs(lat0 - lat1) * np.abs(lon0 - lon1) * con_rE**2
-#    return(A)
 def lat_lon_recangle_area(lat,dlon,dlat, i_curved_earth):
     if i_curved_earth:
         A = np.cos(lat) * \

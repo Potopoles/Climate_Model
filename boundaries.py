@@ -159,6 +159,17 @@ def exchange_BC_rigid_y_horDifSpecial(GR, FIELD):
                 FIELD[:,j+GR.ny+GR.nb+1] = FIELD[:,j+GR.ny+GR.nb-1] 
 
     elif np.ndim(FIELD) == 3:
-        raise NotImplementedError()
+        dimx,dimy,dimz = FIELD.shape
+        binds = np.arange(0,GR.nb)
+
+        if dimy == GR.ny+2*GR.nb: # unstaggered in y
+            raise NotImplementedError()
+        else: # staggered in y
+            for k in range(0,dimz):
+                for j in range(0,GR.nb):
+                    FIELD[:,j,k] = FIELD[:,j+2,k] 
+                    FIELD[:,j+1,k] = FIELD[:,j+2,k]
+                    FIELD[:,j+GR.ny+GR.nb,k] = FIELD[:,j+GR.ny+GR.nb-1,k]
+                    FIELD[:,j+GR.ny+GR.nb+1,k] = FIELD[:,j+GR.ny+GR.nb-1,k] 
 
     return(FIELD)

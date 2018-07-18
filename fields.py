@@ -1,28 +1,34 @@
 import numpy as np
 from namelist import *
 from boundaries import exchange_BC_all, exchange_BC
-from IO import load_topo, load_restart_fields
-from geopotential import diag_geopotential_upwind, diag_geopotential_jacobson
+from IO import load_topo, load_restart_fields, load_profile
+#from geopotential import diag_geopotential_upwind, diag_geopotential_jacobson, \
+from jacobson import diagnose_fields_jacobson
 
 def initialize_fields(GR):
     if i_load_from_restart:
-        COLP, PHI, UWIND, VWIND, WIND, \
+        COLP, PHI, UWIND, VWIND, WIND, WWIND, \
         UFLX, VFLX, UFLXMP, VFLXMP, \
         UUFLX, VUFLX, UVFLX, VVFLX, \
-        HSURF, POTT, PVTF, PVTFVB = load_restart_fields(GR)
+        HSURF, POTT, POTTVB, PVTF, PVTFVB = load_restart_fields(GR)
     else:
         # CREATE ARRAYS
         # scalars
-        COLP = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
-        PHI = np.full( (GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1), np.nan)
-        POTT = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
-        # wind velocities
-        UWIND = np.full( (GR.nxs+2*GR.nb,GR.ny+2*GR.nb), np.nan)
-        VWIND = np.full( (GR.nx+2*GR.nb,GR.nys+2*GR.nb), np.nan)
-        WIND = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
-        # mass fluxes at velocity points
-        UFLX = np.full( (GR.nxs+2*GR.nb,GR.ny+2*GR.nb), np.nan)
-        VFLX = np.full( (GR.nx+2*GR.nb,GR.nys+2*GR.nb), np.nan)
+        COLP =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        PSURF =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        PHI =    np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        POTT =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        POTTVB = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
+        POTTVB[:] = 0
+        # wind v elocities
+        UWIND =  np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        VWIND =  np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
+        WIND =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        WWIND =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
+        WWIND[:] = 0
+        # mass f luxes at v elocity points
+        UFLX =   np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        VFLX =   np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
 
         # FOR MASSPOINT_FLUX_TENDENCY_UPSTREAM:
         # mass fluxes at mass points
@@ -35,8 +41,8 @@ def initialize_fields(GR):
         VVFLX = np.full( (GR.nx+2*GR.nb,GR.nys+2*GR.nb), np.nan)
 
         # vertical profile
-        PVTF   = np.full( (GR.nxs+2*GR.nb, GR.ny+2*GR.nb, 1), np.nan)
-        PVTFVB = np.full( (GR.nxs+2*GR.nb, GR.ny+2*GR.nb, 2), np.nan)
+        PVTF   = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan)
+        PVTFVB = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs), np.nan)
 
         # surface height
         HSURF = load_topo(GR) 
@@ -44,21 +50,26 @@ def initialize_fields(GR):
         HSURF = exchange_BC(GR, HSURF)
         
         # INITIAL CONDITIONS
-        COLP[GR.iijj] = pSurf - pTop
-        #COLP[GR.iijj] = 10000 # TODO DEBUG
-        COLP = gaussian2D(GR, COLP, COLP_gaussian_pert, np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+        GR, COLP, PSURF, POTT = load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT)
+        #quit()
+        COLP = gaussian2D(GR, COLP, COLP_gaussian_pert, np.pi*3/4, np.pi/5, \
+                            gaussian_dlon, gaussian_dlat)
         COLP = random2D(GR, COLP, COLP_random_pert)
 
-        UWIND[GR.iisjj] = u0   
-        UWIND = gaussian2D(GR, UWIND, UWIND_gaussian_pert, np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
-        UWIND = random2D(GR, UWIND, UWIND_random_pert)
-        VWIND[GR.iijjs] = v0
-        VWIND = gaussian2D(GR, VWIND, VWIND_gaussian_pert, np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
-        VWIND = random2D(GR, VWIND, VWIND_random_pert)
+        for k in range(0,GR.nz):
+            UWIND[:,:,k][GR.iisjj] = u0   
+            UWIND[:,:,k] = gaussian2D(GR, UWIND[:,:,k], UWIND_gaussian_pert, \
+                            np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+            UWIND[:,:,k] = random2D(GR, UWIND[:,:,k], UWIND_random_pert)
+            VWIND[:,:,k][GR.iijjs] = v0
+            VWIND[:,:,k] = gaussian2D(GR, VWIND[:,:,k], VWIND_gaussian_pert, \
+                            np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+            VWIND[:,:,k] = random2D(GR, VWIND[:,:,k], VWIND_random_pert)
 
-        POTT[GR.iijj] = 260.
-        POTT = gaussian2D(GR, POTT, POTT_gaussian_pert, np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
-        POTT = random2D(GR, POTT, POTT_random_pert)
+            #POTT[:,:,k][GR.iijj] = 260.
+            POTT[:,:,k] = gaussian2D(GR, POTT[:,:,k], POTT_gaussian_pert, \
+                            np.pi*3/4, np.pi/5, gaussian_dlon, gaussian_dlat)
+            POTT[:,:,k] = random2D(GR, POTT[:,:,k], POTT_random_pert)
 
         # BOUNDARY CONDITIONS
         COLP, UWIND, VWIND, POTT = exchange_BC_all(GR, COLP, UWIND, VWIND, POTT)
@@ -66,13 +77,21 @@ def initialize_fields(GR):
         if i_spatial_discretization == 'UPWIND':
             PHI, PVTF, PVTFVB = diag_geopotential_upwind(GR, PHI, HSURF, TAIR, COLP)
         if i_spatial_discretization == 'JACOBSON':
-            PHI, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, HSURF, POTT, COLP,
-                                    PVTF, PVTFVB)
+            #PHI, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, HSURF, POTT, COLP,
+            #                        PVTF, PVTFVB)
+            PHI, PVTF, PVTFVB, POTTVB = diagnose_fields_jacobson(GR, PHI, COLP, POTT, \
+                                                    HSURF, PVTF, PVTFVB, POTTVB)
 
-    return(COLP, PHI, UWIND, VWIND, WIND,
+        #k = 2
+        #print(PHI[:,:,k][GR.iijj])
+        #print(np.min(PHI[:,:,k][GR.iijj]))
+        #print(np.max(PHI[:,:,k][GR.iijj]))
+        #quit()
+
+    return(COLP, PHI, UWIND, VWIND, WIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
             UUFLX, VUFLX, UVFLX, VVFLX,
-            HSURF, POTT, PVTF, PVTFVB)
+            HSURF, POTT, POTTVB, PVTF, PVTFVB)
 
 
 

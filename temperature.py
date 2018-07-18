@@ -26,31 +26,77 @@ def temperature_tendency_upwind(GR, POTT, COLP, UWIND, VWIND, UFLX, VFLX):
 
 
 
-def temperature_tendency_jacobson(GR, POTT, COLP, UWIND, VWIND, UFLX, VFLX):
+def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, UWIND, VWIND, \
+                                    UFLX, VFLX, WWIND):
+
+    dPOTTdt = np.full( (GR.nx ,GR.ny ,GR.nz), np.nan)
+
+    i_vertAdv = 1
+
+    if i_temperature_tendency:
+
+        for k in range(0,GR.nz):
+            dPOTTdt[:,:,k] = (+ UFLX[:,:,k][GR.iijj    ] *\
+                                 (POTT[:,:,k][GR.iijj_im1] + POTT[:,:,k][GR.iijj    ])/2 \
+                              - UFLX[:,:,k][GR.iijj_ip1] *\
+                                 (POTT[:,:,k][GR.iijj    ] + POTT[:,:,k][GR.iijj_ip1])/2 \
+                              + VFLX[:,:,k][GR.iijj    ] *\
+                                 (POTT[:,:,k][GR.iijj_jm1] + POTT[:,:,k][GR.iijj    ])/2 \
+                              - VFLX[:,:,k][GR.iijj_jp1] *\
+                                 (POTT[:,:,k][GR.iijj    ] + POTT[:,:,k][GR.iijj_jp1])/2 \
+                             ) / GR.A[GR.iijj]
+
+            #print(np.max(dPOTTdt[:,:,k]))
+
+            # VERTICAL ADVECTION
+            if i_vertAdv:
+                #print(k)
+                if k == 0:
+                    #print('yolo')
+                    #print(POTTVB[:,:,k+1][GR.iijj])
+                    #quit()
+                    vertAdv_POTT = COLP_NEW[GR.iijj] * (\
+                            - WWIND[:,:,k+1][GR.iijj] * POTTVB[:,:,k+1][GR.iijj] \
+                                                   ) / GR.dsigma[k]
+                elif k == GR.nz:
+                    #print(WWIND[:,:,k][GR.iijj])
+                    vertAdv_POTT = COLP_NEW[GR.iijj] * (\
+                            + WWIND[:,:,k  ][GR.iijj] * POTTVB[:,:,k  ][GR.iijj] \
+                                                   ) / GR.dsigma[k]
+                else:
+                    vertAdv_POTT = COLP_NEW[GR.iijj] * (\
+                            + WWIND[:,:,k  ][GR.iijj] * POTTVB[:,:,k  ][GR.iijj] \
+                            - WWIND[:,:,k+1][GR.iijj] * POTTVB[:,:,k+1][GR.iijj] \
+                                                   ) / GR.dsigma[k]
+
+                #print(np.mean(WWIND[:,:,k][GR.iijj]))
+                #print('yolo')
+                #print(np.nanmax(vertAdv_POTT))
+                #quit()
+
+                dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + vertAdv_POTT
+
+            if POTT_hor_dif_tau > 0:
+                #num_diff = COLP[GR.iijj] * POTT_hor_dif_tau * \
+                #             (  POTT[:,:,k][GR.iijj_im1] - 2*POTT[:,:,k][GR.iijj] + \
+                #                POTT[:,:,k][GR.iijj_ip1] \
+                #              + POTT[:,:,k][GR.iijj_jm1] - 2*POTT[:,:,k][GR.iijj] + \
+                #                POTT[:,:,k][GR.iijj_jp1] )
+                num_diff = POTT_hor_dif_tau * \
+                             (+ COLP[GR.iijj_im1] * POTT[:,:,k][GR.iijj_im1] \
+                              + COLP[GR.iijj_ip1] * POTT[:,:,k][GR.iijj_ip1] \
+                              + COLP[GR.iijj_jm1] * POTT[:,:,k][GR.iijj_jm1] \
+                              + COLP[GR.iijj_jp1] * POTT[:,:,k][GR.iijj_jp1] \
+                              - 4*COLP[GR.iijj] * POTT[:,:,k][GR.iijj] )
+                dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + num_diff
+
+            if i_pseudo_radiation:
+                radiation = - COLP[GR.iijj]*outRate*POTT[:,:,k][GR.iijj]**1 + \
+                                COLP[GR.iijj]*inpRate*np.cos(GR.lat_rad[GR.iijj])
+                dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + radiation
 
 
-    dPOTTdt = ( + UFLX[GR.iijj    ] *\
-                     (POTT[GR.iijj_im1] + POTT[GR.iijj    ])/2 \
-                  - UFLX[GR.iijj_ip1] *\
-                     (POTT[GR.iijj    ] + POTT[GR.iijj_ip1])/2 \
-                  + VFLX[GR.iijj    ] *\
-                     (POTT[GR.iijj_jm1] + POTT[GR.iijj    ])/2 \
-                  - VFLX[GR.iijj_jp1] *\
-                     (POTT[GR.iijj    ] + POTT[GR.iijj_jp1])/2 \
-                ) / (GR.A[GR.iijj] * COLP[GR.iijj])
-
-    if POTT_hor_dif_tau > 0:
-        num_diff = POTT_hor_dif_tau * \
-                     (  POTT[GR.iijj_im1] - 2*POTT[GR.iijj] + POTT[GR.iijj_ip1] \
-                      + POTT[GR.iijj_jm1] - 2*POTT[GR.iijj] + POTT[GR.iijj_jp1] )
-        dPOTTdt = dPOTTdt + num_diff
-
-    if i_pseudo_radiation:
-        radiation = - outRate*POTT[GR.iijj]**4 + inpRate*np.cos(GR.lat_rad[GR.iijj])
-        dPOTTdt = dPOTTdt + radiation
-
-
-    if i_temperature_tendency == 0:
+    else:
         dPOTTdt[:] = 0
 
     return(dPOTTdt)
