@@ -13,18 +13,17 @@ def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
     # PROGNOSE COLP
     dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
                                                         VWIND, UFLX, VFLX)
-    import copy
     COLP_NEW = copy.deepcopy(COLP)
     COLP_NEW[GR.iijj] = COLP[GR.iijj] + GR.dt*dCOLPdt
+    COLP_NEW = exchange_BC(GR, COLP_NEW)
 
     # DIAGNOSE WWIND
     WWIND = vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
-    #print(WWIND[:,:,1][GR.iijj])
-    #quit()
 
     # PROGNOSE WIND
-    dUFLXdt, dVFLXdt = wind_tendency_jacobson(GR, UWIND, VWIND, UFLX, VFLX, 
-                                                    COLP, HSURF, PHI, POTT, PVTF, PVTFVB)
+    dUFLXdt, dVFLXdt = wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
+                                                    COLP, COLP_NEW, HSURF, PHI, POTT,
+                                                    PVTF, PVTFVB)
 
     # PROGNOSE POTT
     dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, UWIND, VWIND,\
@@ -35,8 +34,7 @@ def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
 
 
 def proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
-                    POTT,
-                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt):
+                    POTT, dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt):
 
     # TIME STEPPING
     COLP_OLD = copy.deepcopy(COLP)
@@ -51,7 +49,8 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
                             + GR.dt*dUFLXdt[:,:,k]/COLPA_is_NEW
         VWIND[:,:,k][GR.iijjs] = VWIND[:,:,k][GR.iijjs] * COLPA_js_OLD/COLPA_js_NEW \
                             + GR.dt*dVFLXdt[:,:,k]/COLPA_js_NEW
-        #POTT[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] + GR.dt*dPOTTdt[:,:,k]
+        #VWIND[:,:,k][GR.ii,GR.nb] = 0
+        #VWIND[:,:,k][GR.ii,-1-GR.nb] = 0
         POTT[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
                             + GR.dt*dPOTTdt[:,:,k]/COLP[GR.iijj]
     UWIND = exchange_BC(GR, UWIND)
@@ -74,10 +73,6 @@ def diagnose_fields_jacobson(GR, PHI, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB):
                         POTT[:,:,ks][GR.iijj]
                                     ) / (PVTF[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj])
 
-    #print(np.mean(np.mean(POTT[GR.iijj], axis=0), axis=0))
-    #print(np.mean(np.mean(POTTVB[GR.iijj], axis=0), axis=0))
-    #quit()
-
     return(PHI, PVTF, PVTFVB, POTTVB)
 
 
@@ -86,28 +81,44 @@ def diagnose_fields_jacobson(GR, PHI, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB):
 def interp_COLPA(GR, COLP):
 
     COLPA_is = 1/8*(    COLP[GR.iisjj_im1_jp1] * GR.A[GR.iisjj_im1_jp1] + \
-                        COLP[GR.iisjj_jp1]     * GR.A[GR.iisjj_jp1] + \
-                    2 * COLP[GR.iisjj_im1]     * GR.A[GR.iisjj_im1] + \
-                    2 * COLP[GR.iisjj]         * GR.A[GR.iisjj] + \
+                        COLP[GR.iisjj_jp1    ] * GR.A[GR.iisjj_jp1    ] + \
+                    2 * COLP[GR.iisjj_im1    ] * GR.A[GR.iisjj_im1    ] + \
+                    2 * COLP[GR.iisjj        ] * GR.A[GR.iisjj        ] + \
                         COLP[GR.iisjj_im1_jm1] * GR.A[GR.iisjj_im1_jm1] + \
-                        COLP[GR.iisjj_jm1]     * GR.A[GR.iisjj_jm1]     )
+                        COLP[GR.iisjj_jm1    ] * GR.A[GR.iisjj_jm1    ]   )
+
+    # ATTEMPT TO INTERPOLATE ONLY WITH TWO NEIGHBORING POINTS
+    #COLPA_is[:, 0] = 1/2*( COLP[GR.iis-1,GR.jj[ 0]] * GR.A[GR.iis-1,GR.jj[ 0]] + \
+    #                       COLP[GR.iis  ,GR.jj[ 0]] * GR.A[GR.iis  ,GR.jj[ 0]]   )
+    #COLPA_is[:,-1] = 1/2*( COLP[GR.iis-1,GR.jj[-1]] * GR.A[GR.iis-1,GR.jj[-1]] + \
+    #                       COLP[GR.iis  ,GR.jj[-1]] * GR.A[GR.iis  ,GR.jj[-1]]   )
+
+    # ATTEMPT TO SET BOUNDARY AREA TO ZERO (see grid)
+    # consequently change 1/8 to 1/6
+    #COLPA_is[:, 0] = COLPA_is[:, 0]*4/3
+    #COLPA_is[:, -1] = COLPA_is[:, -1]*4/3
+
+    # ATTEMPT TO INTERPOLATE ONLY WITH TWO NEIGHBORING POINTS (JACOBSON)
+    COLPA_is[:,-1] = 1/4*(    COLP[GR.iis-1,GR.jj[-1]] * GR.A[GR.iis-1,GR.jj[-1]] + \
+                              COLP[GR.iis  ,GR.jj[-1]] * GR.A[GR.iis  ,GR.jj[-1]] + \
+                              COLP[GR.iis-1,GR.jj[-2]] * GR.A[GR.iis-1,GR.jj[-2]] + \
+                              COLP[GR.iis  ,GR.jj[-2]] * GR.A[GR.iis  ,GR.jj[-2]]   )
+
+    COLPA_is[:, 0] = 1/4*(    COLP[GR.iis-1,GR.jj[0]] * GR.A[GR.iis-1,GR.jj[0]] + \
+                              COLP[GR.iis  ,GR.jj[0]] * GR.A[GR.iis  ,GR.jj[0]] + \
+                              COLP[GR.iis-1,GR.jj[1]] * GR.A[GR.iis-1,GR.jj[1]] + \
+                              COLP[GR.iis  ,GR.jj[1]] * GR.A[GR.iis  ,GR.jj[1]]   )
+
+
 
 
     COLPA_js = 1/8*(    COLP[GR.iijjs_ip1_jm1] * GR.A[GR.iijjs_ip1_jm1] + \
-                        COLP[GR.iijjs_ip1]     * GR.A[GR.iijjs_ip1] + \
-                    2 * COLP[GR.iijjs_im1_jm1]     * GR.A[GR.iijjs_im1_jm1] + \
-                    2 * COLP[GR.iijjs]         * GR.A[GR.iijjs] + \
+                        COLP[GR.iijjs_ip1    ] * GR.A[GR.iijjs_ip1    ] + \
+                    2 * COLP[GR.iijjs_jm1    ] * GR.A[GR.iijjs_jm1    ] + \
+                    2 * COLP[GR.iijjs        ] * GR.A[GR.iijjs        ] + \
                         COLP[GR.iijjs_im1_jm1] * GR.A[GR.iijjs_im1_jm1] + \
-                        COLP[GR.iijjs_im1]     * GR.A[GR.iijjs_im1]     )
+                        COLP[GR.iijjs_im1    ] * GR.A[GR.iijjs_im1    ]   )
 
-
-    #import matplotlib.pyplot as plt
-    ##plt.plot(COLPA_js[3,:])
-    ##plt.grid()
-    #plt.contourf(COLPA_js.T)
-    #plt.show()
-    #print(COLPA_js[3,:])
-    #quit()
 
     return(COLPA_is, COLPA_js)
 

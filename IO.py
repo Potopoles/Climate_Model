@@ -4,7 +4,7 @@ from scipy.interpolate import interp2d
 from boundaries import exchange_BC_rigid_y, exchange_BC_periodic_x
 import pickle
 import os
-from namelist import pTop
+from namelist import pTop, n_topo_smooth, tau_topo_smooth
 from geopotential import diag_pvt_factor
 from constants import con_kappa
 from scipy import interpolate
@@ -63,7 +63,6 @@ def load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT):
 
 def write_restart(GR, COLP, PHI, UWIND, VWIND, WIND, WWIND,\
                         UFLX, VFLX, UFLXMP, VFLXMP, \
-                        UUFLX, VUFLX, UVFLX, VVFLX, \
                         HSURF, POTT, POTTVB, PVTF, PVTFVB):
     filename = '../restart/'+str(GR.dlat_deg).zfill(2)+'.pkl'
     out = {}
@@ -78,10 +77,6 @@ def write_restart(GR, COLP, PHI, UWIND, VWIND, WIND, WWIND,\
     out['VFLX'] = VFLX
     out['UFLXMP'] = UFLXMP
     out['VFLXMP'] = VFLXMP
-    out['UUFLX'] = UUFLX
-    out['VUFLX'] = VUFLX
-    out['UFVLX'] = UVFLX
-    out['VVFLX'] = VVFLX
     out['HSURF'] = HSURF
     out['POTT'] = POTT
     out['POTTVB'] = POTTVB
@@ -115,10 +110,6 @@ def load_restart_fields(GR):
     VFLX = inp['VFLX']
     UFLXMP = inp['UFLXMP']
     VFLXMP = inp['VFLXMP']
-    UUFLX = inp['UUFLX']
-    VUFLX = inp['VUFLX']
-    UVFLX = inp['UFVLX']
-    VVFLX = inp['VVFLX']
     HSURF = inp['HSURF']
     POTT = inp['POTT']
     POTTVB = inp['POTTVB']
@@ -126,7 +117,6 @@ def load_restart_fields(GR):
     PVTFVB = inp['PVTFVB']
     return(COLP, PHI, UWIND, VWIND, WIND, WWIND, \
                 UFLX, VFLX, UFLXMP, VFLXMP, \
-                UUFLX, VUFLX, UVFLX, VVFLX, \
                 HSURF, POTT, POTTVB, PVTF, PVTFVB)
 
 
@@ -144,13 +134,11 @@ def load_topo(GR):
     HSURF = exchange_BC_periodic_x(GR, HSURF)
     HSURF = exchange_BC_rigid_y(GR, HSURF)
 
-    n_smooth = 10
-    n_smooth = 20
-    tau = 0.2
-    for i in range(0,n_smooth):
-        HSURF[GR.iijj] = HSURF[GR.iijj] + tau*(HSURF[GR.iijj_im1] + HSURF[GR.iijj_ip1] + \
-                                                HSURF[GR.iijj_jm1] + HSURF[GR.iijj_jp1] - \
-                                                4*HSURF[GR.iijj]) 
+    for i in range(0,n_topo_smooth):
+        HSURF[GR.iijj] = HSURF[GR.iijj] + tau_topo_smooth*\
+                                            (HSURF[GR.iijj_im1] + HSURF[GR.iijj_ip1] + \
+                                            HSURF[GR.iijj_jm1] + HSURF[GR.iijj_jp1] - \
+                                            4*HSURF[GR.iijj]) 
         HSURF = exchange_BC_periodic_x(GR, HSURF)
         HSURF = exchange_BC_rigid_y(GR, HSURF)
 
@@ -160,6 +148,12 @@ def load_topo(GR):
 def output_to_NC(GR, outCounter, COLP, PHI, UWIND, VWIND, WIND, WWIND,
                 HSURF, POTT,
                 mean_wind):
+    print('###########################################')
+    print('###########################################')
+    print('write fields')
+    print('###########################################')
+    print('###########################################')
+
     filename = '../output/out'+str(outCounter).zfill(4)+'.nc'
 
     ncf = Dataset(filename, 'w', format='NETCDF4')

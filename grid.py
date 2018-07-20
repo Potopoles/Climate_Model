@@ -1,7 +1,7 @@
 import numpy as np
 from namelist import *
 from constants import con_rE, con_omega
-from boundaries import exchange_BC
+from boundaries import exchange_BC, exchange_BC_periodic_x
 from IO import load_restart_grid
 
 class Grid:
@@ -110,6 +110,8 @@ class Grid:
                                         (self.jj-self.nb+0.5)*self.dlat_deg
                 self.latjs_deg[i,self.jjs] = self.lat0_deg + \
                                         (self.jjs-self.nb)*self.dlat_deg
+            #self.lat_deg[self.ii,0] = self.lat0_deg - 0.5*self.dlat_deg
+            #self.lat_deg[self.ii,-1] = self.lat1_deg + 0.5*self.dlat_deg
             for i_s in range(self.nb, self.nxs+self.nb):
                 self.latis_deg[i_s,self.jj] = self.lat0_deg + \
                                         (self.jj-self.nb+0.5)*self.dlat_deg
@@ -125,13 +127,9 @@ class Grid:
             # 2D MATRIX OF GRID SPACING IN METERS
             self.dx = np.full( (self.nx+2*self.nb,self.ny+2*self.nb), np.nan)
             self.dxjs = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan)
-            #self.dxis = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb), np.nan)
 
             self.dx[self.iijj] = np.cos( self.lat_rad[self.iijj] )*self.dlon_rad*con_rE 
             self.dxjs[self.iijjs] = np.cos( self.latjs_rad[self.iijjs] )*self.dlon_rad*con_rE 
-            #self.dxis[self.iisjj] = np.cos( self.latis_rad[self.iisjj] )*self.dlon_rad*con_rE 
-            #self.dx = exchange_BC_rigid_y(self, self.dx)
-            #self.dxjs = exchange_BC_rigid_y(self, self.dxjs)
             self.dx = exchange_BC(self, self.dx)
             self.dxjs = exchange_BC(self, self.dxjs)
             self.dy = self.dlat_rad*con_rE
@@ -139,15 +137,22 @@ class Grid:
             if not i_curved_earth:
                 maxdx = np.max(self.dx[self.iijj])
                 self.dx[self.iijj] = maxdx
-                #self.dxjs[self.iijjs] = maxdx
-                #self.dxis[self.iisjj] = maxdx
 
             self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb), np.nan)
             for i in self.ii:
+            #for i in np.arange(0,(self.nx+2*self.nb)):
                 for j in self.jj:
+                #for j in np.arange(0,(self.ny+2*self.nb)): 
                     self.A[i,j] = lat_lon_recangle_area(self.lat_rad[i,j],
                                         self.dlon_rad, self.dlat_rad, i_curved_earth)
+            #self.A[:,0] = 0
+            #self.A[:,-1] = 0
+            #self.A = exchange_BC_periodic_x(self, self.A)
             self.A = exchange_BC(self, self.A)
+            #print(self.A[3,:])
+            #print(self.A[:,1])
+            #print(self.A)
+            #quit()
 
             print('fraction of earth covered: ' + \
                     str(np.round(np.sum(self.A[self.iijj])/(4*np.pi*con_rE**2),2)))
@@ -163,9 +168,6 @@ class Grid:
             #self.corf_js[self.iijjs] = 2*con_omega*np.sin(self.latjs_rad[self.iijjs])
 
             # SIGMA LEVELS
-            #self.sigma_vb = np.linspace(0, 1, self.nzs)
-            #self.sigma = self.sigma_vb[:-1] + np.diff(self.sigma_vb)/2
-            #self.dsigma = np.diff(self.sigma_vb)
             self.level = np.arange(0,self.nz)
             self.levels = np.arange(0,self.nzs)
 

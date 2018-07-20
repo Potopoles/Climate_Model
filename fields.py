@@ -2,14 +2,12 @@ import numpy as np
 from namelist import *
 from boundaries import exchange_BC_all, exchange_BC
 from IO import load_topo, load_restart_fields, load_profile
-#from geopotential import diag_geopotential_upwind, diag_geopotential_jacobson, \
 from jacobson import diagnose_fields_jacobson
 
 def initialize_fields(GR):
     if i_load_from_restart:
         COLP, PHI, UWIND, VWIND, WIND, WWIND, \
         UFLX, VFLX, UFLXMP, VFLXMP, \
-        UUFLX, VUFLX, UVFLX, VVFLX, \
         HSURF, POTT, POTTVB, PVTF, PVTFVB = load_restart_fields(GR)
     else:
         # CREATE ARRAYS
@@ -20,39 +18,35 @@ def initialize_fields(GR):
         POTT =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         POTTVB = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
         POTTVB[:] = 0
-        # wind v elocities
+        # wind velocities
         UWIND =  np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         VWIND =  np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
         WIND =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         WWIND =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
         WWIND[:] = 0
-        # mass f luxes at v elocity points
+        # mass fluxes at v elocity points
         UFLX =   np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         VFLX =   np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
+        # vertical profile
+        PVTF   = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan)
+        PVTFVB = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs), np.nan)
 
         # FOR MASSPOINT_FLUX_TENDENCY_UPSTREAM:
         # mass fluxes at mass points
         UFLXMP = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
         VFLXMP = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
-        # momentum fluxes at velocity points
-        UUFLX = np.full( (GR.nxs+2*GR.nb,GR.ny+2*GR.nb), np.nan)
-        VUFLX = np.full( (GR.nx+2*GR.nb,GR.nys+2*GR.nb), np.nan)
-        UVFLX = np.full( (GR.nxs+2*GR.nb,GR.ny+2*GR.nb), np.nan)
-        VVFLX = np.full( (GR.nx+2*GR.nb,GR.nys+2*GR.nb), np.nan)
 
-        # vertical profile
-        PVTF   = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan)
-        PVTFVB = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs), np.nan)
 
         # surface height
         HSURF = load_topo(GR) 
-        HSURF[GR.iijj] = 0.
-        HSURF = exchange_BC(GR, HSURF)
+        if not i_use_topo:
+            HSURF[GR.iijj] = 0.
+            HSURF = exchange_BC(GR, HSURF)
         
         # INITIAL CONDITIONS
         GR, COLP, PSURF, POTT = load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT)
         #quit()
-        COLP = gaussian2D(GR, COLP, COLP_gaussian_pert, np.pi*3/4, np.pi/5, \
+        COLP = gaussian2D(GR, COLP, COLP_gaussian_pert, np.pi*3/4, 0, \
                             gaussian_dlon, gaussian_dlat)
         COLP = random2D(GR, COLP, COLP_random_pert)
 
@@ -66,31 +60,22 @@ def initialize_fields(GR):
                             np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
             VWIND[:,:,k] = random2D(GR, VWIND[:,:,k], VWIND_random_pert)
 
-            #POTT[:,:,k][GR.iijj] = 260.
             POTT[:,:,k] = gaussian2D(GR, POTT[:,:,k], POTT_gaussian_pert, \
-                            np.pi*3/4, np.pi/5, gaussian_dlon, gaussian_dlat)
+                            np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
             POTT[:,:,k] = random2D(GR, POTT[:,:,k], POTT_random_pert)
 
         # BOUNDARY CONDITIONS
         COLP, UWIND, VWIND, POTT = exchange_BC_all(GR, COLP, UWIND, VWIND, POTT)
 
         if i_spatial_discretization == 'UPWIND':
-            PHI, PVTF, PVTFVB = diag_geopotential_upwind(GR, PHI, HSURF, TAIR, COLP)
+            raise NotImplementedError()
+            #PHI, PVTF, PVTFVB = diag_geopotential_upwind(GR, PHI, HSURF, TAIR, COLP)
         if i_spatial_discretization == 'JACOBSON':
-            #PHI, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, HSURF, POTT, COLP,
-            #                        PVTF, PVTFVB)
             PHI, PVTF, PVTFVB, POTTVB = diagnose_fields_jacobson(GR, PHI, COLP, POTT, \
                                                     HSURF, PVTF, PVTFVB, POTTVB)
 
-        #k = 2
-        #print(PHI[:,:,k][GR.iijj])
-        #print(np.min(PHI[:,:,k][GR.iijj]))
-        #print(np.max(PHI[:,:,k][GR.iijj]))
-        #quit()
-
     return(COLP, PHI, UWIND, VWIND, WIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
-            UUFLX, VUFLX, UVFLX, VVFLX,
             HSURF, POTT, POTTVB, PVTF, PVTFVB)
 
 

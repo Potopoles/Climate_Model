@@ -12,10 +12,6 @@ def exchange_BC_force_y_equal(GR, FIELD):
 
 def exchange_BC_all(GR, COLP, UWIND, VWIND, POTT):
 
-    #VWIND[GR.ii,1] = 1
-    #VWIND[GR.ii,2] = 2
-    #VWIND[GR.ii,6] = 6
-    
     COLP = exchange_BC_periodic_x(GR, COLP)
     UWIND = exchange_BC_periodic_x(GR, UWIND)
     VWIND = exchange_BC_periodic_x(GR, VWIND)
@@ -106,70 +102,35 @@ def exchange_BC_rigid_y(GR, FIELD):
 
 
 
-#def exchange_BC_rigid_y_force_y_equal(GR, FIELD):
+
+
+#def exchange_BC_rigid_y_horDifSpecial(GR, FIELD):
 #
 #    if np.ndim(FIELD) == 2:
 #        dimx,dimy = FIELD.shape
 #        binds = np.arange(0,GR.nb)
 #
 #        if dimy == GR.ny+2*GR.nb: # unstaggered in y
-#            for j in range(0,GR.nb):
-#                FIELD[:,j] = FIELD[:,GR.nb]
-#                FIELD[:,j+GR.ny+GR.nb] = FIELD[:,GR.ny+GR.nb-1]
+#            raise NotImplementedError()
 #        else: # staggered in y
 #            for j in range(0,GR.nb):
-#                FIELD[:,j] = FIELD[:,j+2]
+#                FIELD[:,j] = FIELD[:,j+2] 
 #                FIELD[:,j+1] = FIELD[:,j+2]
 #                FIELD[:,j+GR.ny+GR.nb] = FIELD[:,j+GR.ny+GR.nb-1]
-#                FIELD[:,j+GR.ny+GR.nb+1] =FIELD[:,j+GR.ny+GR.nb-1] 
+#                FIELD[:,j+GR.ny+GR.nb+1] = FIELD[:,j+GR.ny+GR.nb-1] 
 #
 #    elif np.ndim(FIELD) == 3:
 #        dimx,dimy,dimz = FIELD.shape
 #        binds = np.arange(0,GR.nb)
 #
 #        if dimy == GR.ny+2*GR.nb: # unstaggered in y
-#            for k in range(0,dimz):
-#                for j in range(0,GR.nb):
-#                    FIELD[:,j,k] = FIELD[:,GR.nb,k]
-#                    FIELD[:,j+GR.ny+GR.nb,k] = FIELD[:,GR.ny+GR.nb-1,k]
+#            raise NotImplementedError()
 #        else: # staggered in y
 #            for k in range(0,dimz):
 #                for j in range(0,GR.nb):
 #                    FIELD[:,j,k] = FIELD[:,j+2,k] 
-#                    FIELD[:,j+1,k] = FIELD[:,j+2,k] 
-#                    FIELD[:,j+GR.ny+GR.nb,k] = FIELD[:,j+GR.ny+GR.nb-1,k] 
+#                    FIELD[:,j+1,k] = FIELD[:,j+2,k]
+#                    FIELD[:,j+GR.ny+GR.nb,k] = FIELD[:,j+GR.ny+GR.nb-1,k]
 #                    FIELD[:,j+GR.ny+GR.nb+1,k] = FIELD[:,j+GR.ny+GR.nb-1,k] 
 #
 #    return(FIELD)
-
-
-def exchange_BC_rigid_y_horDifSpecial(GR, FIELD):
-
-    if np.ndim(FIELD) == 2:
-        dimx,dimy = FIELD.shape
-        binds = np.arange(0,GR.nb)
-
-        if dimy == GR.ny+2*GR.nb: # unstaggered in y
-            raise NotImplementedError()
-        else: # staggered in y
-            for j in range(0,GR.nb):
-                FIELD[:,j] = FIELD[:,j+2] 
-                FIELD[:,j+1] = FIELD[:,j+2]
-                FIELD[:,j+GR.ny+GR.nb] = FIELD[:,j+GR.ny+GR.nb-1]
-                FIELD[:,j+GR.ny+GR.nb+1] = FIELD[:,j+GR.ny+GR.nb-1] 
-
-    elif np.ndim(FIELD) == 3:
-        dimx,dimy,dimz = FIELD.shape
-        binds = np.arange(0,GR.nb)
-
-        if dimy == GR.ny+2*GR.nb: # unstaggered in y
-            raise NotImplementedError()
-        else: # staggered in y
-            for k in range(0,dimz):
-                for j in range(0,GR.nb):
-                    FIELD[:,j,k] = FIELD[:,j+2,k] 
-                    FIELD[:,j+1,k] = FIELD[:,j+2,k]
-                    FIELD[:,j+GR.ny+GR.nb,k] = FIELD[:,j+GR.ny+GR.nb-1,k]
-                    FIELD[:,j+GR.ny+GR.nb+1,k] = FIELD[:,j+GR.ny+GR.nb-1,k] 
-
-    return(FIELD)
