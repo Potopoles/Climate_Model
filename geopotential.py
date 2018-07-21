@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from constants import con_g, con_Rd, con_kappa, con_cp
 from namelist import pTop
 from boundaries import exchange_BC
@@ -29,6 +30,8 @@ def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
 def diag_geopotential_jacobson(GR, PHI, HSURF, POTT, COLP,
                                 PVTF, PVTFVB):
 
+    t_start = time.time()
+
     PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
 
     phi_vb = HSURF[GR.iijj]*con_g
@@ -49,6 +52,9 @@ def diag_geopotential_jacobson(GR, PHI, HSURF, POTT, COLP,
         PHI[:,:,k][GR.iijj] = phi_vb - dphi
 
     PHI = exchange_BC(GR, PHI)
+
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
 
     return(PHI, PVTF, PVTFVB)
 

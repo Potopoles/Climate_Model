@@ -1,5 +1,6 @@
 import copy
 import numpy as np
+import time
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency
@@ -12,6 +13,8 @@ i_num_dif  = 1
 
 def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
                                 COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
+
+    t_start = time.time()
 
     dUFLXdt = np.zeros( (GR.nxs,GR.ny ,GR.nz) )
     dVFLXdt = np.zeros( (GR.nx ,GR.nys,GR.nz) )
@@ -61,6 +64,9 @@ def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX,
                                                                 UWIND, VWIND, k)
                 dUFLXdt[:,:,k] += diff_UWIND
                 dVFLXdt[:,:,k] += diff_VWIND
+
+    t_end = time.time()
+    GR.wind_comp_time += t_end - t_start
 
     return(dUFLXdt, dVFLXdt)
 

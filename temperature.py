@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from namelist import i_pseudo_radiation, outRate, inpRate
 from namelist import POTT_hor_dif_tau, i_temperature_tendency
 
@@ -11,6 +12,8 @@ i_radiation = 1
 
 def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, UWIND, VWIND, \
                                     UFLX, VFLX, WWIND):
+
+    t_start = time.time()
 
     dPOTTdt = np.zeros( (GR.nx ,GR.ny ,GR.nz) )
 
@@ -65,6 +68,9 @@ def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, UWIND, VWIND
                     radiation = - COLP[GR.iijj]*outRate*POTT[:,:,k][GR.iijj]**1 + \
                                     COLP[GR.iijj]*inpRate*np.cos(GR.lat_rad[GR.iijj])
                     dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + radiation
+
+    t_end = time.time()
+    GR.temp_comp_time += t_end - t_start
 
 
     return(dPOTTdt)

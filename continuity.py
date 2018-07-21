@@ -1,9 +1,12 @@
 import numpy as np
+import time
 from namelist import  i_colp_tendency, COLP_hor_dif_tau
 from boundaries import exchange_BC
 
 
 def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
+
+    t_start = time.time()
 
     for k in range(0,GR.nz):
         UFLX[:,:,k][GR.iisjj] = \
@@ -45,10 +48,15 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
     else:
         dCOLPdt =  np.zeros( (GR.nx,GR.ny) )
 
+    t_end = time.time()
+    GR.cont_comp_time += t_end - t_start
+
     return(dCOLPdt, UFLX, VFLX, FLXDIV)
 
 
 def vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND):
+
+    t_start = time.time()
 
     for ks in range(1,GR.nzs-1):
 
@@ -59,6 +67,9 @@ def vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND):
 
 
     WWIND = exchange_BC(GR, WWIND)
+
+    t_end = time.time()
+    GR.vert_comp_time += t_end - t_start
 
     return(WWIND)
 

@@ -1,7 +1,7 @@
 import numpy as np
 # GRID PARAMS
 nb = 1
-nz = 5
+nz = 10
 
 ###### TODO
 # With i curved earth = 0 there is some effect in the meridional direction
@@ -9,27 +9,29 @@ nz = 5
 # is only zonal. --> zonal pressure gradient, no coriolis, only pressure term --> meridional
 # acceleration!
 
-lat0_deg = -78
-lat1_deg = 78
+lat0_deg = -81
+lat1_deg = 81
 lon0_deg = 90
 lon1_deg = 240
-#nlon0_deg = 00
-#nlon1_deg = 360
+nlon0_deg = 00
+nlon1_deg = 360
 
-dlat_deg = 6
-dlon_deg = 6
+dlat_deg = 3
+dlon_deg = 3
 
 i_curved_earth = 1
 
 # SIMULATION
-i_sim_n_days = 1
+output_path = '../output_fine'
+output_path = '../output'
+i_sim_n_days = 0.5
 i_out_nth_hour = 3
-i_sim_n_days = 30.0
-i_out_nth_hour = 12
+i_sim_n_days = 60.0
+i_out_nth_hour = 6
 
 i_load_from_restart = 0
 i_save_to_restart = 1
-i_restart_nth_day = 5
+i_restart_nth_day = 1
 
 i_diffusion_on = 1
 
@@ -59,10 +61,10 @@ gaussian_dlat = np.pi/15
 #gaussian_dlon = 1000
 #gaussian_dlat = 1000
 u0 = 0
-UWIND_gaussian_pert = 5
+UWIND_gaussian_pert = 0
 UWIND_random_pert = 0
 v0 = 0
-VWIND_gaussian_pert = 5
+VWIND_gaussian_pert = 0
 VWIND_random_pert = 0
 pTop = 10000
 pSurf = 101350

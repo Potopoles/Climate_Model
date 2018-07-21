@@ -1,12 +1,15 @@
 import numpy as np
+import time
 from netCDF4 import Dataset
 from scipy.interpolate import interp2d
 from boundaries import exchange_BC_rigid_y, exchange_BC_periodic_x
 import pickle
 import os
-from namelist import pTop, n_topo_smooth, tau_topo_smooth
+from namelist import pTop, n_topo_smooth, tau_topo_smooth, \
+                    output_path
 from geopotential import diag_pvt_factor
 from constants import con_kappa
+from functions import IO_diagnostics
 from scipy import interpolate
 
 def load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT):
@@ -146,15 +149,22 @@ def load_topo(GR):
 
 
 def output_to_NC(GR, outCounter, COLP, PHI, UWIND, VWIND, WIND, WWIND,
-                HSURF, POTT,
+                HSURF, POTT, PVTF, PVTFVB,
                 mean_wind):
+
+    t_start = time.time()
+
     print('###########################################')
     print('###########################################')
     print('write fields')
     print('###########################################')
     print('###########################################')
 
-    filename = '../output/out'+str(outCounter).zfill(4)+'.nc'
+    VORT, PAIR, TAIR, WWIND_ms = IO_diagnostics(GR, UWIND, 
+                        VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
+                        PHI)
+
+    filename = output_path+'/out'+str(outCounter).zfill(4)+'.nc'
 
     ncf = Dataset(filename, 'w', format='NETCDF4')
     ncf.close()
@@ -163,7 +173,8 @@ def output_to_NC(GR, outCounter, COLP, PHI, UWIND, VWIND, WIND, WWIND,
 
     # DIMENSIONS
     time_dim = ncf.createDimension('time', None)
-    bnds_dim = ncf.createDimension('bnds', 2)
+    #bnds_dim = ncf.createDimension('bnds', 2)
+    bnds_dim = ncf.createDimension('bnds', 1)
     lon_dim = ncf.createDimension('lon', GR.nx)
     lons_dim = ncf.createDimension('lons', GR.nxs)
     lat_dim = ncf.createDimension('lat', GR.ny)
@@ -172,7 +183,7 @@ def output_to_NC(GR, outCounter, COLP, PHI, UWIND, VWIND, WIND, WWIND,
     levels_dim = ncf.createDimension('levels', GR.nzs)
 
     # DIMENSION VARIABLES
-    time = ncf.createVariable('time', 'f8', ('time',) )
+    dtime = ncf.createVariable('time', 'f8', ('time',) )
     bnds = ncf.createVariable('bnds', 'f8', ('bnds',) )
     lon = ncf.createVariable('lon', 'f4', ('lon',) )
     lons = ncf.createVariable('lons', 'f4', ('lons',) )
@@ -181,8 +192,9 @@ def output_to_NC(GR, outCounter, COLP, PHI, UWIND, VWIND, WIND, WWIND,
     level = ncf.createVariable('level', 'f4', ('level',) )
     levels = ncf.createVariable('levels', 'f4', ('levels',) )
 
-    time[:] = outCounter
-    bnds[:] = [0,1]
+    dtime[:] = GR.sim_time_sec/3600/24
+    #bnds[:] = [0,1]
+    bnds[:] = [0]
     lon[:] = GR.lon_rad[GR.ii,GR.nb+1]
     lons[:] = GR.lonis_rad[GR.iis,GR.nb+1]
     lat[:] = GR.lat_rad[GR.nb+1,GR.jj]
@@ -191,26 +203,39 @@ def output_to_NC(GR, outCounter, COLP, PHI, UWIND, VWIND, WIND, WWIND,
     levels[:] = GR.levels
 
     # VARIABLES
-    COLP_out = ncf.createVariable('COLP', 'f4', ('time', 'lat', 'lon',) )
+    PSURF_out = ncf.createVariable('PSURF', 'f4', ('time', 'lat', 'lon',) )
     PHI_out = ncf.createVariable('PHI', 'f4', ('time', 'level', 'lat', 'lon',) )
     UWIND_out = ncf.createVariable('UWIND', 'f4', ('time', 'level', 'lat', 'lons',) )
     VWIND_out = ncf.createVariable('VWIND', 'f4', ('time', 'level', 'lats', 'lon',) )
     WIND_out = ncf.createVariable('WIND', 'f4', ('time', 'level', 'lat', 'lon',) )
+    VORT_out = ncf.createVariable('VORT', 'f4', ('time', 'level', 'lat', 'lon',) )
     WWIND_out = ncf.createVariable('WWIND', 'f4', ('time', 'levels', 'lat', 'lon',) )
     HSURF_out = ncf.createVariable('HSURF', 'f4', ('bnds', 'lat', 'lon',) )
     POTT_out = ncf.createVariable('POTT', 'f4', ('time', 'level', 'lat', 'lon',) )
-    mean_wind_out = ncf.createVariable('mean_wind', 'f4', ('time', 'bnds',) )
+    POTTprof_out = ncf.createVariable('POTTprof', 'f4', ('time', 'level', 'lat',) )
+    PAIR_out = ncf.createVariable('PAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
+    TAIR_out = ncf.createVariable('TAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
+    #mean_wind_out = ncf.createVariable('mean_wind', 'f4', ('time', 'bnds',) )
 
-    COLP_out[-1,:,:] = COLP[GR.iijj].T
+    PSURF_out[-1,:,:] = COLP[GR.iijj].T + pTop
     HSURF_out[0,:,:] = HSURF[GR.iijj].T
     for k in range(0,GR.nz):
         PHI_out[-1,k,:,:] = PHI[:,:,k][GR.iijj].T
-        WIND_out[-1,k,:,:] = WIND[:,:,k][GR.iijj].T
         UWIND_out[-1,k,:,:] = UWIND[:,:,k][GR.iisjj].T
         VWIND_out[-1,k,:,:] = VWIND[:,:,k][GR.iijjs].T
+        WIND_out[-1,k,:,:] = WIND[:,:,k][GR.iijj].T
+        VORT_out[-1,k,:,:] = VORT[:,:,k][GR.iijj].T
         POTT_out[-1,k,:,:] = POTT[:,:,k][GR.iijj].T
+        POTTprof_out[-1,GR.nz-k-1,:] = np.mean(POTT[:,:,k][GR.iijj],axis=0)
+        TAIR_out[-1,k,:,:] = TAIR[:,:,k][GR.iijj].T
+        PAIR_out[-1,k,:,:] = PAIR[:,:,k][GR.iijj].T
     for ks in range(0,GR.nzs):
-        WWIND_out[-1,ks,:,:] = WWIND[:,:,ks][GR.iijj].T*COLP[GR.iijj].T
-    mean_wind_out[-1,:] = mean_wind
+        #WWIND_out[-1,ks,:,:] = WWIND[:,:,ks][GR.iijj].T*COLP[GR.iijj].T
+        WWIND_out[-1,ks,:,:] = WWIND_ms[:,:,ks][GR.iijj].T
+    #mean_wind_out[-1,:] = mean_wind
 
     ncf.close()
+
+
+    t_end = time.time()
+    GR.IO_comp_time += t_end - t_start

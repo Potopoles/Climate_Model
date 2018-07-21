@@ -185,6 +185,15 @@ class Grid:
             self.i_restart_nth_day = i_restart_nth_day
             self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
                     self.i_out_nth_hour*self.i_out_nth_ts
+            self.sim_time_sec = 0
+
+            self.total_comp_time = 0
+            self.IO_comp_time = 0
+            self.wind_comp_time = 0
+            self.vert_comp_time = 0
+            self.temp_comp_time = 0
+            self.cont_comp_time = 0
+            self.diag_comp_time = 0
 
 
 
