@@ -1,7 +1,47 @@
 import numpy as np
 import scipy
 from datetime import timedelta
-from radiation.namelist_radiation import solar_constant_0
+from radiation.namelist_radiation import solar_constant_0, \
+                            ext_coef_SW
+
+
+
+def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun):
+
+    # LONGWAVE
+    nu0 = 50
+    nu1 = 2500
+    dtau = ext_coef_SW * dz * rho_col
+    taus = np.zeros(GR.nzs)
+    taus[1:] = np.cumsum(dtau)
+    tau = taus[:-1] + np.diff(taus)/2
+
+    gamma1 = np.zeros(GR.nz)
+    gamma1[:] = 1.73
+
+    gamma2 = np.zeros(GR.nz)
+    gamma2[:] = 0
+
+    gamma3 = np.zeros(GR.nz)
+    gamma3[:] = 0.6
+
+    albedo_surface_SW = 0.126
+    # single scattering albedo
+    omega_s = 0
+
+    surf_reflected_SW = albedo_surface_SW * swintoa * \
+                            np.exp(-taus[GR.nzs-1]/mysun)
+    sw_dir = omega_s * solar_constant * np.exp(-tau/mysun)
+
+    A_mat, g_vec = rad_calc_SW_RTE_matrix(GR, dtau, gamma1, gamma2, gamma3,
+                            swintoa, surf_reflected_SW,
+                            albedo_surface_SW, sw_dir)
+    fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
+
+    swflxup = fluxes[range(1,len(fluxes),2)]
+    swflxdo = fluxes[range(0,len(fluxes),2)]
+
+    return(swflxup, swflxdo)
 
 
 

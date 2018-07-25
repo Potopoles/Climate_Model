@@ -2,7 +2,7 @@ import numpy as np
 from datetime import datetime
 # GRID PARAMS
 nb = 1
-nz = 3
+nz = 5
 
 GMT_initialization = datetime(2018,7,21,0,0,0)
 

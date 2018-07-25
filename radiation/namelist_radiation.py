@@ -14,5 +14,5 @@ con_c = 2.9979E8 # m/s Speed of light
 con_kb = 1.38E-23 # J/K Boltzmann's constant
 
 
-sigma_LW = 7E-5
-sigma_SW = 1.7E-5
+ext_coef_LW = 7E-5/0.6 # divide by "average" density
+ext_coef_SW = 1.7E-5/0.6

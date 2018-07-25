@@ -1,6 +1,42 @@
 import numpy as np
 import scipy
-from radiation.namelist_radiation import con_h, con_c, con_kb
+from radiation.namelist_radiation import con_h, con_c, con_kb, \
+                            ext_coef_LW
+
+def org_longwave(GR, dz, tair_col, rho_col, tsurf):
+
+    # LONGWAVE
+    nu0 = 50
+    nu1 = 2500
+    dtau = ext_coef_LW * dz * rho_col
+    taus = np.zeros(GR.nzs)
+    taus[1:] = np.cumsum(dtau)
+
+    gamma1 = np.zeros(GR.nz)
+    gamma1[:] = 1.73
+
+    gamma2 = np.zeros(GR.nz)
+    gamma2[:] = 0
+
+    emissivity_surface = 0.9
+    albedo_surface_LW = 0.126
+    # single scattering albedo
+    omega_s = 0
+
+    B_air = 2*np.pi * (1 - omega_s) * \
+            calc_planck_intensity(GR, nu0, nu1, tair_col)
+    B_surf = emissivity_surface * np.pi * \
+            calc_planck_intensity(GR, nu0, nu1, tsurf)
+
+    A_mat, g_vec = rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2,
+                        B_air, B_surf, albedo_surface_LW)
+    fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
+
+    lwflxup = fluxes[range(1,len(fluxes),2)]
+    lwflxdo = fluxes[range(0,len(fluxes),2)]
+
+    return(lwflxup, lwflxdo)
+
 
 def rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2, \
                         B_air, B_surf, albedo_surface):

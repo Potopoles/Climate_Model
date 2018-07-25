@@ -7,8 +7,8 @@ from radiation.namelist_radiation import \
 from constants import con_cp, con_g
 from radiation.shortwave import rad_solar_zenith_angle, \
        calc_current_solar_constant, rad_calc_SW_RTE_matrix 
-from radiation.longwave import rad_calc_LW_RTE_matrix, \
-        calc_planck_intensity
+from radiation.longwave import org_longwave
+from radiation.shortwave import org_shortwave
 
 
 class radiation:
@@ -89,79 +89,20 @@ class radiation:
                 j_ref = j+GR.nb
 
                 # LONGWAVE
-                nu0 = 50
-                nu1 = 2500
-                taus = np.zeros(GR.nzs)
-                taus[0] = 0
-                taus[1] = 0.114 + taus[0]
-                taus[2] = 1.272 + taus[1] 
-                taus[3] = 4.543 + taus[2]
-                dtau = np.diff(taus)
-                gamma1 = np.zeros(GR.nz)
-                gamma1[0] = 1.73 
-                gamma1[1] = 1.73
-                gamma1[2] = 1.73
-                gamma2 = np.zeros(GR.nz)
-                gamma2[0] = 0.12E-9 
-                gamma2[1] = 0.01E-9 
-                gamma2[2] = 0.003E-9 
-                emissivity_surface = 0.9
-                albedo_surface_LW = 0.126
-                # single scattering albedo
-                omega_s = 0
-
-                B_air = 2*np.pi * (1 - omega_s) * \
-                        calc_planck_intensity(GR, nu0, nu1, TAIR[i_ref,j_ref,:])
-                B_surf = emissivity_surface * np.pi * \
-                        calc_planck_intensity(GR, nu0, nu1, SOIL.TSOIL[i,j,0])
-
-                A_mat, g_vec = rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2,
-                                    B_air, B_surf, albedo_surface_LW)
-                fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
-
-                self.LWFLXUP [i,j,:] = fluxes[range(1,len(fluxes),2)]
-                self.LWFLXDO [i,j,:] = fluxes[range(0,len(fluxes),2)]
-
+                self.LWFLXUP[i,j,:], self.LWFLXDO[i,j,:] = \
+                                    org_longwave(GR, dz[i,j],
+                                                TAIR[i_ref,j_ref,:], RHO[i_ref,j_ref], \
+                                                SOIL.TSOIL[i,j,0])
 
                 # SHORTWAVE
                 if self.SWINTOA[i,j] > 0:
 
-                    taus = np.zeros(GR.nzs)
-                    taus[0] = 0
-                    taus[1] = 0.056
-                    #taus[2] = 0.3375
-                    taus[2] = 0.25
-                    #taus[3] = 1.2242
-                    taus[3] = 0.9
-                    dtau = np.diff(taus)
-                    tau = taus[:-1] + dtau/2
-                    gamma1 = np.zeros(GR.nz)
-                    gamma1[0] = 1.73 
-                    gamma1[1] = 1.73
-                    gamma1[2] = 1.73
-                    gamma2 = np.zeros(GR.nz)
-                    gamma2[0] = 0.163E-5 
-                    gamma2[1] = 0.034E-5 
-                    gamma2[2] = 0.011E-5 
-                    gamma3 = np.zeros(GR.nz)
-                    gamma3[0] = 0.5
-                    gamma3[1] = 0.5
-                    gamma3[2] = 0.5
-                    albedo_surface_SW = 0.126
-                    # single scattering albedo
-                    omega_s = 0
+                    self.SWFLXUP[i,j,:], self.SWFLXDO[i,j,:] = \
+                                        org_shortwave(GR, dz[i,j], self.solar_constant,
+                                                    RHO[i_ref,j_ref],
+                                                    self.SWINTOA[i,j],
+                                                    self.MYSUN[i,j])
 
-                    surf_reflected_SW = albedo_surface_SW * self.SWINTOA[i,j] * \
-                                            np.exp(-taus[GR.nzs-1]/self.MYSUN[i,j])
-                    sw_dir = omega_s * self.solar_constant * np.exp(-tau/self.MYSUN[i,j])
-
-                    A_mat, g_vec = rad_calc_SW_RTE_matrix(GR, dtau, gamma1, gamma2, gamma3,
-                                            self.SWINTOA[i,j], surf_reflected_SW,
-                                            albedo_surface_SW, sw_dir)
-                    fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
-
-                    self.SWFLXUP [i,j,:] = fluxes[range(1,len(fluxes),2)]
-                    self.SWFLXDO [i,j,:] = fluxes[range(0,len(fluxes),2)]
                 else:
                     self.SWFLXUP [i,j,:] = 0
                     self.SWFLXDO [i,j,:] = 0
