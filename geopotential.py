@@ -27,15 +27,16 @@ def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
 
 
 
-def diag_geopotential_jacobson(GR, PHI, HSURF, POTT, COLP,
-                                PVTF, PVTFVB):
+def diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, POTT, COLP,
+                               PVTF, PVTFVB):
 
     t_start = time.time()
 
     PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
 
-    phi_vb = HSURF[GR.iijj]*con_g
-    PHI[:,:,GR.nz-1][GR.iijj] = phi_vb - con_cp*  \
+    #phi_vb = HSURF[GR.iijj]*con_g
+    PHIVB[:,:,GR.nzs-1][GR.iijj] = HSURF[GR.iijj]*con_g
+    PHI[:,:,GR.nz-1][GR.iijj] = PHIVB[:,:,GR.nzs-1][GR.iijj] - con_cp*  \
                                 ( POTT[:,:,GR.nz-1][GR.iijj] * \
                                     (   PVTF  [:,:,GR.nz-1 ][GR.iijj]  \
                                       - PVTFVB[:,:,GR.nzs-1][GR.iijj]  ) )
@@ -44,19 +45,25 @@ def diag_geopotential_jacobson(GR, PHI, HSURF, POTT, COLP,
 
         dphi = con_cp * POTT[:,:,kp1][GR.iijj] * \
                         (PVTFVB[:,:,kp1][GR.iijj] - PVTF[:,:,kp1][GR.iijj])
-        phi_vb = PHI[:,:,kp1][GR.iijj] - dphi
+        #phi_vb = PHI[:,:,kp1][GR.iijj] - dphi
+        PHIVB[:,:,kp1][GR.iijj] = PHI[:,:,kp1][GR.iijj] - dphi
 
         # phi_k
         dphi = con_cp * POTT[:,:,k][GR.iijj] * \
                             (PVTF[:,:,k][GR.iijj] - PVTFVB[:,:,kp1][GR.iijj])
-        PHI[:,:,k][GR.iijj] = phi_vb - dphi
+        #PHI[:,:,k][GR.iijj] = phi_vb - dphi
+        PHI[:,:,k][GR.iijj] = PHIVB[:,:,kp1][GR.iijj] - dphi
+
+    dphi = con_cp * POTT[:,:,0][GR.iijj] * \
+                    (PVTFVB[:,:,0][GR.iijj] - PVTF[:,:,0][GR.iijj])
+    PHIVB[:,:,0][GR.iijj] = PHI[:,:,0][GR.iijj] - dphi
 
     PHI = exchange_BC(GR, PHI)
 
     t_end = time.time()
     GR.diag_comp_time += t_end - t_start
 
-    return(PHI, PVTF, PVTFVB)
+    return(PHI, PHIVB, PVTF, PVTFVB)
 
 
 

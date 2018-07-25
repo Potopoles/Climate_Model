@@ -8,7 +8,8 @@ from boundaries import exchange_BC
 
 def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                     UWIND, VWIND, WIND, WWIND,
-                    UFLX, VFLX, PHI, PVTF, PVTFVB):
+                    UFLX, VFLX, PHI, PVTF, PVTFVB,
+                    RAD):
 
     # PROGNOSE COLP
     dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
@@ -27,7 +28,7 @@ def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
 
     # PROGNOSE POTT
     dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, UWIND, VWIND,\
-                                            UFLX, VFLX, WWIND)
+                                            UFLX, VFLX, WWIND, RAD)
 
 
     return(dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, WWIND)
@@ -60,10 +61,10 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
     return(UWIND, VWIND, COLP, POTT)
 
 
-def diagnose_fields_jacobson(GR, PHI, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB):
+def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB):
 
-    PHI, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, HSURF, POTT, COLP,
-                                    PVTF, PVTVB)
+    PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, 
+                                                POTT, COLP, PVTF, PVTVB)
 
     for ks in range(1,GR.nzs-1):
         POTTVB[:,:,ks][GR.iijj] =   ( \
@@ -73,7 +74,8 @@ def diagnose_fields_jacobson(GR, PHI, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB):
                         POTT[:,:,ks][GR.iijj]
                                     ) / (PVTF[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj])
 
-    return(PHI, PVTF, PVTFVB, POTTVB)
+
+    return(PHI, PHIVB, PVTF, PVTFVB, POTTVB)
 
 
 

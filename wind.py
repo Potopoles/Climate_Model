@@ -41,7 +41,8 @@ def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX,
 
             if i_hor_adv:
                 # VERTICAL ADVECTION
-                vertAdv_UWIND, vertAdv_VWIND = vertical_advection(GR, WWIND_UWIND, WWIND_VWIND, k)
+                vertAdv_UWIND, vertAdv_VWIND = vertical_advection(GR, WWIND_UWIND, 
+                                                                    WWIND_VWIND, k)
                 dUFLXdt[:,:,k] += vertAdv_UWIND
                 dVFLXdt[:,:,k] += vertAdv_VWIND
 

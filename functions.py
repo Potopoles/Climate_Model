@@ -2,7 +2,7 @@ import numpy as np
 import time
 import copy
 from geopotential import diag_pvt_factor
-from constants import con_kappa, con_g
+from constants import con_kappa, con_g, con_Rd
 
 
 def diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
@@ -10,7 +10,8 @@ def diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
     mean_wind = 0
     mean_temp = 0
     for k in range(0,GR.nz):
-        WIND[:,:,k][GR.iijj] = np.sqrt( ((UWIND[:,:,k][GR.iijj] + UWIND[:,:,k][GR.iijj_ip1])/2)**2 + \
+        WIND[:,:,k][GR.iijj] = np.sqrt( ((UWIND[:,:,k][GR.iijj] + \
+                                        UWIND[:,:,k][GR.iijj_ip1])/2)**2 + \
                         ((VWIND[:,:,k][GR.iijj] + VWIND[:,:,k][GR.iijj_jp1])/2)**2 )
         vmax = max(vmax, np.max(WIND[:,:,k][GR.iijj]))
         mean_wind += np.sum( WIND[:,:,k][GR.iijj]*COLP[GR.iijj]*GR.A[GR.iijj] ) / \
@@ -55,9 +56,8 @@ def IO_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
     WWIND_ms = copy.deepcopy(WWIND)
     for ks in range(1,GR.nzs-1):
         WWIND_ms[:,:,ks][GR.iijj] = ( PHI[:,:,ks][GR.iijj] - PHI[:,:,ks-1][GR.iijj] ) / \
-                                        ( con_g * 0.5 * (GR.dsigma[ks] + GR.dsigma[ks-1] ) ) * \
+                                    ( con_g * 0.5 * (GR.dsigma[ks] + GR.dsigma[ks-1] ) ) * \
                                             WWIND[:,:,ks][GR.iijj]
-
 
 
     t_end = time.time()
@@ -97,3 +97,25 @@ def print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT):
             ' faster than reality. ' + to_go_string)
 
     
+
+
+
+def diagnose_secondary_fields(GR, PAIR, PHI, POTT, TAIR, RHO,\
+                                PVTF, PVTFVB):
+
+    t_start = time.time()
+
+    for k in range(0,GR.nz):
+        PAIR[:,:,k][GR.iijj] = 100000*np.power(PVTF[:,:,k][GR.iijj], 1/con_kappa)
+
+        TAIR[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] / \
+                np.power(100000/PAIR[:,:,k][GR.iijj], con_kappa)
+
+        RHO[:,:,k][GR.iijj] = PAIR[:,:,k][GR.iijj] / \
+                (con_Rd * TAIR[:,:,k][GR.iijj])
+
+
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
+
+    return(PAIR, TAIR, RHO)

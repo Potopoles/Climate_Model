@@ -1,33 +1,30 @@
 import numpy as np
+from datetime import datetime
 # GRID PARAMS
 nb = 1
-nz = 10
+nz = 3
 
-###### TODO
-# With i curved earth = 0 there is some effect in the meridional direction
-#from the pressure gradient term even though the pressure gradient itself
-# is only zonal. --> zonal pressure gradient, no coriolis, only pressure term --> meridional
-# acceleration!
+GMT_initialization = datetime(2018,7,21,0,0,0)
 
-lat0_deg = -81
-lat1_deg = 81
+lat0_deg = -80
+lat1_deg = 80
 lon0_deg = 90
 lon1_deg = 240
-nlon0_deg = 00
-nlon1_deg = 360
+lon0_deg = 00
+lon1_deg = 360
 
-dlat_deg = 3
-dlon_deg = 3
+dlat_deg = 10
+dlon_deg = 10
 
 i_curved_earth = 1
 
 # SIMULATION
 output_path = '../output_fine'
 output_path = '../output'
-i_sim_n_days = 0.5
-i_out_nth_hour = 3
-i_sim_n_days = 60.0
-i_out_nth_hour = 6
+i_sim_n_days = 10.0
+i_out_nth_hour = 12
+#i_sim_n_days = 100.0
+#i_out_nth_hour = 12
 
 i_load_from_restart = 0
 i_save_to_restart = 1
@@ -68,17 +65,14 @@ VWIND_gaussian_pert = 0
 VWIND_random_pert = 0
 pTop = 10000
 pSurf = 101350
-COLP_gaussian_pert = -1000
+COLP_gaussian_pert = -000
 COLP_random_pert = 000
-POTT_gaussian_pert = 2
-POTT_random_pert = 0.2
+POTT_gaussian_pert = 0
+POTT_random_pert = 0.0
 
-# PSEUDO RADIATION
-i_pseudo_radiation = 1
-inpRate = 0.00010
-outRate = 1.0E-14
-inpRate = 0.00020
-outRate = 5.0E-7
+# RADIATION
+i_radiation = 3
+
 
 
 # SURFACE
@@ -95,7 +89,7 @@ tau_topo_smooth = 0.2
 WIND_hor_dif_tau = 0
 POTT_hor_dif_tau = 0
 COLP_hor_dif_tau = 0
-if i_diffusion_on == 1:
+if i_diffusion_on:
     if dlat_deg == 8:
         WIND_hor_dif_tau = 0.5
         POTT_hor_dif_tau = 1E-6
@@ -116,3 +110,15 @@ if i_diffusion_on == 1:
         POTT_hor_dif_tau = 3E-5
     elif dlat_deg == 1:
         pass
+
+
+
+
+
+###### TODO
+# With i curved earth = 0 there is some effect in the meridional direction
+#from the pressure gradient term even though the pressure gradient itself
+# is only zonal. --> zonal pressure gradient, no coriolis, only pressure term --> meridional
+# acceleration!
+
+

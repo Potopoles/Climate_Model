@@ -3,19 +3,25 @@ from namelist import *
 from boundaries import exchange_BC_all, exchange_BC
 from IO import load_topo, load_restart_fields, load_profile
 from jacobson import diagnose_fields_jacobson
+from functions import diagnose_secondary_fields
 
 def initialize_fields(GR):
     if i_load_from_restart:
-        COLP, PHI, UWIND, VWIND, WIND, WWIND, \
+        COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
         UFLX, VFLX, UFLXMP, VFLXMP, \
-        HSURF, POTT, POTTVB, PVTF, PVTFVB = load_restart_fields(GR)
+        HSURF, POTT, TAIR, RHO, \
+        POTTVB, PVTF, PVTFVB = load_restart_fields(GR)
     else:
         # CREATE ARRAYS
         # scalars
         COLP =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
         PSURF =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        PAIR =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         PHI =    np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        PHIVB =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
         POTT =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        TAIR =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        RHO =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         POTTVB = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
         POTTVB[:] = 0
         # wind velocities
@@ -36,7 +42,6 @@ def initialize_fields(GR):
         UFLXMP = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
         VFLXMP = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
 
-
         # surface height
         HSURF = load_topo(GR) 
         if not i_use_topo:
@@ -44,7 +49,9 @@ def initialize_fields(GR):
             HSURF = exchange_BC(GR, HSURF)
         
         # INITIAL CONDITIONS
-        GR, COLP, PSURF, POTT = load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT)
+        GR, COLP, PSURF, POTT, TAIR \
+                = load_profile(GR, COLP, HSURF, PSURF, PVTF, \
+                                PVTFVB, POTT, TAIR)
         #quit()
         COLP = gaussian2D(GR, COLP, COLP_gaussian_pert, np.pi*3/4, 0, \
                             gaussian_dlon, gaussian_dlat)
@@ -71,12 +78,17 @@ def initialize_fields(GR):
             raise NotImplementedError()
             #PHI, PVTF, PVTFVB = diag_geopotential_upwind(GR, PHI, HSURF, TAIR, COLP)
         if i_spatial_discretization == 'JACOBSON':
-            PHI, PVTF, PVTFVB, POTTVB = diagnose_fields_jacobson(GR, PHI, COLP, POTT, \
-                                                    HSURF, PVTF, PVTFVB, POTTVB)
+            PHI, PHIVB, PVTF, PVTFVB, POTTVB \
+                        = diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
+                                                HSURF, PVTF, PVTFVB, POTTVB)
 
-    return(COLP, PHI, UWIND, VWIND, WIND, WWIND,
+        PAIR, TAIR, RHO = \
+                diagnose_secondary_fields(GR, PAIR, PHI, POTT, TAIR, RHO,\
+                                                PVTF, PVTFVB)
+
+    return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
-            HSURF, POTT, POTTVB, PVTF, PVTFVB)
+            HSURF, POTT, TAIR, RHO, POTTVB, PVTF, PVTFVB)
 
 
 
