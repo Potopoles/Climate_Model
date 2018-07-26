@@ -9,12 +9,13 @@ from namelist import pTop, n_topo_smooth, tau_topo_smooth, \
                     output_path
 from geopotential import diag_pvt_factor
 from constants import con_kappa
-from functions import IO_diagnostics
+from IO_helper_functions import NC_output_diagnostics
 from scipy import interpolate
 
 
 def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
-                HSURF, POTT, TAIR, RHO, PVTF, PVTFVB, RAD, SOIL):
+                HSURF, POTT, TAIR, RHO, PVTF, PVTFVB,
+                RAD, SOIL):
 
     t_start = time.time()
 
@@ -24,7 +25,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     print('###########################################')
     print('###########################################')
 
-    VORT, PAIR, TAIR, WWIND_ms = IO_diagnostics(GR, UWIND, 
+    VORT, PAIR, TAIR, WWIND_ms = NC_output_diagnostics(GR, UWIND, 
                         VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                         PHI)
 
@@ -175,8 +176,11 @@ def load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
 def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
                         UFLX, VFLX, UFLXMP, VFLXMP, \
                         HSURF, POTT, TAIR, RHO,\
-                        POTTVB, PVTF, PVTFVB):
-    filename = '../restart/'+str(GR.dlat_deg).zfill(2)+'.pkl'
+                        POTTVB, PVTF, PVTFVB,
+                        RAD, SOIL):
+    filename = '../restart/'+str(GR.dlat_deg).zfill(2) + '_' +\
+                            str(GR.dlon_deg).zfill(2) + '_' +\
+                            str(GR.nz).zfill(3)+'.pkl'
     out = {}
     out['GR'] = GR
     out['COLP'] = COLP
@@ -198,11 +202,15 @@ def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
     out['POTTVB'] = POTTVB
     out['PVTF'] = PVTF
     out['PVTFVB'] = PVTFVB
+    out['RAD'] = RAD
+    out['SOIL'] = SOIL
     with open(filename, 'wb') as f:
         pickle.dump(out, f)
 
-def load_restart_grid(dlat_deg):
-    filename = '../restart/'+str(dlat_deg).zfill(2)+'.pkl'
+def load_restart_grid(dlat_deg, dlon_deg, nz):
+    filename = '../restart/'+str(dlat_deg).zfill(2) + '_' +\
+                            str(dlon_deg).zfill(2) + '_' +\
+                            str(nz).zfill(3)+'.pkl'
     if os.path.exists(filename):
         with open(filename, 'rb') as f:
             inp = pickle.load(f)
@@ -212,7 +220,9 @@ def load_restart_grid(dlat_deg):
     return(GR)
 
 def load_restart_fields(GR):
-    filename = '../restart/'+str(GR.dlat_deg).zfill(2)+'.pkl'
+    filename = '../restart/'+str(GR.dlat_deg).zfill(2) + '_' +\
+                            str(GR.dlon_deg).zfill(2) + '_' +\
+                            str(GR.nz).zfill(3)+'.pkl'
     if os.path.exists(filename):
         with open(filename, 'rb') as f:
             inp = pickle.load(f)
@@ -235,12 +245,13 @@ def load_restart_fields(GR):
     POTTVB = inp['POTTVB']
     PVTF = inp['PVTF']
     PVTFVB = inp['PVTFVB']
+    RAD = inp['RAD']
+    SOIL = inp['SOIL'] 
     return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
                 UFLX, VFLX, UFLXMP, VFLXMP, \
                 HSURF, POTT, TAIR, RHO, \
-                POTTVB, PVTF, PVTFVB)
-
-
+                POTTVB, PVTF, PVTFVB,
+                RAD, SOIL)
 
 def load_topo(GR):
     HSURF = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)

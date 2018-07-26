@@ -9,7 +9,7 @@ class Grid:
     def __init__(self):
 
         if i_load_from_restart:
-            loadGR = load_restart_grid(dlat_deg)
+            loadGR = load_restart_grid(dlat_deg, dlat_deg, nz)
             self.__dict__ = loadGR.__dict__
             self.i_sim_n_days = i_sim_n_days
             self.nts = i_sim_n_days*3600*24/self.dt

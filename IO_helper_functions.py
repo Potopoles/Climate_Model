@@ -2,10 +2,8 @@ import numpy as np
 import time
 import copy
 from geopotential import diag_pvt_factor
-from constants import con_kappa, con_g, con_Rd
 
-
-def diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
+def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
     vmax = 0
     mean_wind = 0
     mean_temp = 0
@@ -26,7 +24,7 @@ def diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
     return(WIND, vmax, mean_wind, mean_temp, mean_colp)
 
 
-def IO_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
+def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                     PHI):
 
     t_start = time.time()
@@ -69,7 +67,7 @@ def IO_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
 
 def print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT):
 
-    WIND, vmax, mean_wind, mean_temp, mean_colp = diagnostics(GR, \
+    WIND, vmax, mean_wind, mean_temp, mean_colp = console_output_diagnostics(GR, \
                                     WIND, UWIND, VWIND, COLP, POTT)
 
     print('################')
@@ -79,43 +77,38 @@ def print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT):
             str(np.round(mean_temp,7)) + \
             '  K  COLP: ' + str(np.round(mean_colp,2)) + ' Pa')
 
-    real_time_sec = time.time() - GR.start_time
-    GR.total_comp_time = real_time_sec
-    faster_than_reality = int(GR.sim_time_sec/real_time_sec)
-    percentage_done = np.round(GR.sim_time_sec/(GR.i_sim_n_days*36*24),2)
     try:
-        to_go_sec = int((100/percentage_done - 1)*real_time_sec)
+        faster_than_reality = int(GR.sim_time_sec/GR.total_comp_time)
+        percentage_done = np.round(GR.sim_time_sec/(GR.i_sim_n_days*36*24),2)
+        to_go_sec = int((100/percentage_done - 1)*GR.total_comp_time)
         tghr = int(np.floor(to_go_sec/3600))
         tgmin = int(np.floor(to_go_sec - tghr*3600)/60)
         tgsec = int(to_go_sec - tghr*3600 - tgmin*60)
         to_go_string = 'Finish in ' + str(tghr) + ' h '+ str(tgmin) \
                             + ' m ' + str(tgsec) + ' s.'
-    except:
-        to_go_string = 'unknown'
 
-    print(str(percentage_done) + ' %   ' + str(faster_than_reality) + \
-            ' faster than reality. ' + to_go_string)
+        print(str(percentage_done) + ' %   ' + str(faster_than_reality) + \
+                ' faster than reality. ' + to_go_string)
+    except:
+        pass
+
 
     
+def print_computation_time_info(GR):
+    # FINNAL OUTPUT
+    print('DONE')
+    print('Relative amount of CPU time')
+    print('#### gernal')
+    print('IO         :  ' + str(int(100*GR.IO_comp_time/GR.total_comp_time)) + '  \t%')
+    print('#### dynamics')
+    print('total      :  ' + str(int(100*GR.dyn_comp_time/GR.total_comp_time)) + '  \t%')
+    print('horAdv     :  ' + str(int(100*GR.wind_comp_time/GR.total_comp_time)) + '  \t%')
+    print('vertAdv    :  ' + str(int(100*GR.vert_comp_time/GR.total_comp_time)) + '  \t%')
+    print('temperature:  ' + str(int(100*GR.temp_comp_time/GR.total_comp_time)) + '  \t%')
+    print('continuity :  ' + str(int(100*GR.cont_comp_time/GR.total_comp_time)) + '  \t%')
+    print('diagnostics:  ' + str(int(100*GR.diag_comp_time/GR.total_comp_time)) + '  \t%')
+    print('#### other')
+    print('radiation  :  ' + str(int(100*GR.rad_comp_time/GR.total_comp_time)) + '  \t%')
 
 
 
-def diagnose_secondary_fields(GR, PAIR, PHI, POTT, TAIR, RHO,\
-                                PVTF, PVTFVB):
-
-    t_start = time.time()
-
-    for k in range(0,GR.nz):
-        PAIR[:,:,k][GR.iijj] = 100000*np.power(PVTF[:,:,k][GR.iijj], 1/con_kappa)
-
-        TAIR[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] / \
-                np.power(100000/PAIR[:,:,k][GR.iijj], con_kappa)
-
-        RHO[:,:,k][GR.iijj] = PAIR[:,:,k][GR.iijj] / \
-                (con_Rd * TAIR[:,:,k][GR.iijj])
-
-
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
-
-    return(PAIR, TAIR, RHO)

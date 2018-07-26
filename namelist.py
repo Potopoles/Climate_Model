@@ -2,9 +2,10 @@ import numpy as np
 from datetime import datetime
 # GRID PARAMS
 nb = 1
+nz = 15
 nz = 5
 
-GMT_initialization = datetime(2018,7,21,0,0,0)
+GMT_initialization = datetime(2018,7,26,0,0,0)
 
 lat0_deg = -80
 lat1_deg = 80
@@ -21,10 +22,10 @@ i_curved_earth = 1
 # SIMULATION
 output_path = '../output_fine'
 output_path = '../output'
-i_sim_n_days = 10.0
+i_sim_n_days = 2.0
 i_out_nth_hour = 12
-#i_sim_n_days = 100.0
-#i_out_nth_hour = 12
+#i_sim_n_days = 2*365.0
+#i_out_nth_hour = 10
 
 i_load_from_restart = 0
 i_save_to_restart = 1
@@ -90,7 +91,10 @@ WIND_hor_dif_tau = 0
 POTT_hor_dif_tau = 0
 COLP_hor_dif_tau = 0
 if i_diffusion_on:
-    if dlat_deg == 8:
+    if dlat_deg == 10:
+        WIND_hor_dif_tau = 0.05
+        POTT_hor_dif_tau = 1E-7
+    elif dlat_deg == 8:
         WIND_hor_dif_tau = 0.5
         POTT_hor_dif_tau = 1E-6
     elif dlat_deg == 6:

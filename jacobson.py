@@ -7,7 +7,7 @@ from geopotential import diag_geopotential_jacobson
 from boundaries import exchange_BC
 
 def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
-                    UWIND, VWIND, WIND, WWIND,
+                    UWIND, VWIND, WWIND,
                     UFLX, VFLX, PHI, PVTF, PVTFVB,
                     RAD):
 

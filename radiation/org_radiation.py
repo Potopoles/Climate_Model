@@ -102,7 +102,6 @@ class radiation:
                                                     RHO[i_ref,j_ref],
                                                     self.SWINTOA[i,j],
                                                     self.MYSUN[i,j])
-
                 else:
                     self.SWFLXUP [i,j,:] = 0
                     self.SWFLXDO [i,j,:] = 0
@@ -110,12 +109,6 @@ class radiation:
 
         self.LWFLXNET = self.LWFLXDO - self.LWFLXUP 
         self.SWFLXNET = self.SWFLXDO - self.SWFLXUP 
-        #i = 1
-        #j = 1
-        #print(self.LWFLXNET[i,j,:])
-        #print(self.SWFLXNET[i,j,:])
-        #quit()
-
 
         for k in range(0,GR.nz):
 
@@ -127,11 +120,6 @@ class radiation:
             
             self.dPOTTdt_RAD[:,:,k] = 1/(con_cp * RHO[:,:,k][GR.iijj]) * \
                                                 self.TOTFLXDIV[:,:,k]
-
-        #i = 1
-        #j = 1
-        #print(self.dPOTTdt_RAD[i,j,:])
-        #quit()
 
 
     def pseudo_varying_radiation(self, GR, POTT):

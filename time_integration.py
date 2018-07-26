@@ -10,7 +10,7 @@ from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
 ######################################################################################
 
 def euler_forward(GR, COLP, PHI, PHIVB, POTT,
-                    UWIND, VWIND, WIND,
+                    UWIND, VWIND,
                     UFLX, VFLX, UFLXMP, VFLXMP,
                     HSURF, PVTF, PVTFVB, i_spatial_discretization,
                     RAD, SOIL):
@@ -22,7 +22,7 @@ def euler_forward(GR, COLP, PHI, PHIVB, POTT,
         raise NotImplementedError()
 
         dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt = tendencies_jacobson(GR, COLP, POTT, HSURF,
-                                                            UWIND, VWIND, WIND,
+                                                            UWIND, VWIND,
                                                             UFLX, VFLX, PHI, PVTF, PVTFVB)
 
         UWIND, VWIND, COLP, POTT = proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
@@ -44,7 +44,7 @@ def euler_forward(GR, COLP, PHI, PHIVB, POTT,
 ######################################################################################
 
 def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
-                    UWIND, VWIND, WIND, WWIND,
+                    UWIND, VWIND, WWIND,
                     UFLX, VFLX, UFLXMP, VFLXMP,
                     HSURF, PVTF, PVTFVB, i_spatial_discretization,
                     RAD, SOIL):
@@ -56,7 +56,7 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## ESTIMATE
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
-                                            UWIND, VWIND, WIND, WWIND,
+                                            UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD)
 
@@ -77,7 +77,7 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## FINAL
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
-                                            UWIND, VWIND, WIND, WWIND,
+                                            UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD)
 
@@ -125,7 +125,7 @@ def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, \
     return(COLP1, UWIND1, VWIND1, POTT1)
 
 def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
-            UWIND, VWIND, WIND, WWIND,
+            UWIND, VWIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
             HSURF, PVTF, PVTFVB, i_spatial_discretization,
             RAD, SOIL):
@@ -138,7 +138,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## level 1
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
-                                            UWIND, VWIND, WIND, WWIND,
+                                            UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD)
 
@@ -179,7 +179,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## level 2
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
-                                            UWIND_INT, VWIND_INT, WIND, WWIND,
+                                            UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD)
 
@@ -206,7 +206,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## level 3
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
-                                            UWIND_INT, VWIND_INT, WIND, WWIND,
+                                            UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD)
 
@@ -234,7 +234,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## level 4
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
-                                            UWIND_INT, VWIND_INT, WIND, WWIND,
+                                            UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD)
 
@@ -274,7 +274,7 @@ def heuns_method(GR, COLP, PHI, POTT, POTTVB,
         ########## level 1
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
-                                            UWIND, VWIND, WIND, WWIND,
+                                            UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD)
 
@@ -314,7 +314,7 @@ def heuns_method(GR, COLP, PHI, POTT, POTTVB,
         ########## level 2
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
-                                            UWIND_INT, VWIND_INT, WIND, WWIND,
+                                            UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD)
 

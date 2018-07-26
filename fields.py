@@ -3,14 +3,17 @@ from namelist import *
 from boundaries import exchange_BC_all, exchange_BC
 from IO import load_topo, load_restart_fields, load_profile
 from jacobson import diagnose_fields_jacobson
-from functions import diagnose_secondary_fields
+from diagnostics import diagnose_secondary_fields
+from radiation.org_radiation import radiation
+from soil_model import soil
 
 def initialize_fields(GR):
     if i_load_from_restart:
         COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
         UFLX, VFLX, UFLXMP, VFLXMP, \
         HSURF, POTT, TAIR, RHO, \
-        POTTVB, PVTF, PVTFVB = load_restart_fields(GR)
+        POTTVB, PVTF, PVTFVB, \
+        RAD, SOIL = load_restart_fields(GR)
     else:
         # CREATE ARRAYS
         # scalars
@@ -82,13 +85,23 @@ def initialize_fields(GR):
                         = diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
                                                 HSURF, PVTF, PVTFVB, POTTVB)
 
-        PAIR, TAIR, RHO = \
+        PAIR, TAIR, RHO, WIND = \
                 diagnose_secondary_fields(GR, PAIR, PHI, POTT, TAIR, RHO,\
-                                                PVTF, PVTFVB)
+                                            PVTF, PVTFVB, UWIND, VWIND, WIND)
+
+        # SOIL MODEL
+        SOIL = soil(GR, HSURF)
+
+        # RADIATION
+        RAD = radiation(GR, i_radiation)
+        RAD.calc_radiation(GR, POTT, TAIR, RHO, PHIVB, SOIL)
+
+
 
     return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
-            HSURF, POTT, TAIR, RHO, POTTVB, PVTF, PVTFVB)
+            HSURF, POTT, TAIR, RHO, POTTVB, PVTF, PVTFVB,
+            RAD, SOIL)
 
 
 
