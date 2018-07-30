@@ -5,7 +5,7 @@ nb = 1
 #nz = 15
 nz = 7
 nz = 10
-nz = 3
+nz = 4
 
 GMT_initialization = datetime(2018,7,26,0,0,0)
 

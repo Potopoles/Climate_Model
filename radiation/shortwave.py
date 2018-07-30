@@ -5,23 +5,229 @@ from radiation.namelist_radiation import solar_constant_0, \
                             sigma_abs_gas_SW_in, sigma_sca_gas_SW_in
 
 
+#def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
+#                    albedo_surface_SW):
+#
+#    # TODO
+#    mysun = 1
+#    g_a = 0.0
+#    albedo_surface_SW = 0
+#    #albedo_surface_SW = 0.5
+#    #albedo_surface_SW = 1
+#    sigma_abs_gas_SW = np.repeat(sigma_abs_gas_SW_in, GR.nz+1)
+#    sigma_sca_gas_SW = np.repeat(sigma_sca_gas_SW_in, GR.nz+1)
+#    sigma_abs_gas_SW[0] = 0
+#    sigma_sca_gas_SW[0] = 0
+#    #sigma_sca_gas_SW[1] = sigma_sca_gas_SW[1]*2
+#    #sigma_abs_gas_SW[:] = 0
+#    #sigma_sca_gas_SW = 0 
+#    sigma_tot_SW = sigma_abs_gas_SW + sigma_sca_gas_SW
+#    #print(sigma_tot_SW)
+#
+#    dtau = np.zeros(GR.nz+1)
+#    dtau[1:] = sigma_tot_SW[1:] * dz * rho_col
+#    taus = np.zeros(GR.nzs+1)
+#    taus[1:] = np.cumsum(dtau)
+#    tau = taus[:-1] + np.diff(taus)/2
+#
+#    #print(tau)
+#    #print(taus)
+#    #print()
+#
+#    # single scattering albedo
+#    try:
+#        omega_s = sigma_sca_gas_SW/sigma_tot_SW
+#    except:
+#        omega_s[:] = 0 
+#    omega_s[0] = 0
+#    #print(omega_s)
+#
+#    # QUADRATURE
+#    my1 = 1/(3**(1/2))
+#
+#    gamma1 = np.zeros(GR.nz+1)
+#    gamma1[:] = 3**(1/2) * (2 - omega_s * (1 + g_a) ) / 2
+#
+#    gamma2 = np.zeros(GR.nz+1)
+#    gamma2[:] = omega_s * 3**(1/2) * (1 - g_a) / 2
+#
+#    gamma3 = np.zeros(GR.nz+1)
+#    gamma3[:] = (1 - 3**(1/2) * g_a * mysun) / 2
+#
+#    gamma4 = np.zeros(GR.nz+1)
+#    gamma4[:] = 1 - gamma3
+#
+#    #print('gammas:')
+#    #print(gamma1)
+#    #print(gamma2)
+#    #print(gamma3)
+#    #print(gamma4)
+#    #print()
+#
+#    lamb_2str = np.sqrt(gamma1**2 - gamma2**2)
+#    tau_2str = gamma2 / (gamma1 + lamb_2str)
+#        
+#    #print(lamb_2str)
+#    #print(tau_2str)
+#    #print()
+#
+#    surf_reflected_SW = albedo_surface_SW * mysun * solar_constant * \
+#                            np.exp(-taus[-1]/mysun)
+#    #print(surf_reflected_SW)
+#    #print()
+#
+#    #sw_dir = omega_s * solar_constant * np.exp(-tau/mysun)
+#    #A_mat, g_vec = rad_calc_SW_RTE_matrix(GR, dtau, gamma1, gamma2, gamma3,
+#    #                        swintoa, surf_reflected_SW,
+#    #                        albedo_surface_SW, sw_dir)
+#    A_mat, src = rad_calc_SW_RTE_matrix_toon(GR, dtau, gamma1, gamma2,
+#                            gamma3, gamma4, my1, solar_constant,
+#                            lamb_2str, tau_2str, tau, taus, omega_s, mysun,
+#                            surf_reflected_SW,
+#                            albedo_surface_SW)
+#    #fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
+#
+#    #swflxup = fluxes[range(1,len(fluxes),2)]
+#    #swflxdo = fluxes[range(0,len(fluxes),2)]
+#    #print(swflxup)
+#    #print(swflxdo)
+#
+#    #if np.any(swflxup > swflxdo):
+#    #    print(swflxup)
+#    #    print(swflxdo)
+#    #    raise ValueError('sw upward flux > downward flux!')
+#    #quit()
+#    return(swflxup, swflxdo)
+#
+#
+#def rad_calc_SW_RTE_matrix_toon(GR, dtau, gamma1, gamma2,
+#        gamma3, gamma4, my1, solar_constant,
+#        lamb_2str, tau_2str, tau, taus, omega_s, mysun,
+#        surf_reflected_SW, albedo_surface_SW):
+#
+#    print('yolo')
+#
+#    e1 = 1        + tau_2str * np.exp( - lamb_2str * dtau )
+#    e2 = 1        - tau_2str * np.exp( - lamb_2str * dtau )
+#    e3 = tau_2str +            np.exp( - lamb_2str * dtau )
+#    e4 = tau_2str -            np.exp( - lamb_2str * dtau )
+#    #print('e terms:')
+#    #print(e1)
+#    #print(e2)
+#    #print(e3)
+#    #print(e4)
+#    #print()
+#
+#    lodd = np.arange(3,2*(GR.nz+1),2) - 1
+#    leven = np.arange(2,2*(GR.nz+1),2) - 1
+#    ninds = np.arange(0,(GR.nz+1)-1)
+#    nindsp1 = np.arange(1,(GR.nz+1))
+#    #print('indices')
+#    #print(lodd)
+#    #print(leven)
+#    #print(ninds)
+#    #print(nindsp1)
+#    #print()
+#
+#    dm1 = np.full(2*(GR.nz+1), np.nan)
+#    dm1[lodd]  = e2[ninds  ] * e3[ninds  ] - e4[ninds  ] * e1[ninds  ]
+#    dm1[leven] = e2[nindsp1] * e1[ninds  ] - e3[ninds  ] * e4[nindsp1]
+#    dm1[0] = 0
+#    dm1[-1] = e1[-1] - albedo_surface_SW * e3[-1]
+#    #print(dm1)
+#
+#    d0 = np.full(2*(GR.nz+1), np.nan)
+#    d0[lodd]  = e1[ninds  ] * e1[nindsp1] - e3[ninds  ] * e3[nindsp1]
+#    d0[leven] = e2[ninds  ] * e2[nindsp1] - e4[ninds  ] * e4[nindsp1]
+#    d0[0] = e1[0]
+#    d0[-1] = e2[-1] - albedo_surface_SW * e4[-1]
+#    #print(d0)
+#
+#    dp1 = np.full(2*(GR.nz+1), np.nan)
+#    dp1[lodd]  = e3[ninds  ] * e4[nindsp1] - e1[ninds  ] * e2[nindsp1]
+#    dp1[leven] = e1[nindsp1] * e4[nindsp1] - e2[nindsp1] * e3[nindsp1]
+#    dp1[0] = - e2[0]
+#    dp1[-1] = 0
+#    #print(dp1)
+#    #print()
+#
+#    A_mat = scipy.sparse.diags( (dm1[1:], d0, dp1),
+#                                ( -1,  0,   1),
+#                                ((GR.nz+1)*2, (GR.nz+1)*2), format='csr' )
+#    #print(A_mat.todense())
+#    #print()
+#
+#
+#    print('C terms')
+#    Cp_tau = omega_s * solar_constant * np.exp( - (taus[1:]) / mysun ) * \
+#            ( (gamma1 - 1 / mysun) * gamma3 + gamma4 * gamma2 ) / \
+#            ( lamb_2str**2 - 1 / mysun**2 )
+#    print(Cp_tau)
+#    Cp_0 = omega_s * solar_constant * np.exp( - (taus[:-1]) / mysun ) * \
+#            ( (gamma1 - 1 / mysun) * gamma3 + gamma4 * gamma2 ) / \
+#            ( lamb_2str**2 - 1 / mysun**2 )
+#    print(Cp_0)
+#    Cm_tau = omega_s * solar_constant * np.exp( - (taus[1:]) / mysun ) * \
+#            ( (gamma1 + 1 / mysun) * gamma4 + gamma2 * gamma3 ) / \
+#            ( lamb_2str**2 - 1 / mysun**2 )
+#    print(Cm_tau)
+#    Cm_0 = omega_s * solar_constant * np.exp( - (taus[:-1]) / mysun ) * \
+#            ( (gamma1 + 1 / mysun) * gamma4 + gamma2 * gamma3 ) / \
+#            ( lamb_2str**2 - 1 / mysun**2 )
+#    print(Cm_0)
+#     
+#    src = np.full(2*(GR.nz+1), np.nan)
+#    src[lodd]  = e3[ninds ]  * (Cp_0  [nindsp1] - Cp_tau[ninds  ]) + \
+#                 e1[ninds ]  * (Cm_tau[ninds  ] - Cm_0  [nindsp1])
+#    src[leven] = e2[nindsp1] * (Cp_0  [nindsp1] - Cp_tau[ninds  ]) + \
+#                 e4[nindsp1] * (Cm_0  [nindsp1] - Cm_tau[ninds  ])
+#    src[0] = 0 - Cm_0[0]
+#    src[-1] = surf_reflected_SW - Cp_tau[-1] + albedo_surface_SW * Cm_tau[-1]
+#    print('src')
+#    print(src)
+#    print()
+#
+#    fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
+#
+#    Y1 = fluxes[range(0,len(fluxes),2)]
+#    Y2 = fluxes[range(1,len(fluxes),2)]
+#    print(Y1)
+#    print(Y2)
+#    print()
+#
+#    down_diffuse = Y2 * (e2 - e4) - Cm_tau
+#    #down_diffuse = Y1 * (e1 - e3) - Cm_tau
+#    down_direct = - mysun * solar_constant * np.exp( - taus[1:] / mysun)
+#    up_diffuse = Y1 * (e1 - e3) + Cp_tau
+#    #up_diffuse = Y2 * (e2 - e4) + Cp_tau
+#    print(down_diffuse)
+#    print(down_direct)
+#    print(up_diffuse)
+#
+#    net_flux = down_diffuse + down_direct + up_diffuse 
+#    #net_flux = Y1 * (e1 - e3) + Y2 * (e2 - e4) + Cp_tau - Cm_tau - \
+#    #            mysun * solar_constant * np.exp( - taus[1:] / mysun)
+#
+#    print(net_flux)
+#    quit()
+#    return(A_mat, src)
 
 def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
                     albedo_surface_SW):
 
     # TODO
+    mysun = 1.0
     g_a = 0.0
     albedo_surface_SW = 0
-    #albedo_surface_SW = 0.5
+    albedo_surface_SW = 0.5
     #albedo_surface_SW = 1
     sigma_abs_gas_SW = np.repeat(sigma_abs_gas_SW_in, GR.nz)
     sigma_sca_gas_SW = np.repeat(sigma_sca_gas_SW_in, GR.nz)
     #sigma_sca_gas_SW[1] = sigma_sca_gas_SW[1]*2
     #sigma_abs_gas_SW[:] = 0
-    #sigma_sca_gas_SW = 0 
+    #sigma_sca_gas_SW[:] = 0 
     sigma_tot_SW = sigma_abs_gas_SW + sigma_sca_gas_SW
     print(sigma_tot_SW)
-
 
     dtau = sigma_tot_SW * dz * rho_col
     taus = np.zeros(GR.nzs)
@@ -33,10 +239,8 @@ def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
     #print()
 
     # single scattering albedo
-    try:
-        omega_s = sigma_sca_gas_SW/sigma_tot_SW
-    except:
-        omega_s = 0 
+    omega_s = sigma_sca_gas_SW/sigma_tot_SW
+    omega_s[np.isnan(omega_s)] = 0
 
     # QUADRATURE
     my1 = 1/(3**(1/2))
@@ -67,9 +271,8 @@ def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
     #print(tau_2str)
     #print()
 
-    surf_reflected_SW = albedo_surface_SW * swintoa * \
+    surf_reflected_SW = albedo_surface_SW * mysun * solar_constant * \
                             np.exp(-taus[-1]/mysun)
-    #print('swintoa ' + str(swintoa))
     #print(surf_reflected_SW)
     #print()
 
@@ -80,7 +283,7 @@ def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
     A_mat, src = rad_calc_SW_RTE_matrix_toon(GR, dtau, gamma1, gamma2,
                             gamma3, gamma4, my1, solar_constant,
                             lamb_2str, tau_2str, tau, taus, omega_s, mysun,
-                            swintoa, surf_reflected_SW,
+                            surf_reflected_SW,
                             albedo_surface_SW)
     #fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
 
@@ -96,11 +299,10 @@ def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
     #quit()
     return(swflxup, swflxdo)
 
-
 def rad_calc_SW_RTE_matrix_toon(GR, dtau, gamma1, gamma2,
         gamma3, gamma4, my1, solar_constant,
         lamb_2str, tau_2str, tau, taus, omega_s, mysun,
-        swintoa, surf_reflected_SW, albedo_surface_SW):
+        surf_reflected_SW, albedo_surface_SW):
 
     print('yolo')
 
@@ -108,12 +310,12 @@ def rad_calc_SW_RTE_matrix_toon(GR, dtau, gamma1, gamma2,
     e2 = 1        - tau_2str * np.exp( - lamb_2str * dtau )
     e3 = tau_2str +            np.exp( - lamb_2str * dtau )
     e4 = tau_2str -            np.exp( - lamb_2str * dtau )
-    print('e terms:')
-    print(e1)
-    print(e2)
-    print(e3)
-    print(e4)
-    print()
+    #print('e terms:')
+    #print(e1)
+    #print(e2)
+    #print(e3)
+    #print(e4)
+    #print()
 
     lodd = np.arange(3,2*GR.nz,2) - 1
     leven = np.arange(2,2*GR.nz,2) - 1
@@ -151,9 +353,8 @@ def rad_calc_SW_RTE_matrix_toon(GR, dtau, gamma1, gamma2,
     A_mat = scipy.sparse.diags( (dm1[1:], d0, dp1),
                                 ( -1,  0,   1),
                                 (GR.nz*2, GR.nz*2), format='csr' )
-    print(A_mat.todense())
-    print()
-
+    #print(A_mat.todense())
+    #print()
 
     print('C terms')
     Cp_tau = omega_s * solar_constant * np.exp( - (taus[1:]) / mysun ) * \
@@ -193,8 +394,10 @@ def rad_calc_SW_RTE_matrix_toon(GR, dtau, gamma1, gamma2,
     print()
 
     down_diffuse = Y2 * (e2 - e4) - Cm_tau
+    #down_diffuse = Y1 * (e1 - e3) - Cm_tau
     down_direct = - mysun * solar_constant * np.exp( - taus[1:] / mysun)
     up_diffuse = Y1 * (e1 - e3) + Cp_tau
+    #up_diffuse = Y2 * (e2 - e4) + Cp_tau
     print(down_diffuse)
     print(down_direct)
     print(up_diffuse)
