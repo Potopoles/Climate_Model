@@ -3,7 +3,7 @@ import time
 from datetime import timedelta
 from grid import Grid
 from fields import initialize_fields
-from IO import output_to_NC, write_restart
+from IO import constant_fields_to_NC, output_to_NC, write_restart
 from namelist import i_time_stepping, i_spatial_discretization, \
                     i_load_from_restart, i_save_to_restart, \
                     i_radiation
@@ -26,7 +26,7 @@ COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
 UFLX, VFLX, UFLXMP, VFLXMP, \
 HSURF, POTT, TAIR, RHO, POTTVB, PVTF, PVTFVB, \
 RAD, SOIL = initialize_fields(GR)
-
+constant_fields_to_NC(GR, HSURF, RAD, SOIL)
 
 if i_load_from_restart:
     outCounter = GR.outCounter
@@ -85,7 +85,7 @@ while GR.ts < GR.nts:
         #WIND, vmax, mean_wind, mean_temp, mean_colp = diagnostics(GR, \
         #                                WIND, UWIND, VWIND, COLP, POTT)
         output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
-                    HSURF, POTT, TAIR, RHO, PVTF, PVTFVB,
+                    POTT, TAIR, RHO, PVTF, PVTFVB,
                     RAD, SOIL)
 
     # WRITE RESTART FILE

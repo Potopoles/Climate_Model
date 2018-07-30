@@ -3,7 +3,7 @@ import scipy
 from radiation.namelist_radiation import con_h, con_c, con_kb, \
                             ext_coef_LW
 
-def org_longwave(GR, dz, tair_col, rho_col, tsurf):
+def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW):
 
     # LONGWAVE
     nu0 = 50
@@ -19,7 +19,7 @@ def org_longwave(GR, dz, tair_col, rho_col, tsurf):
     gamma2[:] = 0
 
     emissivity_surface = 0.9
-    albedo_surface_LW = 0.126
+    #albedo_surface_LW = 0.126
     # single scattering albedo
     omega_s = 0
 
@@ -48,6 +48,8 @@ def rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2, \
 
     C1 = 0.5 * dtau * gamma1
     C2 = 0.5 * dtau * gamma2
+    #C1[:] = 0
+    #C2[:] = 0
 
     d0_ = np.repeat(1+C1, 2)
     d0_[range(1,len(d0_),2)] = - d0_[range(1,len(d0_),2)]
@@ -66,7 +68,8 @@ def rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2, \
 
     dm1_ = np.repeat(-C2, 2)
     dm1_[range(1,len(dm1_),2)] = - dm1_[range(1,len(dm1_),2)]
-    dm1 = np.zeros(2*GR.nz+2); dm1[:-2] = dm1_; dm1[-2] = -albedo_surface
+    #dm1 = np.zeros(2*GR.nz+2); dm1[:-2] = dm1_; dm1[-2] = -albedo_surface
+    dm1 = np.zeros(2*GR.nz+2); dm1[:-2] = dm1_; dm1[-2] = albedo_surface
     #print(dm1)
 
     dm2_ = np.repeat(1-C1, 2)

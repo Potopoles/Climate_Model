@@ -6,9 +6,10 @@ from radiation.namelist_radiation import \
         rad_nth_hour 
 from constants import con_cp, con_g
 from radiation.shortwave import rad_solar_zenith_angle, \
-       calc_current_solar_constant, rad_calc_SW_RTE_matrix 
+       calc_current_solar_constant
 from radiation.longwave import org_longwave
 from radiation.shortwave import org_shortwave
+import matplotlib.pyplot as plt
 
 
 class radiation:
@@ -78,8 +79,18 @@ class radiation:
 
         self.SOLZEN = rad_solar_zenith_angle(GR, self.SOLZEN)
         self.MYSUN = np.cos(self.SOLZEN)
+        self.MYSUN[self.MYSUN < 0] = 0
         self.solar_constant = calc_current_solar_constant(GR) 
-        self.SWINTOA = self.solar_constant * np.maximum(np.cos(self.SOLZEN), 0)
+        #self.SWINTOA = self.solar_constant * np.maximum(np.cos(self.SOLZEN), 0)
+        self.SWINTOA = self.solar_constant * np.cos(self.SOLZEN)
+
+        #import matplotlib.pyplot as plt
+        ##plt.contourf(self.SOLZEN.T)
+        ##self.MYSUN[self.MYSUN < 0] = 0
+        #plt.contourf(self.MYSUN.T)
+        #plt.colorbar()
+        #plt.show()
+        #quit()
        
         for i in range(0,GR.nx):
             #i = 10
@@ -88,27 +99,41 @@ class radiation:
                 #j = 10
                 j_ref = j+GR.nb
 
+
                 # LONGWAVE
                 self.LWFLXUP[i,j,:], self.LWFLXDO[i,j,:] = \
                                     org_longwave(GR, dz[i,j],
                                                 TAIR[i_ref,j_ref,:], RHO[i_ref,j_ref], \
-                                                SOIL.TSOIL[i,j,0])
+                                                SOIL.TSOIL[i,j,0], SOIL.ALBEDO[i,j])
 
                 # SHORTWAVE
-                if self.SWINTOA[i,j] > 0:
+                if self.MYSUN[i,j] > 0:
 
                     self.SWFLXUP[i,j,:], self.SWFLXDO[i,j,:] = \
                                         org_shortwave(GR, dz[i,j], self.solar_constant,
                                                     RHO[i_ref,j_ref],
                                                     self.SWINTOA[i,j],
-                                                    self.MYSUN[i,j])
+                                                    self.MYSUN[i,j],
+                                                    SOIL.ALBEDO[i,j])
                 else:
                     self.SWFLXUP [i,j,:] = 0
                     self.SWFLXDO [i,j,:] = 0
 
+        print(np.max(self.SWFLXUP[:,:,-1]))
+        print(np.max(self.SWFLXDO[:,:,-1]))
+        #quit()
 
         self.LWFLXNET = self.LWFLXDO - self.LWFLXUP 
         self.SWFLXNET = self.SWFLXDO - self.SWFLXUP 
+
+        i = 6
+        j = 5
+        plt.plot(self.SWFLXUP[i,j,:], ALTVB[i,j,:])
+        plt.plot(self.SWFLXDO[i,j,:], ALTVB[i,j,:])
+        plt.plot(self.SWFLXNET[i,j,:], ALTVB[i,j,:])
+        plt.axvline(x=0, color='k')
+        plt.show()
+        quit()
 
         for k in range(0,GR.nz):
 

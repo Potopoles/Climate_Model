@@ -14,7 +14,7 @@ from scipy import interpolate
 
 
 def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
-                HSURF, POTT, TAIR, RHO, PVTF, PVTFVB,
+                POTT, TAIR, RHO, PVTF, PVTFVB,
                 RAD, SOIL):
 
     t_start = time.time()
@@ -68,7 +68,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     levels[:] = GR.levels
 
     # VARIABLES
-    HSURF_out = ncf.createVariable('HSURF', 'f4', ('bnds', 'lat', 'lon',) )
+    ALBSFC_out = ncf.createVariable('ALBSFC', 'f4', ('time', 'lat', 'lon',) )
     PSURF_out = ncf.createVariable('PSURF', 'f4', ('time', 'lat', 'lon',) )
     PAIR_out = ncf.createVariable('PAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
     PHI_out = ncf.createVariable('PHI', 'f4', ('time', 'level', 'lat', 'lon',) )
@@ -83,15 +83,30 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     RHO_out = ncf.createVariable('RHO', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # RADIATION VARIABLES
-    SWINTOA_out = ncf.createVariable('SWINTOA', 'f4', ('time', 'lat', 'lon',) )
-    LWOUTOA_out = ncf.createVariable('LWOUTOA', 'f4', ('time', 'lat', 'lon',) )
+    SWFLXUP_out = ncf.createVariable('SWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
+    SWFLXDO_out = ncf.createVariable('SWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
+    SWFLXNET_out = ncf.createVariable('SWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
+    LWFLXUP_out = ncf.createVariable('LWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
+    LWFLXDO_out = ncf.createVariable('LWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
+    LWFLXNET_out = ncf.createVariable('LWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
+    #SWINTOA_out = ncf.createVariable('SWINTOA', 'f4', ('time', 'lat', 'lon',) )
+    #SWNETSFC_out = ncf.createVariable('SWNETSFC', 'f4', ('time', 'lat', 'lon',) )
+    #SWOUTSFC_out = ncf.createVariable('SWOUTSFC', 'f4', ('time', 'lat', 'lon',) )
+    #SWINSFC_out = ncf.createVariable('SWINSFC', 'f4', ('time', 'lat', 'lon',) )
+    #LWOUTOA_out = ncf.createVariable('LWOUTOA', 'f4', ('time', 'lat', 'lon',) )
 
     # SOIL VARIABLES
     TSURF_out = ncf.createVariable('TSURF', 'f4', ('time', 'lat', 'lon',) )
 
-    HSURF_out[0,:,:] = HSURF[GR.iijj].T
+    ALBSFC_out[0,:,:] = SOIL.ALBEDO.T
     PSURF_out[-1,:,:] = COLP[GR.iijj].T + pTop
     TSURF_out[-1,:,:] = SOIL.TSOIL[:,:,0].T
+    #SWINTOA_out[-1,:,:] = RAD.SWINTOA.T
+    #SWNETSFC_out[-1,:,:] = RAD.SWFLXNET[:,:,-1].T
+    #SWINSFC_out[-1,:,:] = RAD.SWFLXDO[:,:,-1].T
+    #SWOUTSFC_out[-1,:,:] = RAD.SWFLXUP[:,:,-1].T
+    #LWOUTOA_out[-1,:,:] = -RAD.LWFLXNET[:,:,0].T
+
     for k in range(0,GR.nz):
         PAIR_out[-1,k,:,:] = PAIR[:,:,k][GR.iijj].T
         PHI_out[-1,k,:,:] = PHI[:,:,k][GR.iijj].T
@@ -104,19 +119,84 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
         TAIR_out[-1,k,:,:] = TAIR[:,:,k][GR.iijj].T
         RHO_out[-1,k,:,:] = RHO[:,:,k][GR.iijj].T
 
-        SWINTOA_out[-1,:,:] = RAD.SWINTOA.T
-        LWOUTOA_out[-1,:,:] = -RAD.LWFLXNET[:,:,0].T
-
     for ks in range(0,GR.nzs):
         #WWIND_out[-1,ks,:,:] = WWIND[:,:,ks][GR.iijj].T*COLP[GR.iijj].T
         WWIND_out[-1,ks,:,:] = WWIND_ms[:,:,ks][GR.iijj].T
-    #mean_wind_out[-1,:] = mean_wind
+
+        SWFLXUP_out[-1,ks,:,:] = RAD.SWFLXUP[:,:,ks].T
+        SWFLXDO_out[-1,ks,:,:] = RAD.SWFLXDO[:,:,ks].T
+        SWFLXNET_out[-1,ks,:,:] = RAD.SWFLXNET[:,:,ks].T
+        LWFLXUP_out[-1,ks,:,:] = RAD.LWFLXUP[:,:,ks].T
+        LWFLXDO_out[-1,ks,:,:] = RAD.LWFLXDO[:,:,ks].T
+        LWFLXNET_out[-1,ks,:,:] = RAD.LWFLXNET[:,:,ks].T
 
     ncf.close()
 
 
     t_end = time.time()
     GR.IO_comp_time += t_end - t_start
+
+
+
+def constant_fields_to_NC(GR, HSURF, RAD, SOIL):
+
+    t_start = time.time()
+
+    print('###########################################')
+    print('###########################################')
+    print('write constant fields')
+    print('###########################################')
+    print('###########################################')
+
+    filename = output_path+'/constants.nc'
+
+    ncf = Dataset(filename, 'w', format='NETCDF4')
+    ncf.close()
+
+    ncf = Dataset(filename, 'a', format='NETCDF4')
+
+    # DIMENSIONS
+    lon_dim = ncf.createDimension('lon', GR.nx)
+    lons_dim = ncf.createDimension('lons', GR.nxs)
+    lat_dim = ncf.createDimension('lat', GR.ny)
+    lats_dim = ncf.createDimension('lats', GR.nys)
+    level_dim = ncf.createDimension('level', GR.nz)
+    levels_dim = ncf.createDimension('levels', GR.nzs)
+
+    # DIMENSION VARIABLES
+    lon = ncf.createVariable('lon', 'f4', ('lon',) )
+    lons = ncf.createVariable('lons', 'f4', ('lons',) )
+    lat = ncf.createVariable('lat', 'f4', ('lat',) )
+    lats = ncf.createVariable('lats', 'f4', ('lats',) )
+    level = ncf.createVariable('level', 'f4', ('level',) )
+    levels = ncf.createVariable('levels', 'f4', ('levels',) )
+
+    lon[:] = GR.lon_rad[GR.ii,GR.nb+1]
+    lons[:] = GR.lonis_rad[GR.iis,GR.nb+1]
+    lat[:] = GR.lat_rad[GR.nb+1,GR.jj]
+    lats[:] = GR.latjs_rad[GR.nb+1,GR.jjs]
+    level[:] = GR.level
+    levels[:] = GR.levels
+
+    # VARIABLES
+    HSURF_out = ncf.createVariable('HSURF', 'f4', ('lat', 'lon',) )
+
+    # RADIATION VARIABLES
+
+    # SOIL VARIABLES
+    OCEANMSK_out = ncf.createVariable('OCEANMSK', 'f4', ('lat', 'lon',) )
+
+    HSURF_out[:,:] = SOIL.HSURF[GR.iijj].T
+    OCEANMSK_out[:,:] = SOIL.OCEANMSK.T
+    for k in range(0,GR.nz):
+        pass
+
+    ncf.close()
+
+    t_end = time.time()
+    GR.IO_comp_time += t_end - t_start
+
+
 
 
 def load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):

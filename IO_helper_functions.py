@@ -2,6 +2,7 @@ import numpy as np
 import time
 import copy
 from geopotential import diag_pvt_factor
+from constants import con_kappa, con_g 
 
 def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
     vmax = 0

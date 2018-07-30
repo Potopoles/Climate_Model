@@ -15,4 +15,5 @@ con_kb = 1.38E-23 # J/K Boltzmann's constant
 
 
 ext_coef_LW = 7E-5/0.6 # divide by "average" density
-ext_coef_SW = 1.7E-5/0.6
+sigma_abs_gas_SW_in = 1.7E-5/0.6
+sigma_sca_gas_SW_in = 1.72E-5 # lamb = 0.5 mym, jacobson page 301
