@@ -68,7 +68,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     levels[:] = GR.levels
 
     # VARIABLES
-    ALBSFCSW_out = ncf.createVariable('ALBSFCSW', 'f4', ('time', 'lat', 'lon',) )
+    ALBSFC_out = ncf.createVariable('ALBSFC', 'f4', ('time', 'lat', 'lon',) )
     PSURF_out = ncf.createVariable('PSURF', 'f4', ('time', 'lat', 'lon',) )
     PAIR_out = ncf.createVariable('PAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
     PHI_out = ncf.createVariable('PHI', 'f4', ('time', 'level', 'lat', 'lon',) )
@@ -97,7 +97,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     # SOIL VARIABLES
     TSURF_out = ncf.createVariable('TSURF', 'f4', ('time', 'lat', 'lon',) )
 
-    ALBSFCSW_out[0,:,:] = SOIL.ALBEDOSW.T
+    ALBSFC_out[0,:,:] = SOIL.ALBEDO.T
     PSURF_out[-1,:,:] = COLP[GR.iijj].T + pTop
     TSURF_out[-1,:,:] = SOIL.TSOIL[:,:,0].T
 
@@ -253,7 +253,7 @@ def load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
 
 def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
                         UFLX, VFLX, UFLXMP, VFLXMP, \
-                        HSURF, POTT, TAIR, TAIRVB, RHO,\
+                        HSURF, POTT, TAIR, RHO,\
                         POTTVB, PVTF, PVTFVB,
                         RAD, SOIL):
     filename = '../restart/'+str(GR.dlat_deg).zfill(2) + '_' +\
@@ -276,7 +276,6 @@ def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
     out['HSURF'] = HSURF
     out['POTT'] = POTT
     out['TAIR'] = TAIR
-    out['TAIRVB'] = TAIRVB
     out['RHO'] = RHO
     out['POTTVB'] = POTTVB
     out['PVTF'] = PVTF
@@ -320,7 +319,6 @@ def load_restart_fields(GR):
     HSURF = inp['HSURF']
     POTT = inp['POTT']
     TAIR = inp['TAIR']
-    TAIRVB = inp['TAIRVB']
     RHO = inp['RHO']
     POTTVB = inp['POTTVB']
     PVTF = inp['PVTF']
@@ -329,7 +327,7 @@ def load_restart_fields(GR):
     SOIL = inp['SOIL'] 
     return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
                 UFLX, VFLX, UFLXMP, VFLXMP, \
-                HSURF, POTT, TAIR, TAIRVB, RHO, \
+                HSURF, POTT, TAIR, RHO, \
                 POTTVB, PVTF, PVTFVB,
                 RAD, SOIL)
 

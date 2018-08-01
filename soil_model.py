@@ -15,16 +15,15 @@ class soil:
         self.HSURF = HSURF
         
         self.TSOIL = np.full( ( GR.nx, GR.ny, self.nz_soil ), np.nan)
-        self.TSOIL[:,:,0] = 286
+        self.TSOIL[:,:,0] = 284
         #self.TSOIL[:,:,0] = 254
 
         # mask: ocean = 1, other = 0
         self.OCEANMSK = np.zeros( ( GR.nx, GR.ny ), np.int )
         self.OCEANMSK[self.HSURF[GR.iijj] <= 100] = 1
 
-        self.ALBEDOSW = np.full( ( GR.nx, GR.ny ), np.nan) 
-        self.ALBEDOLW = np.full( ( GR.nx, GR.ny ), np.nan) 
-        self.ALBEDOSW, self.ALBEDOLW = self.calc_albedo(GR, self.ALBEDOSW, self.ALBEDOLW, self.TSOIL, self.OCEANMSK)
+        self.ALBEDO = np.full( ( GR.nx, GR.ny ), np.nan) 
+        self.ALBEDO = self.calc_albedo(GR, self.ALBEDO, self.TSOIL, self.OCEANMSK)
 
 
     def advance_timestep(self, GR, RAD):
@@ -35,18 +34,24 @@ class soil:
 
         self.TSOIL[:,:,0] = self.TSOIL[:,:,0] + GR.dt * dTSURFdt
 
-        self.ALBEDOSW, self.ALBEDOLW = self.calc_albedo(GR, self.ALBEDOSW, self.ALBEDOLW, self.TSOIL, self.OCEANMSK)
+        self.ALBEDO = self.calc_albedo(GR, self.ALBEDO, self.TSOIL, self.OCEANMSK)
 
 
-    def calc_albedo(self, GR, ALBEDOSW, ALBEDOLW, TSOIL, OCEANMSK):
+    def calc_albedo(self, GR, ALBEDO, TSOIL, OCEANMSK):
         # forest
-        ALBEDOSW[:] = 0.2
-        ALBEDOLW[:] = 0.2
+        ALBEDO[:] = 0.2
         # ocean
-        ALBEDOSW[OCEANMSK == 1] = 0.05
-        ALBEDOLW[OCEANMSK == 1] = 0.05
+        ALBEDO[OCEANMSK == 1] = 0.05
         # land and sea ice
-        ALBEDOSW[TSOIL[:,:,0] <= 273.15] = 0.7
-        ALBEDOLW[TSOIL[:,:,0] <= 273.15] = 0.3
+        ALBEDO[TSOIL[:,:,0] <= 273.15] = 0.8
 
-        return(ALBEDOSW, ALBEDOLW)
+        #ii = 1:GR.nx
+        #jj = 1:GR.ny
+
+        #for i in range(0,3):
+        #    ALBEDO[ii,jj] = ALBEDO[ii,jj] + 0.1*\
+        #                                (ALBEDO[ii-1,jj] + ALBEDO[ii+1,jj] + \
+        #                                ALBEDO[ii,jj+1] + ALBEDO[ii,jj+1] - \
+        #                                4*ALBEDO[ii,jj]) 
+
+        return(ALBEDO)

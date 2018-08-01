@@ -1,30 +1,29 @@
 import numpy as np
 import scipy
 from radiation.namelist_radiation import con_h, con_c, con_kb, \
-                            sigma_abs_gas_LW_in, sigma_sca_gas_LW_in, \
-                            emissivity_surf
+                            ext_coef_LW
 
 
-#def org_longwave(GR, dz, tair_vb_col, rho_col, tsurf, albedo_surface_LW):
+#def org_longwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
+#                    albedo_surface_SW):
 #
 #    # TODO
-#    nu0 = 50
-#    nu1 = 2500
+#    #mysun = 1.0
 #    g_a = 0.0
-#    albedo_surface_LW = 0
-#    albedo_surface_LW = 0.5
-#    #albedo_surface_LW = 1
-#    sigma_abs_gas_LW = np.repeat(sigma_abs_gas_LW_in, GR.nz)
-#    sigma_sca_gas_LW = np.repeat(sigma_sca_gas_LW_in, GR.nz)
-#    #sigma_sca_gas_LW[1] = sigma_sca_gas_LW[1]*2
-#    #sigma_abs_gas_LW[:] = 0
-#    #sigma_sca_gas_LW[:] = 0 
-#    #sigma_sca_gas_LW[:5] = 0
-#    #sigma_sca_gas_LW[7:] = 0
-#    sigma_tot_LW = sigma_abs_gas_LW + sigma_sca_gas_LW
-#    #print(sigma_tot_LW)
+#    #albedo_surface_SW = 0
+#    #albedo_surface_SW = 0.5
+#    #albedo_surface_SW = 1
+#    sigma_abs_gas_SW = np.repeat(sigma_abs_gas_SW_in, GR.nz)
+#    sigma_sca_gas_SW = np.repeat(sigma_sca_gas_SW_in, GR.nz)
+#    #sigma_sca_gas_SW[1] = sigma_sca_gas_SW[1]*2
+#    #sigma_abs_gas_SW[:] = 0
+#    #sigma_sca_gas_SW[:] = 0 
+#    #sigma_sca_gas_SW[:5] = 0
+#    #sigma_sca_gas_SW[7:] = 0
+#    sigma_tot_SW = sigma_abs_gas_SW + sigma_sca_gas_SW
+#    #print(sigma_tot_SW)
 #
-#    dtau = sigma_tot_LW * dz * rho_col
+#    dtau = sigma_tot_SW * dz * rho_col
 #    taus = np.zeros(GR.nzs)
 #    taus[1:] = np.cumsum(dtau)
 #    tau = taus[:-1] + np.diff(taus)/2
@@ -34,9 +33,10 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 #    #print()
 #
 #    # single scattering albedo
-#    omega_s = sigma_sca_gas_LW/sigma_tot_LW
+#    omega_s = sigma_sca_gas_SW/sigma_tot_SW
 #    omega_s[np.isnan(omega_s)] = 0
 #    #print('omega_s ' + str(omega_s))
+#    #quit()
 #
 #    # QUADRATURE
 #    my1 = 1/np.sqrt(3)
@@ -49,9 +49,18 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 #    #gamma2[:] = omega_s * 3**(1/2) * (1 - g_a) / 2
 #    gamma2[:] = omega_s*(1-g_a) / (2*my1)
 #
+#    gamma3 = np.zeros(GR.nz)
+#    #gamma3[:] = (1 - 3**(1/2) * g_a * mysun) / 2
+#    gamma3[:] = (1 - 3 * g_a * my1 * mysun) / 2
+#
+#    gamma4 = np.zeros(GR.nz)
+#    gamma4[:] = 1 - gamma3
+#
 #    #print('gammas:')
 #    #print(gamma1)
 #    #print(gamma2)
+#    #print(gamma3)
+#    #print(gamma4)
 #    #print()
 #
 #    lamb_2str = np.sqrt(gamma1**2 - gamma2**2)
@@ -61,36 +70,38 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 #    #print(tau_2str)
 #    #print()
 #
-#    surf_emitted_LW = emissivity_surf * np.pi * \
-#                    calc_planck_intensity(GR, nu0, nu1, tsurf) 
-#    #print(surf_emitted_LW)
-#    emission_vb  = calc_planck_intensity(GR, nu0, nu1, tair_vb_col)
-#    B0n = emission_vb[:-1]
-#    B1n = np.diff(emission_vb)/dtau
-#    #B1n = np.diff(tair_vb_col)
-#    #print(B0n)
-#    #print(B1n)
+#    surf_reflected_SW = albedo_surface_SW * mysun * solar_constant * \
+#                            np.exp(-taus[-1]/mysun)
+#    #print(surf_reflected_SW)
 #    #print()
-#    
+#
+#    #sw_dir = omega_s * solar_constant * np.exp(-tau/mysun)
+#    #A_mat, g_vec = rad_calc_SW_RTE_matrix(GR, dtau, gamma1, gamma2, gamma3,
+#    #                        swintoa, surf_reflected_SW,
+#    #                        albedo_surface_SW, sw_dir)
+#    #fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
 #    down_diffuse = np.zeros( GR.nzs )
 #    up_diffuse = np.full( GR.nzs, np.nan)
 #    down_diffuse[1:], up_diffuse[1:] = \
-#                rad_calc_LW_fluxes_toon(GR, dtau, gamma1, gamma2, my1,
-#                            lamb_2str, tau_2str, tau, taus, omega_s,
-#                            surf_emitted_LW, B0n, B1n, albedo_surface_LW)
+#                rad_calc_LW_fluxes_toon(GR, dtau, gamma1, gamma2,
+#                            gamma3, gamma4, my1, solar_constant,
+#                            lamb_2str, tau_2str, tau, taus, omega_s, mysun,
+#                            surf_reflected_SW,
+#                            albedo_surface_SW)
 #
-#
-#    ## first order
+#    # first order
 #    #up_diffuse[0] = max(0, up_diffuse[1] - (up_diffuse[2] - up_diffuse[1]) * dz[0]/dz[1])
 #    # second order
 #    up_diffuse[0] = max(0, up_diffuse[1] - (- up_diffuse[3] + 4*up_diffuse[2] - 3*up_diffuse[1]) \
 #                                            * dz[0]/(dz[1]+dz[2]))
+#    down_direct[0] = -swintoa
 #
-#    return(down_diffuse, up_diffuse)
+#    return(down_diffuse, up_diffuse, down_direct)
 #
-#def rad_calc_LW_fluxes_toon(GR, dtau, gamma1, gamma2, my1,
-#                            lamb_2str, tau_2str, tau, taus, omega_s,
-#                            surf_emitted_LW, B0n, B1n, albedo_surface_LW):
+#def rad_calc_LW_fluxes_toon(GR, dtau, gamma1, gamma2,
+#        gamma3, gamma4, my1, solar_constant,
+#        lamb_2str, tau_2str, tau, taus, omega_s, mysun,
+#        surf_reflected_SW, albedo_surface_SW):
 #
 #    e1 = 1        + tau_2str * np.exp( - lamb_2str * dtau )
 #    e2 = 1        - tau_2str * np.exp( - lamb_2str * dtau )
@@ -118,14 +129,14 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 #    dm1[lodd]  = e2[ninds  ] * e3[ninds  ] - e4[ninds  ] * e1[ninds  ]
 #    dm1[leven] = e2[nindsp1] * e1[ninds  ] - e3[ninds  ] * e4[nindsp1]
 #    dm1[0] = 0
-#    dm1[-1] = e1[-1] - albedo_surface_LW * e3[-1]
+#    dm1[-1] = e1[-1] - albedo_surface_SW * e3[-1]
 #    #print(dm1)
 #
 #    d0 = np.full(2*GR.nz, np.nan)
 #    d0[lodd]  = e1[ninds  ] * e1[nindsp1] - e3[ninds  ] * e3[nindsp1]
 #    d0[leven] = e2[ninds  ] * e2[nindsp1] - e4[ninds  ] * e4[nindsp1]
 #    d0[0] = e1[0]
-#    d0[-1] = e2[-1] - albedo_surface_LW * e4[-1]
+#    d0[-1] = e2[-1] - albedo_surface_SW * e4[-1]
 #    #print(d0)
 #
 #    dp1 = np.full(2*GR.nz, np.nan)
@@ -141,15 +152,24 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 #                                (GR.nz*2, GR.nz*2), format='csr' )
 #    #print(A_mat.todense())
 #    #print()
+#    #quit()
 #
 #    #print('C terms')
-#    Cp_tau = 2 * np.pi * my1 * ( B0n + B1n * ( dtau + 1 / (gamma1 + gamma2) ) )
+#    Cp_tau = omega_s * solar_constant * np.exp( - (taus[1:]) / mysun ) * \
+#            ( (gamma1 - 1 / mysun) * gamma3 + gamma4 * gamma2 ) / \
+#            ( lamb_2str**2 - 1 / mysun**2 )
 #    #print(Cp_tau)
-#    Cp_0   = 2 * np.pi * my1 * ( B0n + B1n * ( 0    + 1 / (gamma1 + gamma2) ) )
+#    Cp_0 = omega_s * solar_constant * np.exp( - (taus[:-1]) / mysun ) * \
+#            ( (gamma1 - 1 / mysun) * gamma3 + gamma4 * gamma2 ) / \
+#            ( lamb_2str**2 - 1 / mysun**2 )
 #    #print(Cp_0)
-#    Cm_tau = 2 * np.pi * my1 * ( B0n + B1n * ( dtau - 1 / (gamma1 + gamma2) ) )
+#    Cm_tau = omega_s * solar_constant * np.exp( - (taus[1:]) / mysun ) * \
+#            ( (gamma1 + 1 / mysun) * gamma4 + gamma2 * gamma3 ) / \
+#            ( lamb_2str**2 - 1 / mysun**2 )
 #    #print(Cm_tau)
-#    Cm_0   = 2 * np.pi * my1 * ( B0n + B1n * ( 0    - 1 / (gamma1 + gamma2) ) )
+#    Cm_0 = omega_s * solar_constant * np.exp( - (taus[:-1]) / mysun ) * \
+#            ( (gamma1 + 1 / mysun) * gamma4 + gamma2 * gamma3 ) / \
+#            ( lamb_2str**2 - 1 / mysun**2 )
 #    #print(Cm_0)
 #     
 #    src = np.full(2*GR.nz, np.nan)
@@ -157,39 +177,38 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 #                 e1[ninds ]  * (Cm_tau[ninds  ] - Cm_0  [nindsp1])
 #    src[leven] = e2[nindsp1] * (Cp_0  [nindsp1] - Cp_tau[ninds  ]) + \
 #                 e4[nindsp1] * (Cm_0  [nindsp1] - Cm_tau[ninds  ])
+#    #src[0] = mysun * solar_constant - Cm_0[0]
 #    src[0] = 0 - Cm_0[0]
-#    src[-1] = surf_emitted_LW - Cp_tau[-1] + albedo_surface_LW * Cm_tau[-1]
+#    src[-1] = surf_reflected_SW - Cp_tau[-1] + albedo_surface_SW * Cm_tau[-1]
 #    #print('src')
 #    #print(src)
 #    #print()
+#    #quit()
 #
 #    fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
 #
 #    Y1 = fluxes[range(0,len(fluxes),2)]
 #    Y2 = fluxes[range(1,len(fluxes),2)]
 #
-#    down_diffuse = - ( - Y1*e3 - Y2*e4 - Cm_tau )
-#    up_diffuse   =   ( + Y1*e1 + Y2*e2 + Cp_tau )
+#    down_diffuse = - Y1*e3 - Y2*e4 - Cm_tau
+#    down_direct = - mysun * solar_constant * np.exp( - taus[1:] / mysun)
+#    up_diffuse = Y1*e1 + Y2*e2 + Cp_tau
 #
-#    #net_flux = - down_diffuse + up_diffuse 
-#    #print(down_diffuse)
-#    #print(up_diffuse)
+#    #net_flux = down_diffuse + down_direct + up_diffuse 
 #    #print(net_flux)
 #    #import matplotlib.pyplot as plt
 #    #zs = range(GR.nz,0,-1)
-#    #line1, = plt.plot(-down_diffuse, zs, label='down diff')
+#    #line1, = plt.plot(down_diffuse, zs, label='down diff')
+#    #line2, = plt.plot(down_direct, zs, label='down_dir')
 #    #line3, = plt.plot(up_diffuse, zs, label='up diff', linestyle='--')
-#    #line4, = plt.plot(net_flux, zs, label='net', linewidth=2)
+#    #line4, = plt.plot(net_flux, zs, label='net down')
 #    #plt.axvline(x=0, color='black', lineWidth=1)
-#    #plt.legend([line1,line3,line4])
+#    #plt.legend([line1,line2,line3,line4])
 #    #plt.show()
 #    #quit()
 #
-#    return(down_diffuse, up_diffuse)
+#    return(down_diffuse, up_diffuse, down_direct)
 
-
-###################################################################################
-###################################################################################
 
 
 def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW):
@@ -197,7 +216,6 @@ def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW):
     # LONGWAVE
     nu0 = 50
     nu1 = 2500
-    ext_coef_LW = 1.7E-4
     dtau = ext_coef_LW * dz * rho_col
     taus = np.zeros(GR.nzs)
     taus[1:] = np.cumsum(dtau)
@@ -287,13 +305,12 @@ def calc_planck_intensity(GR, nu0, nu1, temp):
     lambdas_center = 1./nus_center
     dlambdas = np.diff(lambdas)
 
-
     if type(temp) == np.float64:
         B = np.zeros( (len(nus_center), 1) )
     else:
         B = np.zeros( (len(nus_center), len(temp)) )
 
-    for c in range(0,len(nus_center)):
+    for i in range(0,len(nus_center)):
         #print(temp)
         #print(
         #    2*con_h*con_c**2 / lambdas_center[i]**5 * \
@@ -301,12 +318,12 @@ def calc_planck_intensity(GR, nu0, nu1, temp):
         #    )
         #quit()
         spectral_radiance = \
-            2*con_h*con_c**2 / lambdas_center[c]**5 * \
-            1 / ( np.exp( con_h*con_c / (lambdas_center[c]*con_kb*temp) ) - 1 )
+            2*con_h*con_c**2 / lambdas_center[i]**5 * \
+            1 / ( np.exp( con_h*con_c / (lambdas_center[i]*con_kb*temp) ) - 1 )
         #print(spectral_radiance)
-        radiance = spectral_radiance * -dlambdas[c]
+        radiance = spectral_radiance * -dlambdas[i]
         #print(radiance)
-        B[c,:] = radiance
+        B[i,:] = radiance
 
     B = np.sum(B,0)
 

@@ -14,11 +14,8 @@ con_c = 2.9979E8 # m/s Speed of light
 con_kb = 1.38E-23 # J/K Boltzmann's constant
 
 
-#ext_coef_LW = 7E-5/0.6 # divide by "average" density # TODO: remove
+ext_coef_LW = 7E-5/0.6 # divide by "average" density
 sigma_abs_gas_SW_in = 1.7E-5
 sigma_sca_gas_SW_in = 1.72E-5 # lamb = 0.5 mym, jacobson page 301
 sigma_abs_gas_LW_in = 1.7E-4
 sigma_sca_gas_LW_in = 1.72E-7 
-
-# surface emissivity
-emissivity_surf = 1
