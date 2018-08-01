@@ -170,6 +170,10 @@ class Grid:
             # SIGMA LEVELS
             self.level = np.arange(0,self.nz)
             self.levels = np.arange(0,self.nzs)
+            # will be set in load_profile of IO
+            self.sigma_vb = np.full( self.nzs, np.nan)
+            self.dsigma = np.full( self.nz, np.nan)
+
 
             # TIME STEP
             mindx = np.nanmin(self.dx)

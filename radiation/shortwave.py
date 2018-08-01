@@ -192,18 +192,18 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
     Y1 = fluxes[range(0,len(fluxes),2)]
     Y2 = fluxes[range(1,len(fluxes),2)]
 
-    down_diffuse = - Y1*e3 - Y2*e4 - Cm_tau
-    down_direct = - mysun * solar_constant * np.exp( - taus[1:] / mysun)
-    up_diffuse = Y1*e1 + Y2*e2 + Cp_tau
+    down_diffuse = - ( - Y1*e3 - Y2*e4 - Cm_tau)
+    down_direct = + mysun * solar_constant * np.exp( - taus[1:] / mysun)
+    up_diffuse = + (Y1*e1 + Y2*e2 + Cp_tau )
 
-    #net_flux = down_diffuse + down_direct + up_diffuse 
+    #net_flux = - down_diffuse - down_direct + up_diffuse 
     #print(net_flux)
     #import matplotlib.pyplot as plt
     #zs = range(GR.nz,0,-1)
-    #line1, = plt.plot(down_diffuse, zs, label='down diff')
-    #line2, = plt.plot(down_direct, zs, label='down_dir')
+    #line1, = plt.plot(- down_diffuse, zs, label='down diff')
+    #line2, = plt.plot(- down_direct, zs, label='down_dir')
     #line3, = plt.plot(up_diffuse, zs, label='up diff', linestyle='--')
-    #line4, = plt.plot(net_flux, zs, label='net down')
+    #line4, = plt.plot(net_flux, zs, label='net', lineWidth=2)
     #plt.axvline(x=0, color='black', lineWidth=1)
     #plt.legend([line1,line2,line3,line4])
     #plt.show()

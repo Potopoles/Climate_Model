@@ -74,6 +74,12 @@ def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTVB, POT
                         POTT[:,:,ks][GR.iijj]
                                     ) / (PVTF[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj])
 
+    # extrapolate model bottom and model top POTTVB
+    #print(np.mean(np.mean(POTTVB[GR.iijj],0),0))
+    POTTVB[:,:,0][GR.iijj] = POTT[:,:,0][GR.iijj] - ( POTTVB[:,:,1][GR.iijj] - POTT[:,:,0][GR.iijj] )
+    POTTVB[:,:,-1][GR.iijj] = POTT[:,:,-1][GR.iijj] - ( POTTVB[:,:,-2][GR.iijj] - POTT[:,:,-1][GR.iijj] )
+    #print(np.mean(np.mean(POTTVB[GR.iijj],0),0))
+
 
     return(PHI, PHIVB, PVTF, PVTFVB, POTTVB)
 

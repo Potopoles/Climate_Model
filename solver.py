@@ -24,7 +24,7 @@ GR = Grid()
 
 COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
 UFLX, VFLX, UFLXMP, VFLXMP, \
-HSURF, POTT, TAIR, RHO, POTTVB, PVTF, PVTFVB, \
+HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
 RAD, SOIL = initialize_fields(GR)
 constant_fields_to_NC(GR, HSURF, RAD, SOIL)
 
@@ -42,14 +42,14 @@ while GR.ts < GR.nts:
     print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT)
 
     ######## DIAGNOSTICS (not related to dynamics)
-    PAIR, TAIR, RHO, WIND = \
-            diagnose_secondary_fields(GR, PAIR, PHI, POTT, TAIR, RHO,\
+    PAIR, TAIR, TAIRVB, RHO, WIND = \
+            diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
                                     PVTF, PVTFVB, UWIND, VWIND, WIND)
     ########
 
     ######## RADIATION
     t_start = time.time()
-    RAD.calc_radiation(GR, POTT, TAIR, RHO, PHIVB, SOIL)
+    RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL)
     ########
 
     ######## SOIL
@@ -93,7 +93,7 @@ while GR.ts < GR.nts:
         GR.outCounter = outCounter
         write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
                         UFLX, VFLX, UFLXMP, VFLXMP, \
-                        HSURF, POTT, TAIR, RHO, POTTVB, PVTF, PVTFVB, \
+                        HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
                         RAD, SOIL)
 
 
