@@ -40,15 +40,17 @@ class radiation:
 
         if self.i_radiation >= 2:
             # two-stream method fluxes and divergences
-            self.LWFLXUP =   np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-            self.LWFLXDO =   np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-            self.LWFLXNET =  np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-            self.SWFLXUP =   np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-            self.SWFLXDO =   np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-            self.SWFLXNET =  np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-            self.LWFLXDIV =  np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan)
-            self.SWFLXDIV =  np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan)
-            self.TOTFLXDIV = np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan)
+            self.LWFLXUP =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
+            self.LWFLXDO =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
+            self.LWFLXNET =     np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
+            self.SWDIFFLXDO =   np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
+            self.SWDIRFLXDO =   np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
+            self.SWFLXUP =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
+            self.SWFLXDO =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
+            self.SWFLXNET =     np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
+            self.LWFLXDIV =     np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan)
+            self.SWFLXDIV =     np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan)
+            self.TOTFLXDIV =    np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan)
 
 
 
@@ -109,31 +111,36 @@ class radiation:
                 # SHORTWAVE
                 if self.MYSUN[i,j] > 0:
 
-                    self.SWFLXUP[i,j,:], self.SWFLXDO[i,j,:] = \
+                    #self.SWDIFFLXDO[i,j,:], self.SWDIFFLXUP[i,j,:], self.SWDIRFLXDO[i,j,:] = \
+                    down_diffuse, up_diffuse, down_direct = \
                                         org_shortwave(GR, dz[i,j], self.solar_constant,
                                                     RHO[i_ref,j_ref],
                                                     self.SWINTOA[i,j],
                                                     self.MYSUN[i,j],
                                                     SOIL.ALBEDO[i,j])
-                else:
-                    self.SWFLXUP [i,j,:] = 0
-                    self.SWFLXDO [i,j,:] = 0
 
-        print(np.max(self.SWFLXUP[:,:,-1]))
-        print(np.max(self.SWFLXDO[:,:,-1]))
-        #quit()
+                    self.SWDIFFLXDO[i,j,:] = - down_diffuse
+                    self.SWDIRFLXDO[i,j,:] = - down_direct
+                    self.SWFLXUP   [i,j,:] = up_diffuse
+                    self.SWFLXDO   [i,j,:] = - down_diffuse - down_direct
+                else:
+                    self.SWDIFFLXDO[i,j,:] = 0
+                    self.SWDIRFLXDO[i,j,:] = 0
+                    self.SWFLXUP   [i,j,:] = 0
+                    self.SWFLXDO   [i,j,:] = 0
+
 
         self.LWFLXNET = self.LWFLXDO - self.LWFLXUP 
         self.SWFLXNET = self.SWFLXDO - self.SWFLXUP 
 
-        i = 6
-        j = 5
-        plt.plot(self.SWFLXUP[i,j,:], ALTVB[i,j,:])
-        plt.plot(self.SWFLXDO[i,j,:], ALTVB[i,j,:])
-        plt.plot(self.SWFLXNET[i,j,:], ALTVB[i,j,:])
-        plt.axvline(x=0, color='k')
-        plt.show()
-        quit()
+        #i = 6
+        #j = 5
+        #plt.plot(self.SWFLXUP[i,j,:], ALTVB[i,j,:])
+        #plt.plot(self.SWFLXDO[i,j,:], ALTVB[i,j,:])
+        #plt.plot(self.SWFLXNET[i,j,:], ALTVB[i,j,:])
+        #plt.axvline(x=0, color='k')
+        #plt.show()
+        #quit()
 
         for k in range(0,GR.nz):
 

@@ -16,7 +16,7 @@ class soil:
         
         self.TSOIL = np.full( ( GR.nx, GR.ny, self.nz_soil ), np.nan)
         self.TSOIL[:,:,0] = 284
-        self.TSOIL[:,:,0] = 254
+        #self.TSOIL[:,:,0] = 254
 
         # mask: ocean = 1, other = 0
         self.OCEANMSK = np.zeros( ( GR.nx, GR.ny ), np.int )

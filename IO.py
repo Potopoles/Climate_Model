@@ -83,17 +83,16 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     RHO_out = ncf.createVariable('RHO', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # RADIATION VARIABLES
+    SWDIFFLXDO_out = ncf.createVariable('SWDIFFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
+    SWDIRFLXDO_out = ncf.createVariable('SWDIRFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
     SWFLXUP_out = ncf.createVariable('SWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
     SWFLXDO_out = ncf.createVariable('SWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
     SWFLXNET_out = ncf.createVariable('SWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
     LWFLXUP_out = ncf.createVariable('LWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
     LWFLXDO_out = ncf.createVariable('LWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
     LWFLXNET_out = ncf.createVariable('LWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    #SWINTOA_out = ncf.createVariable('SWINTOA', 'f4', ('time', 'lat', 'lon',) )
-    #SWNETSFC_out = ncf.createVariable('SWNETSFC', 'f4', ('time', 'lat', 'lon',) )
-    #SWOUTSFC_out = ncf.createVariable('SWOUTSFC', 'f4', ('time', 'lat', 'lon',) )
-    #SWINSFC_out = ncf.createVariable('SWINSFC', 'f4', ('time', 'lat', 'lon',) )
-    #LWOUTOA_out = ncf.createVariable('LWOUTOA', 'f4', ('time', 'lat', 'lon',) )
+    #SWFLXDIV_out = ncf.createVariable('SWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
+    #LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # SOIL VARIABLES
     TSURF_out = ncf.createVariable('TSURF', 'f4', ('time', 'lat', 'lon',) )
@@ -101,11 +100,6 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     ALBSFC_out[0,:,:] = SOIL.ALBEDO.T
     PSURF_out[-1,:,:] = COLP[GR.iijj].T + pTop
     TSURF_out[-1,:,:] = SOIL.TSOIL[:,:,0].T
-    #SWINTOA_out[-1,:,:] = RAD.SWINTOA.T
-    #SWNETSFC_out[-1,:,:] = RAD.SWFLXNET[:,:,-1].T
-    #SWINSFC_out[-1,:,:] = RAD.SWFLXDO[:,:,-1].T
-    #SWOUTSFC_out[-1,:,:] = RAD.SWFLXUP[:,:,-1].T
-    #LWOUTOA_out[-1,:,:] = -RAD.LWFLXNET[:,:,0].T
 
     for k in range(0,GR.nz):
         PAIR_out[-1,k,:,:] = PAIR[:,:,k][GR.iijj].T
@@ -118,11 +112,15 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
         POTTprof_out[-1,GR.nz-k-1,:] = np.mean(POTT[:,:,k][GR.iijj],axis=0)
         TAIR_out[-1,k,:,:] = TAIR[:,:,k][GR.iijj].T
         RHO_out[-1,k,:,:] = RHO[:,:,k][GR.iijj].T
+        #SWFLXDIV_out[-1,k,:,:] = RAD.SWFLXDIV[:,:,k].T 
+        #LWFLXDIV_out[-1,k,:,:] = RAD.LWFLXDIV[:,:,k].T 
 
     for ks in range(0,GR.nzs):
         #WWIND_out[-1,ks,:,:] = WWIND[:,:,ks][GR.iijj].T*COLP[GR.iijj].T
         WWIND_out[-1,ks,:,:] = WWIND_ms[:,:,ks][GR.iijj].T
 
+        SWDIFFLXDO_out[-1,ks,:,:] = RAD.SWDIFFLXDO[:,:,ks].T
+        SWDIRFLXDO_out[-1,ks,:,:] = RAD.SWDIRFLXDO[:,:,ks].T
         SWFLXUP_out[-1,ks,:,:] = RAD.SWFLXUP[:,:,ks].T
         SWFLXDO_out[-1,ks,:,:] = RAD.SWFLXDO[:,:,ks].T
         SWFLXNET_out[-1,ks,:,:] = RAD.SWFLXNET[:,:,ks].T
