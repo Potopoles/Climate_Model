@@ -13,25 +13,13 @@ def euler_forward(GR, COLP, PHI, PHIVB, POTT,
                     UWIND, VWIND,
                     UFLX, VFLX, UFLXMP, VFLXMP,
                     HSURF, PVTF, PVTFVB, i_spatial_discretization,
-                    RAD, SOIL):
+                    RAD, SOIL, MIC):
 
     if i_spatial_discretization == 'UPWIND':
         raise NotImplementedError()
 
     elif i_spatial_discretization == 'JACOBSON':
-        raise NotImplementedError()
-
-        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt = tendencies_jacobson(GR, COLP, POTT, HSURF,
-                                                            UWIND, VWIND,
-                                                            UFLX, VFLX, PHI, PVTF, PVTFVB)
-
-        UWIND, VWIND, COLP, POTT = proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
-                                                    POTT,
-                                                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt)
-
-        PHI, PHIVB, PVTF, PVTFVB = \
-                diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTFVB)
-
+        raise ValueError('Jacobson spatial discretization is incompatible with euler forward')
 
     return(COLP, PHI, PHIVB, POTT,
             UWIND, VWIND,
@@ -47,7 +35,7 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
                     UWIND, VWIND, WWIND,
                     UFLX, VFLX, UFLXMP, VFLXMP,
                     HSURF, PVTF, PVTFVB, i_spatial_discretization,
-                    RAD, SOIL):
+                    RAD, SOIL, MIC):
 
     if i_spatial_discretization == 'UPWIND':
         raise NotImplementedError()
@@ -55,20 +43,22 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
     elif i_spatial_discretization == 'JACOBSON':
         ########## ESTIMATE
         dCOLPdt, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
+        dPOTTdt, WWIND, dQVdt = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD)
+                                            RAD, MIC)
 
         # has to happen after masspoint_flux_tendency function
         UWIND_OLD = copy.deepcopy(UWIND)
         VWIND_OLD = copy.deepcopy(VWIND)
         COLP_OLD = copy.deepcopy(COLP)
         POTT_OLD = copy.deepcopy(POTT)
+        QV = copy.deepcopy(MIC.QV)
+        QV_OLD = copy.deepcopy(MIC.QV)
 
-        UWIND, VWIND, COLP, POTT = proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
-                                                    POTT,
-                                                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt)
+        UWIND, VWIND, COLP, POTT, QV = proceed_timestep_jacobson(GR, UWIND, VWIND,
+                                            COLP, POTT, QV,
+                                            dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt)
 
         PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
@@ -76,22 +66,26 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
 
         ########## FINAL
         dCOLPdt, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
+        dPOTTdt, WWIND, dQVdt = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD)
+                                            RAD, MIC)
 
-        UWIND, VWIND, COLP, POTT = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
-                                                    COLP_OLD, POTT_OLD,
-                                                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt)
+        UWIND, VWIND, COLP, POTT, QV = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
+                                                COLP_OLD, POTT_OLD, QV_OLD,
+                                                dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt)
 
         PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
                                         HSURF, PVTF, PVTFVB, POTTVB)
 
+        
+        MIC.QV = QV
+
     return(COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
-            UFLX, VFLX, UFLXMP, VFLXMP)
+            UFLX, VFLX, UFLXMP, VFLXMP,
+            MIC)
 
 
 
@@ -102,9 +96,9 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
 ######################################################################################
 ######################################################################################
 
-def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, \
-                COLP1, UWIND1, VWIND1, POTT1, \
-                dCOLP, dUFLX, dVFLX, dPOTT, factor):
+def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, QV0, \
+                COLP1, UWIND1, VWIND1, POTT1, QV1, \
+                dCOLP, dUFLX, dVFLX, dPOTT, dQV, factor):
 
     COLPA_is_0, COLPA_js_0 = interp_COLPA(GR, COLP0)
     COLP1[GR.iijj] = COLP0[GR.iijj] + dCOLP/factor
@@ -118,17 +112,22 @@ def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, \
         POTT1[:,:,k][GR.iijj] = POTT0[:,:,k][GR.iijj] * \
                         COLP0[GR.iijj]/COLP1[GR.iijj] + \
                         dPOTT[:,:,k]/factor/COLP1[GR.iijj]
+        QV1[:,:,k][GR.iijj] = QV0[:,:,k][GR.iijj] * \
+                        COLP0[GR.iijj]/COLP1[GR.iijj] + \
+                        dQV[:,:,k]/factor/COLP1[GR.iijj]
     UWIND1 = exchange_BC(GR, UWIND1)
     VWIND1 = exchange_BC(GR, VWIND1)
     POTT1  = exchange_BC(GR, POTT1)
+    QV1[QV1 < 0] = 0
+    QV1  = exchange_BC(GR, QV1)
 
-    return(COLP1, UWIND1, VWIND1, POTT1)
+    return(COLP1, UWIND1, VWIND1, POTT1, QV1)
 
 def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
             HSURF, PVTF, PVTFVB, i_spatial_discretization,
-            RAD, SOIL):
+            RAD, SOIL, MIC):
 
     if i_spatial_discretization == 'UPWIND':
         raise NotImplementedError()
@@ -137,10 +136,10 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
     elif i_spatial_discretization == 'JACOBSON':
         ########## level 1
         dCOLPdt, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
+        dPOTTdt, WWIND, dQVdt = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD)
+                                            RAD, MIC)
 
         # INITIAL FIELDS
         # has to happen after masspoint_flux_tendency function
@@ -149,28 +148,33 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         COLP_START = copy.deepcopy(COLP)
         POTT_START = copy.deepcopy(POTT)
         POTTVB_START = copy.deepcopy(POTTVB)
+        QV_START = copy.deepcopy(MIC.QV)
 
         # INTERMEDIATE FIELDS
         UWIND_INT = copy.deepcopy(UWIND)
         VWIND_INT = copy.deepcopy(VWIND)
         COLP_INT = copy.deepcopy(COLP)
         POTT_INT = copy.deepcopy(POTT)
+        QV_INT = copy.deepcopy(MIC.QV)
+
+        QV = copy.deepcopy(MIC.QV)
 
         dUFLX = GR.dt*dUFLXdt
         dVFLX = GR.dt*dVFLXdt
         dCOLP = GR.dt*dCOLPdt
         dPOTT = GR.dt*dPOTTdt
+        dQV = GR.dt*dQVdt
 
         # TIME STEPPING
-        COLP_INT, UWIND_INT, VWIND_INT, POTT_INT = \
-        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, \
-                    COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 2)
+        COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, QV_INT = \
+        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, QV_START, \
+                    COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, QV_INT, \
+                    dCOLP, dUFLX, dVFLX, dPOTT, dQV, 2)
 
-        COLP, UWIND, VWIND, POTT = \
-        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, \
-                    COLP, UWIND, VWIND, POTT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 6)
+        COLP, UWIND, VWIND, POTT, QV = \
+        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, QV_START,\
+                    COLP, UWIND, VWIND, POTT, QV, \
+                    dCOLP, dUFLX, dVFLX, dPOTT, dQV, 6)
 
         PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP_INT, POTT_INT,
@@ -178,26 +182,27 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
 
         ########## level 2
         dCOLPdt, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
+        dPOTTdt, WWIND, dQVdt = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD)
+                                            RAD, MIC)
 
         dUFLX = GR.dt*dUFLXdt
         dVFLX = GR.dt*dVFLXdt
         dCOLP = GR.dt*dCOLPdt
         dPOTT = GR.dt*dPOTTdt
+        dQV = GR.dt*dQVdt
 
-        COLP_INT, UWIND_INT, VWIND_INT, POTT_INT = \
-        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, \
-                    COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 2)
+        COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, QV_INT = \
+        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, QV_START, \
+                    COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, QV_INT, \
+                    dCOLP, dUFLX, dVFLX, dPOTT, dQV, 2)
 
         COLP_OLD = copy.deepcopy(COLP)
-        COLP, UWIND, VWIND, POTT = \
-        RK_time_step(GR, COLP_OLD, UWIND, VWIND, POTT, \
-                    COLP, UWIND, VWIND, POTT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 3)
+        COLP, UWIND, VWIND, POTT, QV = \
+        RK_time_step(GR, COLP_OLD, UWIND, VWIND, POTT, QV, \
+                    COLP, UWIND, VWIND, POTT, QV, \
+                    dCOLP, dUFLX, dVFLX, dPOTT, dQV, 3)
         
         PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP_INT, POTT_INT,
@@ -205,27 +210,28 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
 
         ########## level 3
         dCOLPdt, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
+        dPOTTdt, WWIND, dQVdt = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD)
+                                            RAD, MIC)
 
         dUFLX = GR.dt*dUFLXdt
         dVFLX = GR.dt*dVFLXdt
         dCOLP = GR.dt*dCOLPdt
         dPOTT = GR.dt*dPOTTdt
+        dQV = GR.dt*dQVdt
 
 
-        COLP_INT, UWIND_INT, VWIND_INT, POTT_INT = \
-        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, \
-                    COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 1)
+        COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, QV_INT, = \
+        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, QV_START,\
+                    COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, QV_INT,\
+                    dCOLP, dUFLX, dVFLX, dPOTT, dQV, 1)
 
         COLP_OLD = copy.deepcopy(COLP)
-        COLP, UWIND, VWIND, POTT = \
-        RK_time_step(GR, COLP_OLD, UWIND, VWIND, POTT, \
-                    COLP, UWIND, VWIND, POTT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 3)
+        COLP, UWIND, VWIND, POTT, QV = \
+        RK_time_step(GR, COLP_OLD, UWIND, VWIND, POTT, QV,\
+                    COLP, UWIND, VWIND, POTT, QV,\
+                    dCOLP, dUFLX, dVFLX, dPOTT, dQV, 3)
         
         PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP_INT, POTT_INT,
@@ -233,108 +239,37 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
 
         ########## level 4
         dCOLPdt, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
+        dPOTTdt, WWIND, dQVdt = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD)
+                                            RAD, MIC)
 
         dUFLX = GR.dt*dUFLXdt
         dVFLX = GR.dt*dVFLXdt
         dCOLP = GR.dt*dCOLPdt
         dPOTT = GR.dt*dPOTTdt
+        dQV = GR.dt*dQVdt
 
         COLP_OLD = copy.deepcopy(COLP)
-        COLP, UWIND, VWIND, POTT = \
-        RK_time_step(GR, COLP_OLD, UWIND, VWIND, POTT, \
-                    COLP, UWIND, VWIND, POTT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 6)
+        COLP, UWIND, VWIND, POTT, QV = \
+        RK_time_step(GR, COLP_OLD, UWIND, VWIND, POTT, QV,\
+                    COLP, UWIND, VWIND, POTT, QV,\
+                    dCOLP, dUFLX, dVFLX, dPOTT, dQV, 6)
 
         PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
                                         HSURF, PVTF, PVTFVB, POTTVB)
 
+        MIC.QV = QV
+
     return(COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
-            UFLX, VFLX, UFLXMP, VFLXMP)
+            UFLX, VFLX, UFLXMP, VFLXMP,
+            MIC)
 
 
 
 
-def heuns_method(GR, COLP, PHI, POTT, POTTVB,
-                    UWIND, VWIND, WIND, WWIND,
-                    UFLX, VFLX, UFLXMP, VFLXMP,
-                    HSURF, PVTF, PVTFVB, i_spatial_discretization):
-
-    if i_spatial_discretization == 'UPWIND':
-        raise NotImplementedError()
-
-
-    elif i_spatial_discretization == 'JACOBSON':
-        raise NotImplementedError('Heuns methods does not yet work well.')
-        ########## level 1
-        dCOLPdt, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
-                                            UWIND, VWIND, WWIND,
-                                            UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD)
-
-        # INITIAL FIELDS
-        # has to happen after masspoint_flux_tendency function
-        UWIND_START = copy.deepcopy(UWIND)
-        VWIND_START = copy.deepcopy(VWIND)
-        COLP_START = copy.deepcopy(COLP)
-        POTT_START = copy.deepcopy(POTT)
-        POTTVB_START = copy.deepcopy(POTTVB)
-
-        # INTERMEDIATE FIELDS
-        UWIND_INT = copy.deepcopy(UWIND)
-        VWIND_INT = copy.deepcopy(VWIND)
-        COLP_INT = copy.deepcopy(COLP)
-        POTT_INT = copy.deepcopy(POTT)
-
-        dUFLX = GR.dt*dUFLXdt
-        dVFLX = GR.dt*dVFLXdt
-        dCOLP = GR.dt*dCOLPdt
-        dPOTT = GR.dt*dPOTTdt
-
-        # TIME STEPPING
-        COLP_INT, UWIND_INT, VWIND_INT, POTT_INT = \
-        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, \
-                    COLP_INT, UWIND_INT, VWIND_INT, POTT_INT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 1)
-
-        COLP, UWIND, VWIND, POTT = \
-        RK_time_step(GR, COLP_START, UWIND_START, VWIND_START, POTT_START, \
-                    COLP, UWIND, VWIND, POTT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 2)
-
-        PHI, PVTF, PVTFVB, POTTVB = diagnose_fields_jacobson(GR, PHI, COLP_INT, POTT_INT,
-                                                HSURF, PVTF, PVTFVB, POTTVB)
-
-        ########## level 2
-        dCOLPdt, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
-                                            UWIND_INT, VWIND_INT, WWIND,
-                                            UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD)
-
-        dUFLX = GR.dt*dUFLXdt
-        dVFLX = GR.dt*dVFLXdt
-        dCOLP = GR.dt*dCOLPdt
-        dPOTT = GR.dt*dPOTTdt
-
-        COLP_OLD = copy.deepcopy(COLP)
-        COLP, UWIND, VWIND, POTT = \
-        RK_time_step(GR, COLP_OLD, UWIND, VWIND, POTT, \
-                    COLP, UWIND, VWIND, POTT, \
-                    dCOLP, dUFLX, dVFLX, dPOTT, 2)
-
-        PHI, PVTF, PVTFVB, POTTVB = diagnose_fields_jacobson(GR, PHI, COLP, POTT,
-                                                HSURF, PVTF, PVTFVB, POTTVB)
-
-    return(COLP, PHI, POTT, POTTVB,
-            UWIND, VWIND, WWIND,
-            UFLX, VFLX, UFLXMP, VFLXMP)
 
 
 #########################################################################################

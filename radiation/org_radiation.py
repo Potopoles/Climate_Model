@@ -111,7 +111,7 @@ class radiation:
                 # SHORTWAVE
                 if self.MYSUN[i,j] > 0:
 
-                    #self.SWDIFFLXDO[i,j,:], self.SWDIFFLXUP[i,j,:], self.SWDIRFLXDO[i,j,:] = \
+                    # toon et al 1989 method
                     down_diffuse, up_diffuse, down_direct = \
                                         org_shortwave(GR, dz[i,j], self.solar_constant,
                                                     RHO[i_ref,j_ref],
@@ -132,15 +132,6 @@ class radiation:
 
         self.LWFLXNET = self.LWFLXDO - self.LWFLXUP 
         self.SWFLXNET = self.SWFLXDO - self.SWFLXUP 
-
-        #i = 6
-        #j = 5
-        #plt.plot(self.SWFLXUP[i,j,:], ALTVB[i,j,:])
-        #plt.plot(self.SWFLXDO[i,j,:], ALTVB[i,j,:])
-        #plt.plot(self.SWFLXNET[i,j,:], ALTVB[i,j,:])
-        #plt.axvline(x=0, color='k')
-        #plt.show()
-        #quit()
 
         for k in range(0,GR.nz):
 

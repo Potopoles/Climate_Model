@@ -110,6 +110,7 @@ def print_computation_time_info(GR):
     print('diagnostics:  ' + str(int(100*GR.diag_comp_time/GR.total_comp_time)) + '  \t%')
     print('#### other')
     print('radiation  :  ' + str(int(100*GR.rad_comp_time/GR.total_comp_time)) + '  \t%')
+    print('microphyis :  ' + str(int(100*GR.mic_comp_time/GR.total_comp_time)) + '  \t%')
 
 
 

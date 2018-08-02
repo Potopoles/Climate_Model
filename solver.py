@@ -3,7 +3,8 @@ import time
 from datetime import timedelta
 from grid import Grid
 from fields import initialize_fields
-from IO import constant_fields_to_NC, output_to_NC, write_restart
+from nc_IO import constant_fields_to_NC, output_to_NC
+from IO import write_restart
 from namelist import i_time_stepping, i_spatial_discretization, \
                     i_load_from_restart, i_save_to_restart, \
                     i_radiation
@@ -25,7 +26,7 @@ GR = Grid()
 COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
 UFLX, VFLX, UFLXMP, VFLXMP, \
 HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
-RAD, SOIL = initialize_fields(GR)
+RAD, SOIL, MIC = initialize_fields(GR)
 constant_fields_to_NC(GR, HSURF, RAD, SOIL)
 
 if i_load_from_restart:
@@ -43,13 +44,18 @@ while GR.ts < GR.nts:
 
     ######## DIAGNOSTICS (not related to dynamics)
     PAIR, TAIR, TAIRVB, RHO, WIND = \
-            diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
+            diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
+                                    TAIR, TAIRVB, RHO,\
                                     PVTF, PVTFVB, UWIND, VWIND, WIND)
     ########
 
     ######## RADIATION
-    t_start = time.time()
     RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL)
+    ########
+
+    ######## MICROPHYSICS
+    MIC.calc_microphysics(GR, WIND, SOIL)
+    #quit()
     ########
 
     ######## SOIL
@@ -61,13 +67,14 @@ while GR.ts < GR.nts:
 
     COLP, PHI, PHIVB, POTT, POTTVB, \
     UWIND, VWIND, WWIND,\
-    UFLX, VFLX, UFLXMP, VFLXMP \
+    UFLX, VFLX, UFLXMP, VFLXMP, \
+    MIC \
                 = time_stepper(GR, COLP, PHI, PHIVB, POTT, POTTVB,
                             UWIND, VWIND, WWIND,
                             UFLX, VFLX, UFLXMP, VFLXMP,
                             HSURF, PVTF, PVTFVB, 
                             i_spatial_discretization,
-                            RAD, SOIL)
+                            RAD, SOIL, MIC)
     t_end = time.time()
     GR.dyn_comp_time += t_end - t_start
     ########
@@ -86,7 +93,7 @@ while GR.ts < GR.nts:
         #                                WIND, UWIND, VWIND, COLP, POTT)
         output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
                     POTT, TAIR, RHO, PVTF, PVTFVB,
-                    RAD, SOIL)
+                    RAD, SOIL, MIC)
 
     # WRITE RESTART FILE
     if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
@@ -94,10 +101,9 @@ while GR.ts < GR.nts:
         write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
                         UFLX, VFLX, UFLXMP, VFLXMP, \
                         HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
-                        RAD, SOIL)
+                        RAD, SOIL, MIC)
 
 
     GR.total_comp_time += time.time() - real_time_ts_start
-    print(GR.total_comp_time)
 
 print_computation_time_info(GR)

@@ -202,6 +202,7 @@ class Grid:
             self.cont_comp_time = 0
             self.diag_comp_time = 0
             self.rad_comp_time = 0
+            self.mic_comp_time = 0
 
 
 

@@ -10,7 +10,7 @@ i_num_dif   = 1
 i_radiation = 1
 
 
-def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, UWIND, VWIND, \
+def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, \
                                     UFLX, VFLX, WWIND, RAD):
 
     t_start = time.time()

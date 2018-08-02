@@ -5,11 +5,12 @@ from wind import wind_tendency_jacobson
 from temperature import temperature_tendency_jacobson
 from geopotential import diag_geopotential_jacobson
 from boundaries import exchange_BC
+from water_vapor import water_vapor_tendency
 
 def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                     UWIND, VWIND, WWIND,
                     UFLX, VFLX, PHI, PVTF, PVTFVB,
-                    RAD):
+                    RAD, MIC):
 
     # PROGNOSE COLP
     dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
@@ -27,15 +28,18 @@ def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                                                     PVTF, PVTFVB)
 
     # PROGNOSE POTT
-    dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, UWIND, VWIND,\
+    dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
                                             UFLX, VFLX, WWIND, RAD)
 
+    # MOIST VARIABLES
+    dQVdt = water_vapor_tendency(GR, MIC.QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC)
 
-    return(dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, WWIND)
+    return(dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, WWIND, dQVdt)
 
 
-def proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
-                    POTT, dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt):
+def proceed_timestep_jacobson(GR, UWIND, VWIND,
+                    COLP, POTT, QV,
+                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt):
 
     # TIME STEPPING
     COLP_OLD = copy.deepcopy(COLP)
@@ -54,11 +58,15 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND, COLP,
         #VWIND[:,:,k][GR.ii,-1-GR.nb] = 0
         POTT[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
                             + GR.dt*dPOTTdt[:,:,k]/COLP[GR.iijj]
+        QV[:,:,k][GR.iijj] = QV[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
+                            + GR.dt*dQVdt[:,:,k]/COLP[GR.iijj]
     UWIND = exchange_BC(GR, UWIND)
     VWIND = exchange_BC(GR, VWIND)
     POTT = exchange_BC(GR, POTT)
+    QV[QV < 0] = 0
+    QV = exchange_BC(GR, QV)
 
-    return(UWIND, VWIND, COLP, POTT)
+    return(UWIND, VWIND, COLP, POTT, QV)
 
 
 def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB):

@@ -2,10 +2,8 @@ import numpy as np
 from datetime import datetime
 # GRID PARAMS
 nb = 1
-#nz = 15
-nz = 5
 nz = 10
-#nz = 3
+nz = 5
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
@@ -13,24 +11,24 @@ lat0_deg = -80
 lat1_deg = 80
 lon0_deg = 90
 lon1_deg = 240
-lon0_deg = 00
+lon0_deg = 0
 lon1_deg = 360
 
-dlat_deg = 5
-dlon_deg = 5
+dlat_deg = 10
+dlon_deg = 10
 
 i_curved_earth = 1
 
 # SIMULATION
 output_path = '../output_fine'
 output_path = '../output'
-i_sim_n_days = 2.0
-i_out_nth_hour = 6
+i_sim_n_days = 10
+i_out_nth_hour = 12
 i_sim_n_days = 1*365.0
 i_out_nth_hour = 24
 
 i_load_from_restart = 0
-i_save_to_restart = 1
+i_save_to_restart = 0
 i_restart_nth_day = 1
 
 i_diffusion_on = 1
@@ -47,7 +45,6 @@ i_spatial_discretization = 'JACOBSON'
 i_time_stepping = 'EULER_FORWARD'
 i_time_stepping = 'MATSUNO'
 i_time_stepping = 'RK4'
-#i_time_stepping = 'HEUN' # DOES NOT WORK
 if i_time_stepping != 'RK4':
     CFL = 0.7
 else:
@@ -75,6 +72,10 @@ POTT_random_pert = 0.0
 
 # RADIATION
 i_radiation = 3
+#i_radiation = 0
+
+# MICROPHYSICS
+i_microphysics = 1
 
 
 
@@ -115,7 +116,9 @@ if i_diffusion_on:
         WIND_hor_dif_tau = 20
         POTT_hor_dif_tau = 3E-5
     elif dlat_deg == 1:
-        pass
+        raise NotImplementedError()
+
+QV_hor_dif_tau = POTT_hor_dif_tau
 
 
 

@@ -6,6 +6,7 @@ from jacobson import diagnose_fields_jacobson
 from diagnostics import diagnose_secondary_fields
 from radiation.org_radiation import radiation
 from soil_model import soil
+from org_microphysics import microphysics
 
 def initialize_fields(GR):
     if i_load_from_restart:
@@ -13,7 +14,7 @@ def initialize_fields(GR):
         UFLX, VFLX, UFLXMP, VFLXMP, \
         HSURF, POTT, TAIR, TAIRVB, RHO, \
         POTTVB, PVTF, PVTFVB, \
-        RAD, SOIL = load_restart_fields(GR)
+        RAD, SOIL, MIC = load_restart_fields(GR)
     else:
         # CREATE ARRAYS
         # scalars
@@ -86,7 +87,8 @@ def initialize_fields(GR):
                                                 HSURF, PVTF, PVTFVB, POTTVB)
 
         PAIR, TAIR, TAIRVB, RHO, WIND = \
-                diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
+                diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
+                                        TAIR, TAIRVB, RHO,\
                                         PVTF, PVTFVB, UWIND, VWIND, WIND)
 
         # SOIL MODEL
@@ -96,12 +98,15 @@ def initialize_fields(GR):
         RAD = radiation(GR, i_radiation)
         RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL)
 
+        # MOISTURE & MICROPHYSICS
+        MIC = microphysics(GR, i_microphysics) 
+
 
 
     return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
             HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB,
-            RAD, SOIL)
+            RAD, SOIL, MIC)
 
 
 
