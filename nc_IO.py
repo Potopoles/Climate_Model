@@ -89,6 +89,9 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
 
     # MICROPHYSICS VARIABLES
     QV_out = ncf.createVariable('QV', 'f4', ('time', 'level', 'lat', 'lon',) )
+    RH_out = ncf.createVariable('RH', 'f4', ('time', 'level', 'lat', 'lon',) )
+    dQVdt_MIC_out = ncf.createVariable('dQVdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
+    dQCdt_MIC_out = ncf.createVariable('dQCdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # SOIL VARIABLES
     TSURF_out = ncf.createVariable('TSURF', 'f4', ('time', 'lat', 'lon',) )
@@ -130,6 +133,9 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
 
         # MICROPHYSICS VARIABLES
         QV_out[-1,k,:,:] = MIC.QV[:,:,k][GR.iijj].T
+        RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
+        dQVdt_MIC_out[-1,k,:,:] = MIC.dQVdt_MIC[:,:,k].T * 3600
+        dQCdt_MIC_out[-1,k,:,:] = MIC.dQCdt_MIC[:,:,k].T * 3600
 
         # VERTICAL PROFILES
         POTTprof_out[-1,GR.nz-k-1,:] = np.mean(POTT[:,:,k][GR.iijj],axis=0)

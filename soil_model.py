@@ -11,9 +11,9 @@ class soil:
     rho_soil = 3000
     rho_water = 1000
 
-    # initial values
-    moisture_ocean = 10
-    moisture_soil = 1
+    # initial values (kg/kg air equivalent)
+    moisture_ocean = 10*1E-3
+    moisture_soil = 1*1E-3
 
     def __init__(self, GR, HSURF):
 

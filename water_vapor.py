@@ -67,7 +67,6 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
         if i_microphysics:
             dQVdt[:,:,k] = dQVdt[:,:,k] + MIC.dQVdt_MIC[:,:,k] * COLP[GR.iijj]
 
-    #print(np.max(MIC.dQVdt_MIC[:,:,GR.nz-1]))
 
     t_end = time.time()
     GR.mic_comp_time += t_end - t_start

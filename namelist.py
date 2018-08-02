@@ -24,8 +24,8 @@ output_path = '../output_fine'
 output_path = '../output'
 i_sim_n_days = 10
 i_out_nth_hour = 12
-i_sim_n_days = 1*365.0
-i_out_nth_hour = 24
+#i_sim_n_days = 1*365.0
+#i_out_nth_hour = 12
 
 i_load_from_restart = 0
 i_save_to_restart = 0

@@ -54,7 +54,7 @@ while GR.ts < GR.nts:
     ########
 
     ######## MICROPHYSICS
-    MIC.calc_microphysics(GR, WIND, SOIL)
+    MIC.calc_microphysics(GR, WIND, SOIL, TAIR, PAIR)
     #quit()
     ########
 
