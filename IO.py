@@ -70,7 +70,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     # VARIABLES
     ALBSFCSW_out = ncf.createVariable('ALBSFCSW', 'f4', ('time', 'lat', 'lon',) )
     PSURF_out = ncf.createVariable('PSURF', 'f4', ('time', 'lat', 'lon',) )
-    PAIR_out = ncf.createVariable('PAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
+    #PAIR_out = ncf.createVariable('PAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
     PHI_out = ncf.createVariable('PHI', 'f4', ('time', 'level', 'lat', 'lon',) )
     UWIND_out = ncf.createVariable('UWIND', 'f4', ('time', 'level', 'lat', 'lons',) )
     VWIND_out = ncf.createVariable('VWIND', 'f4', ('time', 'level', 'lats', 'lon',) )
@@ -78,9 +78,14 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     VORT_out = ncf.createVariable('VORT', 'f4', ('time', 'level', 'lat', 'lon',) )
     WWIND_out = ncf.createVariable('WWIND', 'f4', ('time', 'levels', 'lat', 'lon',) )
     POTT_out = ncf.createVariable('POTT', 'f4', ('time', 'level', 'lat', 'lon',) )
-    POTTprof_out = ncf.createVariable('POTTprof', 'f4', ('time', 'level', 'lat',) )
     TAIR_out = ncf.createVariable('TAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
-    RHO_out = ncf.createVariable('RHO', 'f4', ('time', 'level', 'lat', 'lon',) )
+    #RHO_out = ncf.createVariable('RHO', 'f4', ('time', 'level', 'lat', 'lon',) )
+
+    POTTprof_out = ncf.createVariable('POTTprof', 'f4', ('time', 'level', 'lat',) )
+    UWINDprof_out = ncf.createVariable('UWINDprof', 'f4', ('time', 'level', 'lat',) )
+    VWINDprof_out = ncf.createVariable('VWINDprof', 'f4', ('time', 'level', 'lats',) )
+    WWINDprof_out = ncf.createVariable('WWINDprof', 'f4', ('time', 'levels', 'lat',) )
+    VORTprof_out = ncf.createVariable('VORTprof', 'f4', ('time', 'level', 'lat',) )
 
     # RADIATION VARIABLES
     SWDIFFLXDO_out = ncf.createVariable('SWDIFFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
@@ -91,6 +96,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     LWFLXUP_out = ncf.createVariable('LWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
     LWFLXDO_out = ncf.createVariable('LWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
     LWFLXNET_out = ncf.createVariable('LWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
+    dPOTTdt_RAD_out = ncf.createVariable('dPOTTdt_RAD', 'f4', ('time', 'level', 'lat', 'lon',) )
     #SWFLXDIV_out = ncf.createVariable('SWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
     #LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
 
@@ -102,22 +108,29 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     TSURF_out[-1,:,:] = SOIL.TSOIL[:,:,0].T
 
     for k in range(0,GR.nz):
-        PAIR_out[-1,k,:,:] = PAIR[:,:,k][GR.iijj].T
+        #PAIR_out[-1,k,:,:] = PAIR[:,:,k][GR.iijj].T
         PHI_out[-1,k,:,:] = PHI[:,:,k][GR.iijj].T
         UWIND_out[-1,k,:,:] = UWIND[:,:,k][GR.iisjj].T
         VWIND_out[-1,k,:,:] = VWIND[:,:,k][GR.iijjs].T
         WIND_out[-1,k,:,:] = WIND[:,:,k][GR.iijj].T
         VORT_out[-1,k,:,:] = VORT[:,:,k][GR.iijj].T
         POTT_out[-1,k,:,:] = POTT[:,:,k][GR.iijj].T
-        POTTprof_out[-1,GR.nz-k-1,:] = np.mean(POTT[:,:,k][GR.iijj],axis=0)
         TAIR_out[-1,k,:,:] = TAIR[:,:,k][GR.iijj].T
-        RHO_out[-1,k,:,:] = RHO[:,:,k][GR.iijj].T
+        #RHO_out[-1,k,:,:] = RHO[:,:,k][GR.iijj].T
+        dPOTTdt_RAD_out[-1,k,:,:] = RAD.dPOTTdt_RAD[:,:,k].T * 3600
         #SWFLXDIV_out[-1,k,:,:] = RAD.SWFLXDIV[:,:,k].T 
         #LWFLXDIV_out[-1,k,:,:] = RAD.LWFLXDIV[:,:,k].T 
+
+        POTTprof_out[-1,GR.nz-k-1,:] = np.mean(POTT[:,:,k][GR.iijj],axis=0)
+        UWINDprof_out[-1,GR.nz-k-1,:] = np.mean(UWIND[:,:,k][GR.iijj],axis=0)
+        VWINDprof_out[-1,GR.nz-k-1,:] = np.mean(VWIND[:,:,k][GR.iijjs],axis=0)
+        VORTprof_out[-1,GR.nz-k-1,:] = np.mean(VORT[:,:,k][GR.iijj],axis=0)
 
     for ks in range(0,GR.nzs):
         #WWIND_out[-1,ks,:,:] = WWIND[:,:,ks][GR.iijj].T*COLP[GR.iijj].T
         WWIND_out[-1,ks,:,:] = WWIND_ms[:,:,ks][GR.iijj].T
+
+        WWINDprof_out[-1,GR.nzs-ks-1,:] = np.mean(WWIND_ms[:,:,ks][GR.iijj],axis=0)
 
         SWDIFFLXDO_out[-1,ks,:,:] = RAD.SWDIFFLXDO[:,:,ks].T
         SWDIRFLXDO_out[-1,ks,:,:] = RAD.SWDIRFLXDO[:,:,ks].T

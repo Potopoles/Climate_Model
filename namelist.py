@@ -3,11 +3,11 @@ from datetime import datetime
 # GRID PARAMS
 nb = 1
 #nz = 15
-nz = 7
-nz = 10
+nz = 5
+#nz = 10
 #nz = 3
 
-GMT_initialization = datetime(2018,7,26,0,0,0)
+GMT_initialization = datetime(2018,6,1,0,0,0)
 
 lat0_deg = -80
 lat1_deg = 80
@@ -24,10 +24,10 @@ i_curved_earth = 1
 # SIMULATION
 output_path = '../output_fine'
 output_path = '../output'
-i_sim_n_days = 1.0
-i_out_nth_hour = 2
-#i_sim_n_days = 1*365.0
-#i_out_nth_hour = 24
+i_sim_n_days = 2.0
+i_out_nth_hour = 6
+i_sim_n_days = 1*365.0
+i_out_nth_hour = 24
 
 i_load_from_restart = 0
 i_save_to_restart = 1
@@ -94,10 +94,10 @@ POTT_hor_dif_tau = 0
 COLP_hor_dif_tau = 0
 if i_diffusion_on:
     if dlat_deg == 10:
-        WIND_hor_dif_tau = 0.5
+        WIND_hor_dif_tau = 1
         POTT_hor_dif_tau = 1E-6
     elif dlat_deg == 8:
-        WIND_hor_dif_tau = 0.5
+        WIND_hor_dif_tau = 1
         POTT_hor_dif_tau = 1E-6
     elif dlat_deg == 6:
         WIND_hor_dif_tau = 5

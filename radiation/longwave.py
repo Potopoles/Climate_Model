@@ -2,8 +2,123 @@ import numpy as np
 import scipy
 from radiation.namelist_radiation import con_h, con_c, con_kb, \
                             sigma_abs_gas_LW_in, sigma_sca_gas_LW_in, \
-                            emissivity_surf
+                            emissivity_surface
 
+
+###################################################################################
+###################################################################################
+# METHOD: SELF CONSTRUCTED
+###################################################################################
+###################################################################################
+
+def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW):
+
+    # LONGWAVE
+    nu0 = 50
+    nu1 = 2500
+    g_a = 0.0
+    #albedo_surface_LW = 1
+    sigma_abs_gas_LW = np.repeat(sigma_abs_gas_LW_in, GR.nz)
+    sigma_sca_gas_LW = np.repeat(sigma_sca_gas_LW_in, GR.nz)
+    sigma_tot_LW = sigma_abs_gas_LW + sigma_sca_gas_LW
+
+    # optical thickness
+    dtau = sigma_tot_LW * dz * rho_col
+    taus = np.zeros(GR.nzs)
+    taus[1:] = np.cumsum(dtau)
+
+    # single scattering albedo
+    omega_s = sigma_sca_gas_LW/sigma_tot_LW
+    omega_s[np.isnan(omega_s)] = 0
+
+    # quadrature
+    my1 = 1/np.sqrt(3)
+
+    gamma1 = np.zeros(GR.nz)
+    gamma1[:] = ( 1 - omega_s*(1+g_a)/2 ) / my1
+
+    gamma2 = np.zeros(GR.nz)
+    gamma2[:] = omega_s*(1-g_a) / (2*my1)
+
+    # emission fields
+    B_air = 2*np.pi * (1 - omega_s) * \
+            calc_planck_intensity(GR, nu0, nu1, tair_col)
+    B_surf = emissivity_surface * np.pi * \
+            calc_planck_intensity(GR, nu0, nu1, tsurf)
+
+    # calculate radiative fluxes
+    A_mat, g_vec = rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2,
+                        B_air, B_surf, albedo_surface_LW)
+    fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
+
+    up_diffuse = fluxes[range(1,len(fluxes),2)]
+    down_diffuse = - fluxes[range(0,len(fluxes),2)]
+
+    #net_flux = + down_diffuse + up_diffuse 
+    #print(down_diffuse)
+    #print(up_diffuse)
+    #print(net_flux)
+    #import matplotlib.pyplot as plt
+    #zs = range(GR.nzs,0,-1)
+    #line1, = plt.plot(down_diffuse, zs, label='down diff')
+    #line3, = plt.plot(up_diffuse, zs, label='up diff', linestyle='--')
+    #line4, = plt.plot(net_flux, zs, label='net', linewidth=2)
+    #plt.axvline(x=0, color='black', lineWidth=1)
+    #plt.legend([line1,line3,line4])
+    #plt.show()
+    #quit()
+
+    return(down_diffuse, up_diffuse)
+
+
+def rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2, \
+                        B_air, B_surf, albedo_surface):
+
+    g_vec = np.zeros(2*GR.nz+2)
+    g_vec[1:-1] = np.repeat(dtau*B_air, 2)
+    g_vec[range(2,len(g_vec),2)] = - g_vec[range(2,len(g_vec),2)]
+    g_vec[-1] = B_surf
+
+    C1 = 0.5 * dtau * gamma1
+    C2 = 0.5 * dtau * gamma2
+
+    d0_ = np.repeat(1+C1, 2)
+    d0_[range(1,len(d0_),2)] = - d0_[range(1,len(d0_),2)]
+    d0 = np.ones(2*GR.nz+2); d0[1:-1] = d0_
+
+    dp1_ = np.repeat(-C2, 2)
+    dp1_[range(1,len(dp1_),2)] = - dp1_[range(1,len(dp1_),2)]
+    dp1 = np.zeros(2*GR.nz+2); dp1[2:] = dp1_
+
+    dp2_ = np.repeat(-(1-C1), 2)
+    dp2_[range(0,len(dp2_),2)] = 0
+    dp2 = np.zeros(2*GR.nz+2); dp2[2:] = dp2_
+
+    dm1_ = np.repeat(-C2, 2)
+    dm1_[range(1,len(dm1_),2)] = - dm1_[range(1,len(dm1_),2)]
+    dm1 = np.zeros(2*GR.nz+2); dm1[:-2] = dm1_; dm1[-2] = -albedo_surface
+
+    dm2_ = np.repeat(1-C1, 2)
+    dm2_[range(1,len(dm2_),2)] = 0
+    dm2 = np.zeros(2*GR.nz+2); dm2[:-2] = dm2_
+
+    A_mat = scipy.sparse.diags( (dm2, dm1, d0, dp1[1:], dp2[2:]),
+                                ( -2,  -1,  0,       1,       2),
+                                (GR.nzs*2, GR.nzs*2), format='csr' )
+
+    return(A_mat, g_vec)
+
+###################################################################################
+###################################################################################
+###################################################################################
+###################################################################################
+
+
+###################################################################################
+###################################################################################
+# METHOD: TOON ET AL 1989
+###################################################################################
+###################################################################################
 
 #def org_longwave(GR, dz, tair_vb_col, rho_col, tsurf, albedo_surface_LW):
 #
@@ -11,8 +126,8 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 #    nu0 = 50
 #    nu1 = 2500
 #    g_a = 0.0
-#    albedo_surface_LW = 0
-#    albedo_surface_LW = 0.5
+#    #albedo_surface_LW = 0
+#    #albedo_surface_LW = 0.5
 #    #albedo_surface_LW = 1
 #    sigma_abs_gas_LW = np.repeat(sigma_abs_gas_LW_in, GR.nz)
 #    sigma_sca_gas_LW = np.repeat(sigma_sca_gas_LW_in, GR.nz)
@@ -168,8 +283,8 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 #    Y1 = fluxes[range(0,len(fluxes),2)]
 #    Y2 = fluxes[range(1,len(fluxes),2)]
 #
-#    down_diffuse = - ( - Y1*e3 - Y2*e4 - Cm_tau )
-#    up_diffuse   =   ( + Y1*e1 + Y2*e2 + Cp_tau )
+#    down_diffuse = + ( - Y1*e3 - Y2*e4 - Cm_tau )
+#    up_diffuse   = + ( + Y1*e1 + Y2*e2 + Cp_tau )
 #
 #    #net_flux = - down_diffuse + up_diffuse 
 #    #print(down_diffuse)
@@ -190,88 +305,10 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 
 ###################################################################################
 ###################################################################################
+###################################################################################
+###################################################################################
 
 
-def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW):
-
-    # LONGWAVE
-    nu0 = 50
-    nu1 = 2500
-    ext_coef_LW = 1.7E-4
-    dtau = ext_coef_LW * dz * rho_col
-    taus = np.zeros(GR.nzs)
-    taus[1:] = np.cumsum(dtau)
-
-    gamma1 = np.zeros(GR.nz)
-    gamma1[:] = 1.73
-
-    gamma2 = np.zeros(GR.nz)
-    gamma2[:] = 0
-
-    emissivity_surface = 0.9
-    #albedo_surface_LW = 0.126
-    # single scattering albedo
-    omega_s = 0
-
-    B_air = 2*np.pi * (1 - omega_s) * \
-            calc_planck_intensity(GR, nu0, nu1, tair_col)
-    B_surf = emissivity_surface * np.pi * \
-            calc_planck_intensity(GR, nu0, nu1, tsurf)
-
-    A_mat, g_vec = rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2,
-                        B_air, B_surf, albedo_surface_LW)
-    fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
-
-    lwflxup = fluxes[range(1,len(fluxes),2)]
-    lwflxdo = fluxes[range(0,len(fluxes),2)]
-
-    return(lwflxup, lwflxdo)
-
-
-def rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2, \
-                        B_air, B_surf, albedo_surface):
-
-    g_vec = np.zeros(2*GR.nz+2)
-    g_vec[1:-1] = np.repeat(dtau*B_air, 2)
-    g_vec[range(2,len(g_vec),2)] = - g_vec[range(2,len(g_vec),2)]
-    g_vec[-1] = B_surf
-
-    C1 = 0.5 * dtau * gamma1
-    C2 = 0.5 * dtau * gamma2
-    #C1[:] = 0
-    #C2[:] = 0
-
-    d0_ = np.repeat(1+C1, 2)
-    d0_[range(1,len(d0_),2)] = - d0_[range(1,len(d0_),2)]
-    d0 = np.ones(2*GR.nz+2); d0[1:-1] = d0_
-    #print(d0)
-
-    dp1_ = np.repeat(-C2, 2)
-    dp1_[range(1,len(dp1_),2)] = - dp1_[range(1,len(dp1_),2)]
-    dp1 = np.zeros(2*GR.nz+2); dp1[2:] = dp1_
-    #print(dp1)
-
-    dp2_ = np.repeat(-(1-C1), 2)
-    dp2_[range(0,len(dp2_),2)] = 0
-    dp2 = np.zeros(2*GR.nz+2); dp2[2:] = dp2_
-    #print(dp2)
-
-    dm1_ = np.repeat(-C2, 2)
-    dm1_[range(1,len(dm1_),2)] = - dm1_[range(1,len(dm1_),2)]
-    #dm1 = np.zeros(2*GR.nz+2); dm1[:-2] = dm1_; dm1[-2] = -albedo_surface
-    dm1 = np.zeros(2*GR.nz+2); dm1[:-2] = dm1_; dm1[-2] = albedo_surface
-    #print(dm1)
-
-    dm2_ = np.repeat(1-C1, 2)
-    dm2_[range(1,len(dm2_),2)] = 0
-    dm2 = np.zeros(2*GR.nz+2); dm2[:-2] = dm2_
-    #print(dm2)
-
-    A_mat = scipy.sparse.diags( (dm2, dm1, d0, dp1[1:], dp2[2:]),
-                                ( -2,  -1,  0,       1,       2),
-                                (GR.nzs*2, GR.nzs*2), format='csr' )
-
-    return(A_mat, g_vec)
 
 
 

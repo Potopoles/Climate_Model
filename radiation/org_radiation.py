@@ -65,7 +65,7 @@ class radiation:
         elif self.i_radiation == 3:
             if GR.ts % self.rad_nth_ts == 0:
                 print('calculate radiation')
-                self.simple_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL)
+                self.simple_radiation(GR, TAIR, RHO, PHIVB, SOIL)
         elif self.i_radiation == 0:
             pass
         else:
@@ -75,7 +75,7 @@ class radiation:
         GR.rad_comp_time += t_end - t_start
 
 
-    def simple_radiation(self, GR, TAIR, TAIRVB, RHO, PHIVB, SOIL):
+    def simple_radiation(self, GR, TAIR, RHO, PHIVB, SOIL):
         ALTVB = PHIVB / con_g
         dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
 
@@ -83,17 +83,8 @@ class radiation:
         self.MYSUN = np.cos(self.SOLZEN)
         self.MYSUN[self.MYSUN < 0] = 0
         self.solar_constant = calc_current_solar_constant(GR) 
-        #self.SWINTOA = self.solar_constant * np.maximum(np.cos(self.SOLZEN), 0)
         self.SWINTOA = self.solar_constant * np.cos(self.SOLZEN)
 
-        #import matplotlib.pyplot as plt
-        ##plt.contourf(self.SOLZEN.T)
-        ##self.MYSUN[self.MYSUN < 0] = 0
-        #plt.contourf(self.MYSUN.T)
-        #plt.colorbar()
-        #plt.show()
-        #quit()
-       
         for i in range(0,GR.nx):
             #i = 10
             i_ref = i+GR.nb
@@ -103,14 +94,19 @@ class radiation:
 
 
                 # LONGWAVE
-                #self.LWFLXDO[i,j,:], self.LWFLXUP[i,j,:]  = \
+                # toon et al 1989 method
+                #down_diffuse, up_diffuse = \
                 #                    org_longwave(GR, dz[i,j],
                 #                                TAIRVB[i_ref,j_ref,:], RHO[i_ref,j_ref], \
                 #                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
-                self.LWFLXDO[i,j,:], self.LWFLXUP[i,j,:]  = \
+                # self-manufactured method
+                down_diffuse, up_diffuse = \
                                     org_longwave(GR, dz[i,j],
                                                 TAIR[i_ref,j_ref,:], RHO[i_ref,j_ref], \
                                                 SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
+
+                self.LWFLXDO[i,j,:] = - down_diffuse
+                self.LWFLXUP[i,j,:] =   up_diffuse
 
                 # SHORTWAVE
                 if self.MYSUN[i,j] > 0:
@@ -123,10 +119,10 @@ class radiation:
                                                     self.MYSUN[i,j],
                                                     SOIL.ALBEDOSW[i,j])
 
-                    self.SWDIFFLXDO[i,j,:] = down_diffuse
-                    self.SWDIRFLXDO[i,j,:] = down_direct
+                    self.SWDIFFLXDO[i,j,:] = - down_diffuse
+                    self.SWDIRFLXDO[i,j,:] = - down_direct
                     self.SWFLXUP   [i,j,:] = up_diffuse
-                    self.SWFLXDO   [i,j,:] = down_diffuse + down_direct
+                    self.SWFLXDO   [i,j,:] = - down_diffuse - down_direct
                 else:
                     self.SWDIFFLXDO[i,j,:] = 0
                     self.SWDIRFLXDO[i,j,:] = 0

@@ -5,82 +5,55 @@ from radiation.namelist_radiation import solar_constant_0, \
                             sigma_abs_gas_SW_in, sigma_sca_gas_SW_in
 
 
+###################################################################################
+###################################################################################
+# METHOD: TOON ET AL 1989
+###################################################################################
+###################################################################################
+
 def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
                     albedo_surface_SW):
 
-    # TODO
-    #mysun = 1.0
     g_a = 0.0
+    #mysun = 1.0
     #albedo_surface_SW = 0
-    #albedo_surface_SW = 0.5
-    #albedo_surface_SW = 1
     sigma_abs_gas_SW = np.repeat(sigma_abs_gas_SW_in, GR.nz)
     sigma_sca_gas_SW = np.repeat(sigma_sca_gas_SW_in, GR.nz)
-    #sigma_sca_gas_SW[1] = sigma_sca_gas_SW[1]*2
-    #sigma_abs_gas_SW[:] = 0
-    #sigma_sca_gas_SW[:] = 0 
-    #sigma_sca_gas_SW[:5] = 0
-    #sigma_sca_gas_SW[7:] = 0
     sigma_tot_SW = sigma_abs_gas_SW + sigma_sca_gas_SW
-    #print(sigma_tot_SW)
 
+    # optical thickness
     dtau = sigma_tot_SW * dz * rho_col
     taus = np.zeros(GR.nzs)
     taus[1:] = np.cumsum(dtau)
     tau = taus[:-1] + np.diff(taus)/2
 
-    #print(tau)
-    #print(taus)
-    #print()
-
     # single scattering albedo
     omega_s = sigma_sca_gas_SW/sigma_tot_SW
     omega_s[np.isnan(omega_s)] = 0
-    #print('omega_s ' + str(omega_s))
-    #quit()
 
-    # QUADRATURE
+    # quadrature
     my1 = 1/np.sqrt(3)
 
     gamma1 = np.zeros(GR.nz)
-    #gamma1[:] = 3**(1/2) * (2 - omega_s * (1 + g_a) ) / 2
     gamma1[:] = ( 1 - omega_s*(1+g_a)/2 ) / my1
 
     gamma2 = np.zeros(GR.nz)
-    #gamma2[:] = omega_s * 3**(1/2) * (1 - g_a) / 2
     gamma2[:] = omega_s*(1-g_a) / (2*my1)
 
     gamma3 = np.zeros(GR.nz)
-    #gamma3[:] = (1 - 3**(1/2) * g_a * mysun) / 2
     gamma3[:] = (1 - 3 * g_a * my1 * mysun) / 2
 
     gamma4 = np.zeros(GR.nz)
     gamma4[:] = 1 - gamma3
 
-    #print('gammas:')
-    #print(gamma1)
-    #print(gamma2)
-    #print(gamma3)
-    #print(gamma4)
-    #print()
-
     lamb_2str = np.sqrt(gamma1**2 - gamma2**2)
     tau_2str = gamma2 / (gamma1 + lamb_2str)
         
-    #print(lamb_2str)
-    #print(tau_2str)
-    #print()
-
+    # surface reflection
     surf_reflected_SW = albedo_surface_SW * mysun * solar_constant * \
                             np.exp(-taus[-1]/mysun)
-    #print(surf_reflected_SW)
-    #print()
 
-    #sw_dir = omega_s * solar_constant * np.exp(-tau/mysun)
-    #A_mat, g_vec = rad_calc_SW_RTE_matrix(GR, dtau, gamma1, gamma2, gamma3,
-    #                        swintoa, surf_reflected_SW,
-    #                        albedo_surface_SW, sw_dir)
-    #fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
+    # calculate radiative fluxes
     down_diffuse = np.zeros( GR.nzs )
     up_diffuse = np.full( GR.nzs, np.nan)
     down_direct = np.full( GR.nzs, np.nan)
@@ -91,6 +64,7 @@ def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
                             surf_reflected_SW,
                             albedo_surface_SW)
 
+    # extrapolate uppermost flux
     # first order
     #up_diffuse[0] = max(0, up_diffuse[1] - (up_diffuse[2] - up_diffuse[1]) * dz[0]/dz[1])
     # second order
@@ -109,99 +83,70 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
     e2 = 1        - tau_2str * np.exp( - lamb_2str * dtau )
     e3 = tau_2str +            np.exp( - lamb_2str * dtau )
     e4 = tau_2str -            np.exp( - lamb_2str * dtau )
-    #print('e terms:')
-    #print(e1)
-    #print(e2)
-    #print(e3)
-    #print(e4)
-    #print()
 
     lodd = np.arange(3,2*GR.nz,2) - 1
     leven = np.arange(2,2*GR.nz,2) - 1
     ninds = np.arange(0,GR.nz-1)
     nindsp1 = np.arange(1,GR.nz)
-    #print('indices')
-    #print(lodd)
-    #print(leven)
-    #print(ninds)
-    #print(nindsp1)
-    #print()
 
     dm1 = np.full(2*GR.nz, np.nan)
     dm1[lodd]  = e2[ninds  ] * e3[ninds  ] - e4[ninds  ] * e1[ninds  ]
     dm1[leven] = e2[nindsp1] * e1[ninds  ] - e3[ninds  ] * e4[nindsp1]
     dm1[0] = 0
     dm1[-1] = e1[-1] - albedo_surface_SW * e3[-1]
-    #print(dm1)
 
     d0 = np.full(2*GR.nz, np.nan)
     d0[lodd]  = e1[ninds  ] * e1[nindsp1] - e3[ninds  ] * e3[nindsp1]
     d0[leven] = e2[ninds  ] * e2[nindsp1] - e4[ninds  ] * e4[nindsp1]
     d0[0] = e1[0]
     d0[-1] = e2[-1] - albedo_surface_SW * e4[-1]
-    #print(d0)
 
     dp1 = np.full(2*GR.nz, np.nan)
     dp1[lodd]  = e3[ninds  ] * e4[nindsp1] - e1[ninds  ] * e2[nindsp1]
     dp1[leven] = e1[nindsp1] * e4[nindsp1] - e2[nindsp1] * e3[nindsp1]
     dp1[0] = - e2[0]
     dp1[-1] = 0
-    #print(dp1)
-    #print()
 
     A_mat = scipy.sparse.diags( (dm1[1:], d0, dp1),
                                 ( -1,  0,   1),
                                 (GR.nz*2, GR.nz*2), format='csr' )
-    #print(A_mat.todense())
-    #print()
-    #quit()
 
-    #print('C terms')
     Cp_tau = omega_s * solar_constant * np.exp( - (taus[1:]) / mysun ) * \
             ( (gamma1 - 1 / mysun) * gamma3 + gamma4 * gamma2 ) / \
             ( lamb_2str**2 - 1 / mysun**2 )
-    #print(Cp_tau)
     Cp_0 = omega_s * solar_constant * np.exp( - (taus[:-1]) / mysun ) * \
             ( (gamma1 - 1 / mysun) * gamma3 + gamma4 * gamma2 ) / \
             ( lamb_2str**2 - 1 / mysun**2 )
-    #print(Cp_0)
     Cm_tau = omega_s * solar_constant * np.exp( - (taus[1:]) / mysun ) * \
             ( (gamma1 + 1 / mysun) * gamma4 + gamma2 * gamma3 ) / \
             ( lamb_2str**2 - 1 / mysun**2 )
-    #print(Cm_tau)
     Cm_0 = omega_s * solar_constant * np.exp( - (taus[:-1]) / mysun ) * \
             ( (gamma1 + 1 / mysun) * gamma4 + gamma2 * gamma3 ) / \
             ( lamb_2str**2 - 1 / mysun**2 )
-    #print(Cm_0)
      
     src = np.full(2*GR.nz, np.nan)
     src[lodd]  = e3[ninds ]  * (Cp_0  [nindsp1] - Cp_tau[ninds  ]) + \
                  e1[ninds ]  * (Cm_tau[ninds  ] - Cm_0  [nindsp1])
     src[leven] = e2[nindsp1] * (Cp_0  [nindsp1] - Cp_tau[ninds  ]) + \
                  e4[nindsp1] * (Cm_0  [nindsp1] - Cm_tau[ninds  ])
-    #src[0] = mysun * solar_constant - Cm_0[0]
     src[0] = 0 - Cm_0[0]
     src[-1] = surf_reflected_SW - Cp_tau[-1] + albedo_surface_SW * Cm_tau[-1]
-    #print('src')
-    #print(src)
-    #print()
-    #quit()
 
     fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
 
     Y1 = fluxes[range(0,len(fluxes),2)]
     Y2 = fluxes[range(1,len(fluxes),2)]
 
-    down_diffuse = - ( - Y1*e3 - Y2*e4 - Cm_tau)
-    down_direct = + mysun * solar_constant * np.exp( - taus[1:] / mysun)
+    down_diffuse = + ( - Y1*e3 - Y2*e4 - Cm_tau)
+    down_direct = - mysun * solar_constant * np.exp( - taus[1:] / mysun)
     up_diffuse = + (Y1*e1 + Y2*e2 + Cp_tau )
 
-    #net_flux = - down_diffuse - down_direct + up_diffuse 
+    #net_flux = + down_diffuse + down_direct + up_diffuse 
     #print(net_flux)
     #import matplotlib.pyplot as plt
     #zs = range(GR.nz,0,-1)
-    #line1, = plt.plot(- down_diffuse, zs, label='down diff')
-    #line2, = plt.plot(- down_direct, zs, label='down_dir')
+    #line1, = plt.plot(down_diffuse, zs, label='down diff')
+    #line2, = plt.plot(down_direct, zs, label='down_dir')
     #line3, = plt.plot(up_diffuse, zs, label='up diff', linestyle='--')
     #line4, = plt.plot(net_flux, zs, label='net', lineWidth=2)
     #plt.axvline(x=0, color='black', lineWidth=1)
@@ -211,6 +156,80 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
 
     return(down_diffuse, up_diffuse, down_direct)
 
+###################################################################################
+###################################################################################
+###################################################################################
+###################################################################################
+
+
+
+
+def rad_solar_zenith_angle(GR, SOLZEN):
+
+    #print(GR.GMT)
+    #quit()
+
+    # SOLAR DECLINATION ANGLE
+    n_days_in_year = 365 # TODO: leap years
+    D_J = GR.GMT.timetuple().tm_yday
+    Y = GR.GMT.timetuple().tm_year
+
+    if Y >= 2001:
+        D_L = np.floor((Y - 2001)/4)
+    else:
+        D_L = np.floor((Y - 2000)/4) - 1
+    N_JD = 364.5 + (Y - 2001)*365 + D_L + D_J
+
+    eps_ob = 23.439 - 0.0000004 * N_JD
+
+    L_M = 280.460 + 0.9856474 * N_JD;
+    g_M = 357.528 + 0.9856003 * N_JD;
+
+    lamb_ec = L_M + 1.915 * np.sin(g_M * np.pi/180) + \
+                    0.020 * np.sin(2 * g_M * np.pi/180);
+
+    sol_declin = np.arcsin( \
+            np.sin(eps_ob/180*np.pi)*np.sin(lamb_ec/180*np.pi))            
+
+    # HOUR ANGLE
+    sec_of_local_noon = GR.lon_rad[GR.iijj]/(2*np.pi)*86400
+    sec_of_day = timedelta(hours=GR.GMT.hour,
+                              minutes=GR.GMT.minute,
+                              seconds=GR.GMT.second).total_seconds()
+    sec_past_local_noon = sec_of_day - sec_of_local_noon
+    hour_angle = 2*np.pi * sec_past_local_noon / 86400;
+
+
+    #SOLZEN[:,:] = np.cos(hour_angle)
+    SOLZEN[:,:] = np.arccos( \
+                    + np.sin(GR.lat_rad[GR.iijj]) * np.sin(sol_declin) \
+                    + np.cos(GR.lat_rad[GR.iijj]) * \
+                                np.cos(sol_declin) * np.cos(hour_angle) )
+
+    return(SOLZEN)
+
+
+def calc_current_solar_constant(GR):
+    n_days_in_year = 365 # TODO: leap years
+    D_J = GR.GMT.timetuple().tm_yday
+    theta_J = 2 * np.pi * D_J / n_days_in_year
+    earth_sun_dist = 1.00011 + 0.034221 * np.cos(theta_J) \
+                    + 0.00128 * np.sin(theta_J) \
+                    + 0.000719 * np.cos(2 * theta_J) \
+                    + 0.000077 * np.sin(2 * theta_J)
+    return(solar_constant_0 * earth_sun_dist)
+
+
+
+
+
+
+
+###################################################################################
+###################################################################################
+# METHOD: SELF CONSTRUCTED
+###################################################################################
+###################################################################################
 
 #def rad_calc_SW_RTE_matrix(GR, dtau, gamma1, gamma2, gamma3,
 #        TOA_SW_in, surf_reflected_SW, albedo_surface, sw_dir):
@@ -272,59 +291,7 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
 #    return(A_mat, g_vec)
 
 
-
-def rad_solar_zenith_angle(GR, SOLZEN):
-
-    #print(GR.GMT)
-    #quit()
-
-    # SOLAR DECLINATION ANGLE
-    n_days_in_year = 365 # TODO: leap years
-    D_J = GR.GMT.timetuple().tm_yday
-    Y = GR.GMT.timetuple().tm_year
-
-    if Y >= 2001:
-        D_L = np.floor((Y - 2001)/4)
-    else:
-        D_L = np.floor((Y - 2000)/4) - 1
-    N_JD = 364.5 + (Y - 2001)*365 + D_L + D_J
-
-    eps_ob = 23.439 - 0.0000004 * N_JD
-
-    L_M = 280.460 + 0.9856474 * N_JD;
-    g_M = 357.528 + 0.9856003 * N_JD;
-
-    lamb_ec = L_M + 1.915 * np.sin(g_M * np.pi/180) + \
-                    0.020 * np.sin(2 * g_M * np.pi/180);
-
-    sol_declin = np.arcsin( \
-            np.sin(eps_ob/180*np.pi)*np.sin(lamb_ec/180*np.pi))            
-
-    # HOUR ANGLE
-    sec_of_local_noon = GR.lon_rad[GR.iijj]/(2*np.pi)*86400
-    sec_of_day = timedelta(hours=GR.GMT.hour,
-                              minutes=GR.GMT.minute,
-                              seconds=GR.GMT.second).total_seconds()
-    sec_past_local_noon = sec_of_day - sec_of_local_noon
-    hour_angle = 2*np.pi * sec_past_local_noon / 86400;
-
-
-    #SOLZEN[:,:] = np.cos(hour_angle)
-    SOLZEN[:,:] = np.arccos( \
-                    + np.sin(GR.lat_rad[GR.iijj]) * np.sin(sol_declin) \
-                    + np.cos(GR.lat_rad[GR.iijj]) * \
-                                np.cos(sol_declin) * np.cos(hour_angle) )
-
-    return(SOLZEN)
-
-
-def calc_current_solar_constant(GR):
-    n_days_in_year = 365 # TODO: leap years
-    D_J = GR.GMT.timetuple().tm_yday
-    theta_J = 2 * np.pi * D_J / n_days_in_year
-    earth_sun_dist = 1.00011 + 0.034221 * np.cos(theta_J) \
-                    + 0.00128 * np.sin(theta_J) \
-                    + 0.000719 * np.cos(2 * theta_J) \
-                    + 0.000077 * np.sin(2 * theta_J)
-    return(solar_constant_0 * earth_sun_dist)
-
+###################################################################################
+###################################################################################
+###################################################################################
+###################################################################################
