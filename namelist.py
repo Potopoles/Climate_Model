@@ -4,7 +4,7 @@ from datetime import datetime
 nb = 1
 #nz = 15
 nz = 5
-#nz = 10
+nz = 10
 #nz = 3
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
@@ -16,8 +16,8 @@ lon1_deg = 240
 lon0_deg = 00
 lon1_deg = 360
 
-dlat_deg = 10
-dlon_deg = 10
+dlat_deg = 5
+dlon_deg = 5
 
 i_curved_earth = 1
 
