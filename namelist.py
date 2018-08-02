@@ -4,7 +4,7 @@ from datetime import datetime
 nb = 1
 #nz = 15
 nz = 7
-#nz = 10
+nz = 10
 #nz = 3
 
 GMT_initialization = datetime(2018,7,26,0,0,0)
@@ -26,8 +26,8 @@ output_path = '../output_fine'
 output_path = '../output'
 i_sim_n_days = 1.0
 i_out_nth_hour = 2
-i_sim_n_days = 1*365.0
-i_out_nth_hour = 24
+#i_sim_n_days = 1*365.0
+#i_out_nth_hour = 24
 
 i_load_from_restart = 0
 i_save_to_restart = 1

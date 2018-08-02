@@ -54,18 +54,18 @@ class radiation:
 
 
 
-    def calc_radiation(self, GR, POTT, TAIR, RHO, PHIVB, SOIL):
+    def calc_radiation(self, GR, TAIR, TAIRVB, RHO, PHIVB, SOIL):
 
         t_start = time.time()
 
         if self.i_radiation == 1:
-            self.pseudo_constant_radiation(GR, POTT)
+            self.pseudo_constant_radiation(GR, TAIR)
         elif self.i_radiation == 2:
-            self.pseudo_varying_radiation(GR, POTT)
+            self.pseudo_varying_radiation(GR, TAIR)
         elif self.i_radiation == 3:
             if GR.ts % self.rad_nth_ts == 0:
                 print('calculate radiation')
-                self.simple_radiation(GR, POTT, TAIR, RHO, PHIVB, SOIL)
+                self.simple_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL)
         elif self.i_radiation == 0:
             pass
         else:
@@ -75,7 +75,7 @@ class radiation:
         GR.rad_comp_time += t_end - t_start
 
 
-    def simple_radiation(self, GR, POTT, TAIR, RHO, PHIVB, SOIL):
+    def simple_radiation(self, GR, TAIR, TAIRVB, RHO, PHIVB, SOIL):
         ALTVB = PHIVB / con_g
         dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
 
@@ -103,10 +103,14 @@ class radiation:
 
 
                 # LONGWAVE
-                self.LWFLXUP[i,j,:], self.LWFLXDO[i,j,:] = \
+                #self.LWFLXDO[i,j,:], self.LWFLXUP[i,j,:]  = \
+                #                    org_longwave(GR, dz[i,j],
+                #                                TAIRVB[i_ref,j_ref,:], RHO[i_ref,j_ref], \
+                #                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
+                self.LWFLXDO[i,j,:], self.LWFLXUP[i,j,:]  = \
                                     org_longwave(GR, dz[i,j],
                                                 TAIR[i_ref,j_ref,:], RHO[i_ref,j_ref], \
-                                                SOIL.TSOIL[i,j,0], SOIL.ALBEDO[i,j])
+                                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
 
                 # SHORTWAVE
                 if self.MYSUN[i,j] > 0:
@@ -117,12 +121,12 @@ class radiation:
                                                     RHO[i_ref,j_ref],
                                                     self.SWINTOA[i,j],
                                                     self.MYSUN[i,j],
-                                                    SOIL.ALBEDO[i,j])
+                                                    SOIL.ALBEDOSW[i,j])
 
-                    self.SWDIFFLXDO[i,j,:] = - down_diffuse
-                    self.SWDIRFLXDO[i,j,:] = - down_direct
+                    self.SWDIFFLXDO[i,j,:] = down_diffuse
+                    self.SWDIRFLXDO[i,j,:] = down_direct
                     self.SWFLXUP   [i,j,:] = up_diffuse
-                    self.SWFLXDO   [i,j,:] = - down_diffuse - down_direct
+                    self.SWFLXDO   [i,j,:] = down_diffuse + down_direct
                 else:
                     self.SWDIFFLXDO[i,j,:] = 0
                     self.SWDIRFLXDO[i,j,:] = 0
@@ -154,20 +158,20 @@ class radiation:
                                                 self.TOTFLXDIV[:,:,k]
 
 
-    def pseudo_varying_radiation(self, GR, POTT):
+    def pseudo_varying_radiation(self, GR, TAIR):
         self.SOLZEN = rad_solar_zenith_angle(GR, self.SOLZEN)
         self.SWINTOA = incoming_SW_TOA(GR, self.SWINTOA, self.SOLZEN) 
 
         for k in range(0,GR.nz):
             self.dPOTTdt_RAD[:,:,k] = \
-                                -  pseudo_rad_outRate*POTT[:,:,k][GR.iijj]**1/2  \
+                                -  pseudo_rad_outRate*TAIR[:,:,k][GR.iijj]**1/2  \
                                 +  pseudo_rad_inpRate*self.SWINTOA/1000
 
 
-    def pseudo_constant_radiation(self, GR, POTT):
+    def pseudo_constant_radiation(self, GR, TAIR):
         for k in range(0,GR.nz):
             self.dPOTTdt_RAD[:,:,k] = \
-                                -  pseudo_rad_outRate*POTT[:,:,k][GR.iijj]**1  \
+                                -  pseudo_rad_outRate*TAIR[:,:,k][GR.iijj]**1  \
                                 +  pseudo_rad_inpRate*np.cos(GR.lat_rad[GR.iijj])
 
 

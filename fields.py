@@ -11,7 +11,7 @@ def initialize_fields(GR):
     if i_load_from_restart:
         COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
         UFLX, VFLX, UFLXMP, VFLXMP, \
-        HSURF, POTT, TAIR, RHO, \
+        HSURF, POTT, TAIR, TAIRVB, RHO, \
         POTTVB, PVTF, PVTFVB, \
         RAD, SOIL = load_restart_fields(GR)
     else:
@@ -24,7 +24,8 @@ def initialize_fields(GR):
         PHIVB =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
         POTT =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         TAIR =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        RHO =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        TAIRVB = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
+        RHO  =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz   ), np.nan)
         POTTVB = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
         POTTVB[:] = 0
         # wind velocities
@@ -79,28 +80,27 @@ def initialize_fields(GR):
 
         if i_spatial_discretization == 'UPWIND':
             raise NotImplementedError()
-            #PHI, PVTF, PVTFVB = diag_geopotential_upwind(GR, PHI, HSURF, TAIR, COLP)
         if i_spatial_discretization == 'JACOBSON':
             PHI, PHIVB, PVTF, PVTFVB, POTTVB \
                         = diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
                                                 HSURF, PVTF, PVTFVB, POTTVB)
 
-        PAIR, TAIR, RHO, WIND = \
-                diagnose_secondary_fields(GR, PAIR, PHI, POTT, TAIR, RHO,\
-                                            PVTF, PVTFVB, UWIND, VWIND, WIND)
+        PAIR, TAIR, TAIRVB, RHO, WIND = \
+                diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
+                                        PVTF, PVTFVB, UWIND, VWIND, WIND)
 
         # SOIL MODEL
         SOIL = soil(GR, HSURF)
 
         # RADIATION
         RAD = radiation(GR, i_radiation)
-        RAD.calc_radiation(GR, POTT, TAIR, RHO, PHIVB, SOIL)
+        RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL)
 
 
 
     return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
-            HSURF, POTT, TAIR, RHO, POTTVB, PVTF, PVTFVB,
+            HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB,
             RAD, SOIL)
 
 
