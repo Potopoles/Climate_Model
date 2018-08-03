@@ -203,6 +203,7 @@ class Grid:
             self.diag_comp_time = 0
             self.rad_comp_time = 0
             self.mic_comp_time = 0
+            self.soil_comp_time = 0
 
 
 

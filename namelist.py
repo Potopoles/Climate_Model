@@ -3,7 +3,7 @@ from datetime import datetime
 # GRID PARAMS
 nb = 1
 nz = 10
-nz = 5
+nz = 8
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
@@ -14,8 +14,8 @@ lon1_deg = 240
 lon0_deg = 0
 lon1_deg = 360
 
-dlat_deg = 10
-dlon_deg = 10
+dlat_deg = 5
+dlon_deg = 5
 
 i_curved_earth = 1
 
@@ -24,8 +24,8 @@ output_path = '../output_fine'
 output_path = '../output'
 i_sim_n_days = 10
 i_out_nth_hour = 12
-#i_sim_n_days = 1*365.0
-#i_out_nth_hour = 12
+i_sim_n_days = 1*365.0
+i_out_nth_hour = 12
 
 i_load_from_restart = 0
 i_save_to_restart = 0
@@ -48,7 +48,7 @@ i_time_stepping = 'RK4'
 if i_time_stepping != 'RK4':
     CFL = 0.7
 else:
-    CFL = 1.0
+    CFL = 1.2
 
 # INITIAL CONDITIONS
 gaussian_dlon = np.pi/10

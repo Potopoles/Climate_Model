@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 
 class soil:
@@ -12,8 +13,10 @@ class soil:
     rho_water = 1000
 
     # initial values (kg/kg air equivalent)
-    moisture_ocean = 10*1E-3
-    moisture_soil = 1*1E-3
+    moisture_ocean = np.nan
+    moisture_soil = 10.0
+    evapity_thresh = 10
+
 
     def __init__(self, GR, HSURF):
 
@@ -43,15 +46,21 @@ class soil:
 
         self.MOIST = np.full( ( GR.nx, GR.ny ), self.moisture_soil )
         self.MOIST[self.OCEANMSK == 1] = self.moisture_ocean
+        self.EVAPITY = np.zeros( ( GR.nx, GR.ny ) ) # mm
+        self.EVAPITY[self.OCEANMSK == 1] = 1
 
         self.ALBEDOSW = np.full( ( GR.nx, GR.ny ), np.nan) 
         self.ALBEDOLW = np.full( ( GR.nx, GR.ny ), np.nan) 
         self.ALBEDOSW, self.ALBEDOLW = self.calc_albedo(GR, self.ALBEDOSW, self.ALBEDOLW, 
                                                             self.TSOIL, self.OCEANMSK)
 
+        self.RAINRATE = np.zeros( ( GR.nx, GR.ny ) ) # mm/s
+        self.ACCRAIN = np.zeros( ( GR.nx, GR.ny ) ) # mm
 
 
     def advance_timestep(self, GR, RAD):
+
+        t_start = time.time()
 
 
         if RAD.i_radiation > 0:
@@ -62,6 +71,13 @@ class soil:
 
             self.ALBEDOSW, self.ALBEDOLW = self.calc_albedo(GR, self.ALBEDOSW, self.ALBEDOLW,
                                                             self.TSOIL, self.OCEANMSK)
+
+        # calc evaporation capacity
+        self.EVAPITY[self.OCEANMSK == 0] = np.minimum(np.maximum(0, self.MOIST[self.OCEANMSK == 0] \
+                                                        / self.evapity_thresh), 1)
+
+        t_end = time.time()
+        GR.soil_comp_time += t_end - t_start
 
 
     def calc_albedo(self, GR, ALBEDOSW, ALBEDOLW, TSOIL, OCEANMSK):

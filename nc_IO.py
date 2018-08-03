@@ -5,7 +5,7 @@ from namelist import output_path, pTop
 from IO_helper_functions import NC_output_diagnostics
 
 
-def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
+def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
                 POTT, TAIR, RHO, PVTF, PVTFVB,
                 RAD, SOIL, MIC):
 
@@ -17,9 +17,10 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     print('###########################################')
     print('###########################################')
 
-    VORT, PAIR, TAIR, WWIND_ms = NC_output_diagnostics(GR, UWIND, 
+    VORT, PAIR, TAIR, WWIND_ms,\
+    WVP, CWP                 = NC_output_diagnostics(GR, UWIND, 
                         VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
-                        PHI)
+                        PHI, PHIVB, RHO, MIC)
 
     filename = output_path+'/out'+str(outCounter).zfill(4)+'.nc'
 
@@ -89,13 +90,19 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
 
     # MICROPHYSICS VARIABLES
     QV_out = ncf.createVariable('QV', 'f4', ('time', 'level', 'lat', 'lon',) )
+    QC_out = ncf.createVariable('QC', 'f4', ('time', 'level', 'lat', 'lon',) )
     RH_out = ncf.createVariable('RH', 'f4', ('time', 'level', 'lat', 'lon',) )
     dQVdt_MIC_out = ncf.createVariable('dQVdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
     dQCdt_MIC_out = ncf.createVariable('dQCdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
+    WVP_out = ncf.createVariable('WVP', 'f4', ('time', 'lat', 'lon',) )
+    CWP_out = ncf.createVariable('CWP', 'f4', ('time', 'lat', 'lon',) )
 
     # SOIL VARIABLES
     TSURF_out = ncf.createVariable('TSURF', 'f4', ('time', 'lat', 'lon',) )
     SOILMOIST_out = ncf.createVariable('SOILMOIST', 'f4', ('time', 'lat', 'lon',) )
+    RAINRATE_out = ncf.createVariable('RAINRATE', 'f4', ('time', 'lat', 'lon',) )
+    ACCRAIN_out = ncf.createVariable('ACCRAIN', 'f4', ('time', 'lat', 'lon',) )
+    EVAPITY_out = ncf.createVariable('EVAPITY', 'f4', ('time', 'lat', 'lon',) )
 
     # VERTICAL PROFILES
     POTTprof_out = ncf.createVariable('POTTprof', 'f4', ('time', 'level', 'lat',) )
@@ -103,6 +110,8 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     VWINDprof_out = ncf.createVariable('VWINDprof', 'f4', ('time', 'level', 'lats',) )
     WWINDprof_out = ncf.createVariable('WWINDprof', 'f4', ('time', 'levels', 'lat',) )
     VORTprof_out = ncf.createVariable('VORTprof', 'f4', ('time', 'level', 'lat',) )
+    QVprof_out = ncf.createVariable('QVprof', 'f4', ('time', 'level', 'lat',) )
+    QCprof_out = ncf.createVariable('QCprof', 'f4', ('time', 'level', 'lat',) )
 
     ################################################################################
     ################################################################################
@@ -112,6 +121,12 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
     PSURF_out[-1,:,:] = COLP[GR.iijj].T + pTop
     TSURF_out[-1,:,:] = SOIL.TSOIL[:,:,0].T
     SOILMOIST_out[-1,:,:] = SOIL.MOIST.T
+    RAINRATE_out[-1,:,:] = SOIL.RAINRATE.T*3600 # mm/h
+    ACCRAIN_out[-1,:,:] = SOIL.ACCRAIN.T # mm
+    EVAPITY_out[-1,:,:] = SOIL.EVAPITY.T
+
+    WVP_out[-1,:,:] = WVP.T
+    CWP_out[-1,:,:] = CWP.T
 
     for k in range(0,GR.nz):
         # DYNAMIC VARIABLES
@@ -133,6 +148,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
 
         # MICROPHYSICS VARIABLES
         QV_out[-1,k,:,:] = MIC.QV[:,:,k][GR.iijj].T
+        QC_out[-1,k,:,:] = MIC.QC[:,:,k][GR.iijj].T
         RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
         dQVdt_MIC_out[-1,k,:,:] = MIC.dQVdt_MIC[:,:,k].T * 3600
         dQCdt_MIC_out[-1,k,:,:] = MIC.dQCdt_MIC[:,:,k].T * 3600
@@ -142,6 +158,8 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
         UWINDprof_out[-1,GR.nz-k-1,:] = np.mean(UWIND[:,:,k][GR.iijj],axis=0)
         VWINDprof_out[-1,GR.nz-k-1,:] = np.mean(VWIND[:,:,k][GR.iijjs],axis=0)
         VORTprof_out[-1,GR.nz-k-1,:] = np.mean(VORT[:,:,k][GR.iijj],axis=0)
+        QVprof_out[-1,GR.nz-k-1,:] = np.mean(MIC.QV[:,:,k][GR.iijj],axis=0)
+        QCprof_out[-1,GR.nz-k-1,:] = np.mean(MIC.QC[:,:,k][GR.iijj],axis=0)
 
 
     for ks in range(0,GR.nzs):

@@ -22,11 +22,12 @@ def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
 
     mean_colp = np.sum(COLP[GR.iijj]*GR.A[GR.iijj])/np.sum(GR.A[GR.iijj])
 
+
     return(WIND, vmax, mean_wind, mean_temp, mean_colp)
 
 
 def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
-                    PHI):
+                    PHI, PHIVB, RHO, MIC):
 
     t_start = time.time()
 
@@ -59,10 +60,15 @@ def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                                             WWIND[:,:,ks][GR.iijj]
 
 
+    ALTVB = PHIVB / con_g
+    dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
+    WVP = np.sum(MIC.QV[GR.iijj]*dz*RHO[GR.iijj],2)
+    CWP = np.sum(MIC.QC[GR.iijj]*dz*RHO[GR.iijj],2)
+
     t_end = time.time()
     GR.IO_comp_time += t_end - t_start
 
-    return(VORT, PAIR, TAIR, WWIND_ms)
+    return(VORT, PAIR, TAIR, WWIND_ms, WVP, CWP)
 
 
 
@@ -111,6 +117,7 @@ def print_computation_time_info(GR):
     print('#### other')
     print('radiation  :  ' + str(int(100*GR.rad_comp_time/GR.total_comp_time)) + '  \t%')
     print('microphyis :  ' + str(int(100*GR.mic_comp_time/GR.total_comp_time)) + '  \t%')
+    print('soil       :  ' + str(int(100*GR.soil_comp_time/GR.total_comp_time)) + '  \t%')
 
 
 

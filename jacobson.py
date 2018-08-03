@@ -5,7 +5,7 @@ from wind import wind_tendency_jacobson
 from temperature import temperature_tendency_jacobson
 from geopotential import diag_geopotential_jacobson
 from boundaries import exchange_BC
-from water_vapor import water_vapor_tendency
+from moisture import water_vapor_tendency, cloud_water_tendency
 
 def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                     UWIND, VWIND, WWIND,
@@ -33,13 +33,14 @@ def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
 
     # MOIST VARIABLES
     dQVdt = water_vapor_tendency(GR, MIC.QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC)
+    dQCdt = cloud_water_tendency(GR, MIC.QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC)
 
-    return(dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, WWIND, dQVdt)
+    return(dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, WWIND, dQVdt, dQCdt)
 
 
 def proceed_timestep_jacobson(GR, UWIND, VWIND,
-                    COLP, POTT, QV,
-                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt):
+                    COLP, POTT, QV, QC,
+                    dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt):
 
     # TIME STEPPING
     COLP_OLD = copy.deepcopy(COLP)
@@ -60,13 +61,17 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND,
                             + GR.dt*dPOTTdt[:,:,k]/COLP[GR.iijj]
         QV[:,:,k][GR.iijj] = QV[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
                             + GR.dt*dQVdt[:,:,k]/COLP[GR.iijj]
+        QC[:,:,k][GR.iijj] = QC[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
+                            + GR.dt*dQCdt[:,:,k]/COLP[GR.iijj]
     UWIND = exchange_BC(GR, UWIND)
     VWIND = exchange_BC(GR, VWIND)
     POTT = exchange_BC(GR, POTT)
     QV[QV < 0] = 0
     QV = exchange_BC(GR, QV)
+    QC[QC < 0] = 0
+    QC = exchange_BC(GR, QC)
 
-    return(UWIND, VWIND, COLP, POTT, QV)
+    return(UWIND, VWIND, COLP, POTT, QV, QC)
 
 
 def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB):

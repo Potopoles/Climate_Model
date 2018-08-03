@@ -54,7 +54,7 @@ while GR.ts < GR.nts:
     ########
 
     ######## MICROPHYSICS
-    MIC.calc_microphysics(GR, WIND, SOIL, TAIR, PAIR)
+    MIC.calc_microphysics(GR, WIND, SOIL, TAIR, PAIR, RHO, PHIVB)
     #quit()
     ########
 
@@ -91,7 +91,7 @@ while GR.ts < GR.nts:
         outCounter += 1
         #WIND, vmax, mean_wind, mean_temp, mean_colp = diagnostics(GR, \
         #                                WIND, UWIND, VWIND, COLP, POTT)
-        output_to_NC(GR, outCounter, COLP, PAIR, PHI, UWIND, VWIND, WIND, WWIND,
+        output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
                     POTT, TAIR, RHO, PVTF, PVTFVB,
                     RAD, SOIL, MIC)
 

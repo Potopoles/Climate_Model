@@ -99,7 +99,7 @@ def initialize_fields(GR):
         RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL)
 
         # MOISTURE & MICROPHYSICS
-        MIC = microphysics(GR, i_microphysics) 
+        MIC = microphysics(GR, i_microphysics, TAIR, PAIR) 
 
 
 

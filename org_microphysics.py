@@ -2,14 +2,17 @@ import numpy as np
 import scipy
 import time
 import matplotlib.pyplot as plt
+from constants import con_g
 
 
 class microphysics:
     
-    surf_moisture_flux_constant = 1E-6
+    RH_init = 0.6
+    surf_moisture_flux_constant = 1E-9
     qv_to_qc_rate = 1E-3
+    qc_to_qr_rate = 1E-5
 
-    def __init__(self, GR, i_microphysics):
+    def __init__(self, GR, i_microphysics, TAIR, PAIR):
         print('Prepare Microphysics')
 
         self.i_microphysics = i_microphysics 
@@ -28,7 +31,9 @@ class microphysics:
         if self.i_microphysics >= 1:
             # specific water vapor content
             self.QV = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
-            #self.QV[3:7,3:7,range(0,GR.nz)] = 0.005 - 0.005*np.exp(-0.8*np.arange(0,GR.nz))
+            e_satw = 610.94 * np.exp( (17.625 * (TAIR[GR.iijj] - 273.15)) / (TAIR[GR.iijj] - 273.15 + 243.04) )
+            self.QV[GR.iijj] = self.RH_init * (0.622 * e_satw) / PAIR[GR.iijj]
+            #self.QV[:,:,range(0,GR.nz)] = 0.003 - 0.003*(np.exp(-0.1*np.arange(0,GR.nz))-0.01)
             ## specific cloud liquid water content
             self.QC = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
 
@@ -42,22 +47,33 @@ class microphysics:
         return(rh, qv_diff)
             
 
-    def calc_microphysics(self, GR, WIND, SOIL, TAIR, PAIR):
+    def calc_microphysics(self, GR, WIND, SOIL, TAIR, PAIR, RHO, PHIVB):
         t_start = time.time()
+
+        ALTVB = PHIVB / con_g
+        dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
 
         # relative humidity
         self.RH, qv_diff = self.relative_humidity(GR, TAIR, self.QV, PAIR)
 
-        self.dQCdt_MIC[:] = + qv_diff * self.qv_to_qc_rate
+        # rain
+        rain_rate = self.qc_to_qr_rate * self.QC[GR.iijj]
+
         self.dQVdt_MIC[:] = - qv_diff * self.qv_to_qc_rate
-        #self.dPOTTdt_MIC[:] = qv_diff / 
-        # SURFACE MOISTURE UPTAKE
-        self.dQVdt_MIC[:,:,-1] = self.dQVdt_MIC[:,:,-1] + WIND[:,:,-1][GR.iijj] * self.surf_moisture_flux_constant * \
-                                    np.abs((SOIL.MOIST - self.QV[:,:,-1][GR.iijj]))
+        self.dQCdt_MIC[:] = + qv_diff * self.qv_to_qc_rate - rain_rate
 
+        # surface moisture uptake
+        QV_surf_flux = np.maximum((1 - self.RH[:,:,-1]),0) * WIND[:,:,-1][GR.iijj] * \
+                                    self.surf_moisture_flux_constant * SOIL.EVAPITY
+        total_evaporation = QV_surf_flux * RHO[:,:,-1][GR.iijj] * dz[:,:,-1] * GR.dt
 
+        self.dQVdt_MIC[:,:,-1] = self.dQVdt_MIC[:,:,-1] + QV_surf_flux
 
-
+        SOIL.RAINRATE = np.sum(rain_rate*RHO[GR.iijj]*dz,2) # mm/s
+        SOIL.ACCRAIN = SOIL.ACCRAIN + SOIL.RAINRATE*GR.dt
+        SOIL.MOIST = SOIL.MOIST - total_evaporation + SOIL.RAINRATE*GR.dt
+        SOIL.MOIST[SOIL.MOIST < 0] = 0
+        SOIL.MOIST[SOIL.MOIST > 20] = 20
 
         t_end = time.time()
         GR.mic_comp_time += t_end - t_start
