@@ -103,6 +103,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
     RAINRATE_out = ncf.createVariable('RAINRATE', 'f4', ('time', 'lat', 'lon',) )
     ACCRAIN_out = ncf.createVariable('ACCRAIN', 'f4', ('time', 'lat', 'lon',) )
     EVAPITY_out = ncf.createVariable('EVAPITY', 'f4', ('time', 'lat', 'lon',) )
+    dPOTTdt_MIC_out=ncf.createVariable('dPOTTdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # VERTICAL PROFILES
     POTTprof_out = ncf.createVariable('POTTprof', 'f4', ('time', 'level', 'lat',) )
@@ -152,6 +153,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
         RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
         dQVdt_MIC_out[-1,k,:,:] = MIC.dQVdt_MIC[:,:,k].T * 3600
         dQCdt_MIC_out[-1,k,:,:] = MIC.dQCdt_MIC[:,:,k].T * 3600
+        dPOTTdt_MIC_out[-1,k,:,:] = MIC.dPOTTdt_MIC[:,:,k].T * 3600
 
         # VERTICAL PROFILES
         POTTprof_out[-1,GR.nz-k-1,:] = np.mean(POTT[:,:,k][GR.iijj],axis=0)

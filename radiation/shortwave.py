@@ -12,13 +12,16 @@ from radiation.namelist_radiation import solar_constant_0, \
 ###################################################################################
 
 def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
-                    albedo_surface_SW):
+                    albedo_surface_SW, qc_col):
 
     g_a = 0.0
     #mysun = 1.0
     #albedo_surface_SW = 0
+    #qc_col = np.minimum(qc_col, 0.003)
     sigma_abs_gas_SW = np.repeat(sigma_abs_gas_SW_in, GR.nz)
+    #sigma_abs_gas_SW = sigma_abs_gas_SW + qc_col*1E-5
     sigma_sca_gas_SW = np.repeat(sigma_sca_gas_SW_in, GR.nz)
+    #sigma_sca_gas_SW = sigma_sca_gas_SW + qc_col*1E-5
     sigma_tot_SW = sigma_abs_gas_SW + sigma_sca_gas_SW
 
     # optical thickness

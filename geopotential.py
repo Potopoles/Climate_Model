@@ -30,8 +30,6 @@ def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
 def diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, POTT, COLP,
                                PVTF, PVTFVB):
 
-    t_start = time.time()
-
     PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
 
     #phi_vb = HSURF[GR.iijj]*con_g
@@ -59,9 +57,6 @@ def diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, POTT, COLP,
     PHIVB[:,:,0][GR.iijj] = PHI[:,:,0][GR.iijj] - dphi
 
     PHI = exchange_BC(GR, PHI)
-
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
 
     return(PHI, PHIVB, PVTF, PVTFVB)
 

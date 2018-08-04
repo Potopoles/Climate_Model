@@ -1,16 +1,19 @@
 import copy
 import numpy as np
+import time
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
 from wind import wind_tendency_jacobson
 from temperature import temperature_tendency_jacobson
 from geopotential import diag_geopotential_jacobson
 from boundaries import exchange_BC
 from moisture import water_vapor_tendency, cloud_water_tendency
+from namelist import pTop
+from constants import con_Rd
 
 def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                     UWIND, VWIND, WWIND,
                     UFLX, VFLX, PHI, PVTF, PVTFVB,
-                    RAD, MIC):
+                    RAD, MIC, TURB):
 
     # PROGNOSE COLP
     dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
@@ -29,10 +32,10 @@ def tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
 
     # PROGNOSE POTT
     dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
-                                            UFLX, VFLX, WWIND, RAD)
+                                            UFLX, VFLX, WWIND, RAD, MIC)
 
     # MOIST VARIABLES
-    dQVdt = water_vapor_tendency(GR, MIC.QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC)
+    dQVdt = water_vapor_tendency(GR, MIC.QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB)
     dQCdt = cloud_water_tendency(GR, MIC.QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC)
 
     return(dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, WWIND, dQVdt, dQCdt)
@@ -74,7 +77,9 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND,
     return(UWIND, VWIND, COLP, POTT, QV, QC)
 
 
-def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB):
+def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB, TURB):
+
+    t_start = time.time()
 
     PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, 
                                                 POTT, COLP, PVTF, PVTVB)
@@ -88,13 +93,18 @@ def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTVB, POT
                                     ) / (PVTF[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj])
 
     # extrapolate model bottom and model top POTTVB
-    #print(np.mean(np.mean(POTTVB[GR.iijj],0),0))
-    POTTVB[:,:,0][GR.iijj] = POTT[:,:,0][GR.iijj] - ( POTTVB[:,:,1][GR.iijj] - POTT[:,:,0][GR.iijj] )
-    POTTVB[:,:,-1][GR.iijj] = POTT[:,:,-1][GR.iijj] - ( POTTVB[:,:,-2][GR.iijj] - POTT[:,:,-1][GR.iijj] )
-    #print(np.mean(np.mean(POTTVB[GR.iijj],0),0))
+    POTTVB[:,:,0][GR.iijj] = POTT[:,:,0][GR.iijj] - \
+            ( POTTVB[:,:,1][GR.iijj] - POTT[:,:,0][GR.iijj] )
+    POTTVB[:,:,-1][GR.iijj] = POTT[:,:,-1][GR.iijj] - \
+            ( POTTVB[:,:,-2][GR.iijj] - POTT[:,:,-1][GR.iijj] )
 
+    TURB.diag_rho(GR, COLP, POTT, PVTF, POTTVB, PVTFVB)
+    TURB.diag_dz(GR, PHI, PHIVB)
 
-    return(PHI, PHIVB, PVTF, PVTFVB, POTTVB)
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
+
+    return(PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB)
 
 
 

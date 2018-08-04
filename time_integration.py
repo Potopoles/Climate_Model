@@ -35,7 +35,7 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
                     UWIND, VWIND, WWIND,
                     UFLX, VFLX, UFLXMP, VFLXMP,
                     HSURF, PVTF, PVTFVB, i_spatial_discretization,
-                    RAD, SOIL, MIC):
+                    RAD, SOIL, MIC, TURB):
 
     if i_spatial_discretization == 'UPWIND':
         raise NotImplementedError()
@@ -47,7 +47,7 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         dQVdt, dQCdt = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD, MIC)
+                                            RAD, MIC, TURB)
 
         # has to happen after masspoint_flux_tendency function
         UWIND_OLD = copy.deepcopy(UWIND)
@@ -63,9 +63,9 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
                                             COLP, POTT, QV, QC,
                                             dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
 
-        PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+        PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                        HSURF, PVTF, PVTFVB, POTTVB)
+                                        HSURF, PVTF, PVTFVB, POTTVB, TURB)
 
         ########## FINAL
         dCOLPdt, dUFLXdt, dVFLXdt, \
@@ -73,15 +73,15 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         dQVdt, dQCdt = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD, MIC)
+                                            RAD, MIC, TURB)
 
         UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
                                                 COLP_OLD, POTT_OLD, QV_OLD, QC_OLD,
                                                 dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
 
-        PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+        PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                        HSURF, PVTF, PVTFVB, POTTVB)
+                                        HSURF, PVTF, PVTFVB, POTTVB, TURB)
 
         
         MIC.QV = QV
@@ -90,7 +90,7 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
     return(COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
-            MIC)
+            MIC, TURB)
 
 
 
@@ -137,7 +137,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
             HSURF, PVTF, PVTFVB, i_spatial_discretization,
-            RAD, SOIL, MIC):
+            RAD, SOIL, MIC, TURB):
 
     if i_spatial_discretization == 'UPWIND':
         raise NotImplementedError()
@@ -150,7 +150,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         dQVdt, dQCdt = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD, MIC)
+                                            RAD, MIC, TURB)
 
         # INITIAL FIELDS
         # has to happen after masspoint_flux_tendency function
@@ -191,9 +191,9 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
                     COLP, UWIND, VWIND, POTT, QV, QC, \
                     dCOLP, dUFLX, dVFLX, dPOTT, dQV, dQC, 6)
 
-        PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+        PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP_INT, POTT_INT,
-                                            HSURF, PVTF, PVTFVB, POTTVB)
+                                            HSURF, PVTF, PVTFVB, POTTVB, TURB)
 
         ########## level 2
         dCOLPdt, dUFLXdt, dVFLXdt, \
@@ -201,7 +201,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         dQVdt, dQCdt = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD, MIC)
+                                            RAD, MIC, TURB)
 
         dUFLX = GR.dt*dUFLXdt
         dVFLX = GR.dt*dVFLXdt
@@ -221,9 +221,9 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
                     COLP, UWIND, VWIND, POTT, QV, QC, \
                     dCOLP, dUFLX, dVFLX, dPOTT, dQV, dQC, 3)
         
-        PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+        PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP_INT, POTT_INT,
-                                            HSURF, PVTF, PVTFVB, POTTVB)
+                                            HSURF, PVTF, PVTFVB, POTTVB, TURB)
 
         ########## level 3
         dCOLPdt, dUFLXdt, dVFLXdt, \
@@ -231,7 +231,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         dQVdt, dQCdt = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD, MIC)
+                                            RAD, MIC, TURB)
 
         dUFLX = GR.dt*dUFLXdt
         dVFLX = GR.dt*dVFLXdt
@@ -252,9 +252,9 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
                     COLP, UWIND, VWIND, POTT, QV, QC,\
                     dCOLP, dUFLX, dVFLX, dPOTT, dQV, dQC, 3)
         
-        PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+        PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP_INT, POTT_INT,
-                                            HSURF, PVTF, PVTFVB, POTTVB)
+                                            HSURF, PVTF, PVTFVB, POTTVB, TURB)
 
         ########## level 4
         dCOLPdt, dUFLXdt, dVFLXdt, \
@@ -262,7 +262,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         dQVdt, dQCdt = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            RAD, MIC)
+                                            RAD, MIC, TURB)
 
         dUFLX = GR.dt*dUFLXdt
         dVFLX = GR.dt*dVFLXdt
@@ -277,9 +277,9 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
                     COLP, UWIND, VWIND, POTT, QV, QC,\
                     dCOLP, dUFLX, dVFLX, dPOTT, dQV, dQC, 6)
 
-        PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+        PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB = \
                 diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                        HSURF, PVTF, PVTFVB, POTTVB)
+                                        HSURF, PVTF, PVTFVB, POTTVB, TURB)
 
         MIC.QV = QV
         MIC.QC = QC
@@ -287,7 +287,7 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
     return(COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
-            MIC)
+            MIC, TURB)
 
 
 

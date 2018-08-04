@@ -3,29 +3,27 @@ from datetime import datetime
 # GRID PARAMS
 nb = 1
 nz = 10
-nz = 8
+nz = 5
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
 lat0_deg = -80
 lat1_deg = 80
-lon0_deg = 90
-lon1_deg = 240
 lon0_deg = 0
 lon1_deg = 360
 
-dlat_deg = 5
-dlon_deg = 5
+dlat_deg = 10
+dlon_deg = 10
 
 i_curved_earth = 1
 
 # SIMULATION
 output_path = '../output_fine'
 output_path = '../output'
-i_sim_n_days = 10
-i_out_nth_hour = 12
-i_sim_n_days = 1*365.0
-i_out_nth_hour = 12
+i_sim_n_days = 1
+i_out_nth_hour = 3
+#i_sim_n_days = 2*365.0
+#i_out_nth_hour = 24
 
 i_load_from_restart = 0
 i_save_to_restart = 0
@@ -44,11 +42,11 @@ i_spatial_discretization = 'JACOBSON'
 # TIME DISCRETIZATION
 i_time_stepping = 'EULER_FORWARD'
 i_time_stepping = 'MATSUNO'
-i_time_stepping = 'RK4'
+#i_time_stepping = 'RK4'
 if i_time_stepping != 'RK4':
     CFL = 0.7
 else:
-    CFL = 1.2
+    CFL = 1.0
 
 # INITIAL CONDITIONS
 gaussian_dlon = np.pi/10
@@ -72,10 +70,13 @@ POTT_random_pert = 0.0
 
 # RADIATION
 i_radiation = 3
-#i_radiation = 0
+i_radiation = 0
 
 # MICROPHYSICS
 i_microphysics = 1
+
+# TURBULENCE
+i_turbulence = 1
 
 
 

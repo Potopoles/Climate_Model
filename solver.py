@@ -26,7 +26,7 @@ GR = Grid()
 COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
 UFLX, VFLX, UFLXMP, VFLXMP, \
 HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
-RAD, SOIL, MIC = initialize_fields(GR)
+RAD, SOIL, MIC, TURB = initialize_fields(GR)
 constant_fields_to_NC(GR, HSURF, RAD, SOIL)
 
 if i_load_from_restart:
@@ -50,7 +50,7 @@ while GR.ts < GR.nts:
     ########
 
     ######## RADIATION
-    RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL)
+    RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC)
     ########
 
     ######## MICROPHYSICS
@@ -59,7 +59,7 @@ while GR.ts < GR.nts:
     ########
 
     ######## SOIL
-    SOIL.advance_timestep(GR, RAD)
+    SOIL.advance_timestep(GR, RAD, MIC)
     ########
 
     ######## DYNAMICS
@@ -68,13 +68,13 @@ while GR.ts < GR.nts:
     COLP, PHI, PHIVB, POTT, POTTVB, \
     UWIND, VWIND, WWIND,\
     UFLX, VFLX, UFLXMP, VFLXMP, \
-    MIC \
+    MIC, TURB \
                 = time_stepper(GR, COLP, PHI, PHIVB, POTT, POTTVB,
                             UWIND, VWIND, WWIND,
                             UFLX, VFLX, UFLXMP, VFLXMP,
                             HSURF, PVTF, PVTFVB, 
                             i_spatial_discretization,
-                            RAD, SOIL, MIC)
+                            RAD, SOIL, MIC, TURB)
     t_end = time.time()
     GR.dyn_comp_time += t_end - t_start
     ########

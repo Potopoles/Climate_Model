@@ -3,13 +3,14 @@ import time
 from namelist import QV_hor_dif_tau
 
 
-i_vert_adv     = 1
-i_hor_adv      = 1
-i_num_dif      = 1
-i_microphysics = 1
+i_vert_adv     = 0
+i_hor_adv      = 0
+i_turb         = 1
+i_num_dif      = 0
+i_microphysics = 0
 
 
-def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
+def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
 
     t_start = time.time()
 
@@ -19,6 +20,8 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
     QVVB = np.zeros( (GR.nx ,GR.ny ,GR.nzs) )
     QVVB[:,:,1:(GR.nzs-1)] = (QV[:,:,:-1][GR.iijj] + QV[:,:,1:][GR.iijj])/2
 
+    if i_turb:
+        turb_flux_div = TURB.turbulent_flux_divergence(GR, QV)
 
     for k in range(0,GR.nz):
 
@@ -51,6 +54,10 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
                                                ) / GR.dsigma[k]
 
             dQVdt[:,:,k] = dQVdt[:,:,k] + vertAdv_QV
+
+        # TURBULENCE
+        if i_turb:
+            dQVdt[:,:,k] = dQVdt[:,:,k] + turb_flux_div[:,:,k] * COLP[GR.iijj]
 
 
         # NUMERICAL DIFUSION 

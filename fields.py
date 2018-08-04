@@ -7,6 +7,7 @@ from diagnostics import diagnose_secondary_fields
 from radiation.org_radiation import radiation
 from soil_model import soil
 from org_microphysics import microphysics
+from org_turbulence import turbulence
 
 def initialize_fields(GR):
     if i_load_from_restart:
@@ -14,7 +15,7 @@ def initialize_fields(GR):
         UFLX, VFLX, UFLXMP, VFLXMP, \
         HSURF, POTT, TAIR, TAIRVB, RHO, \
         POTTVB, PVTF, PVTFVB, \
-        RAD, SOIL, MIC = load_restart_fields(GR)
+        RAD, SOIL, MIC, TURB = load_restart_fields(GR)
     else:
         # CREATE ARRAYS
         # scalars
@@ -79,12 +80,16 @@ def initialize_fields(GR):
         # BOUNDARY CONDITIONS
         COLP, UWIND, VWIND, POTT = exchange_BC_all(GR, COLP, UWIND, VWIND, POTT)
 
+
+        # TURBULENCE 
+        TURB = turbulence(GR, i_turbulence) 
+
         if i_spatial_discretization == 'UPWIND':
             raise NotImplementedError()
         if i_spatial_discretization == 'JACOBSON':
-            PHI, PHIVB, PVTF, PVTFVB, POTTVB \
+            PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB \
                         = diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                                HSURF, PVTF, PVTFVB, POTTVB)
+                                                HSURF, PVTF, PVTFVB, POTTVB, TURB)
 
         PAIR, TAIR, TAIRVB, RHO, WIND = \
                 diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
@@ -94,19 +99,20 @@ def initialize_fields(GR):
         # SOIL MODEL
         SOIL = soil(GR, HSURF)
 
-        # RADIATION
-        RAD = radiation(GR, i_radiation)
-        RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL)
-
         # MOISTURE & MICROPHYSICS
         MIC = microphysics(GR, i_microphysics, TAIR, PAIR) 
+
+
+        # RADIATION
+        RAD = radiation(GR, i_radiation)
+        RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC)
 
 
 
     return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
             HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB,
-            RAD, SOIL, MIC)
+            RAD, SOIL, MIC, TURB)
 
 
 

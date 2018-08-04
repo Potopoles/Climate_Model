@@ -54,7 +54,7 @@ class radiation:
 
 
 
-    def calc_radiation(self, GR, TAIR, TAIRVB, RHO, PHIVB, SOIL):
+    def calc_radiation(self, GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC):
 
         t_start = time.time()
 
@@ -65,7 +65,7 @@ class radiation:
         elif self.i_radiation == 3:
             if GR.ts % self.rad_nth_ts == 0:
                 print('calculate radiation')
-                self.simple_radiation(GR, TAIR, RHO, PHIVB, SOIL)
+                self.simple_radiation(GR, TAIR, RHO, PHIVB, SOIL, MIC)
         elif self.i_radiation == 0:
             pass
         else:
@@ -75,7 +75,7 @@ class radiation:
         GR.rad_comp_time += t_end - t_start
 
 
-    def simple_radiation(self, GR, TAIR, RHO, PHIVB, SOIL):
+    def simple_radiation(self, GR, TAIR, RHO, PHIVB, SOIL, MIC):
         ALTVB = PHIVB / con_g
         dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
 
@@ -103,7 +103,8 @@ class radiation:
                 down_diffuse, up_diffuse = \
                                     org_longwave(GR, dz[i,j],
                                                 TAIR[i_ref,j_ref,:], RHO[i_ref,j_ref], \
-                                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
+                                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j],
+                                                MIC.QC[i,j,:])
 
                 self.LWFLXDO[i,j,:] = - down_diffuse
                 self.LWFLXUP[i,j,:] =   up_diffuse
@@ -117,7 +118,8 @@ class radiation:
                                                     RHO[i_ref,j_ref],
                                                     self.SWINTOA[i,j],
                                                     self.MYSUN[i,j],
-                                                    SOIL.ALBEDOSW[i,j])
+                                                    SOIL.ALBEDOSW[i,j],
+                                                    MIC.QC[i,j,:])
 
                     self.SWDIFFLXDO[i,j,:] = - down_diffuse
                     self.SWDIRFLXDO[i,j,:] = - down_direct

@@ -28,7 +28,10 @@ def load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
     g_vb_test = np.zeros(GR.nzs)
 
     z_vb_test[0] = ztop_test
-    z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)
+    z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)**(2)
+    #print(z_vb_test)
+    #print(np.diff(z_vb_test))
+    #quit()
 
     rho_vb_test = np.interp(z_vb_test, profile[:,0], profile[:,4]) 
     g_vb_test = np.interp(z_vb_test, profile[:,0], profile[:,1]) 
@@ -69,7 +72,7 @@ def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
                         UFLX, VFLX, UFLXMP, VFLXMP, \
                         HSURF, POTT, TAIR, TAIRVB, RHO,\
                         POTTVB, PVTF, PVTFVB,
-                        RAD, SOIL, MIC):
+                        RAD, SOIL, MIC, TURB):
     filename = '../restart/'+str(GR.dlat_deg).zfill(2) + '_' +\
                             str(GR.dlon_deg).zfill(2) + '_' +\
                             str(GR.nz).zfill(3)+'.pkl'
@@ -98,6 +101,7 @@ def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
     out['RAD'] = RAD
     out['SOIL'] = SOIL
     out['MIC'] = MIC
+    out['TURB'] = TURB
     with open(filename, 'wb') as f:
         pickle.dump(out, f)
 
@@ -143,11 +147,12 @@ def load_restart_fields(GR):
     RAD = inp['RAD']
     SOIL = inp['SOIL'] 
     MIC = inp['MIC'] 
+    TURB = inp['TURB'] 
     return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
                 UFLX, VFLX, UFLXMP, VFLXMP, \
                 HSURF, POTT, TAIR, TAIRVB, RHO, \
                 POTTVB, PVTF, PVTFVB,
-                RAD, SOIL, MIC)
+                RAD, SOIL, MIC, TURB)
 
 def load_topo(GR):
     HSURF = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)

@@ -2,7 +2,8 @@ import numpy as np
 import scipy
 import time
 import matplotlib.pyplot as plt
-from constants import con_g
+from constants import con_g, con_cp
+from boundaries import exchange_BC
 
 
 class microphysics:
@@ -11,6 +12,8 @@ class microphysics:
     surf_moisture_flux_constant = 1E-9
     qv_to_qc_rate = 1E-3
     qc_to_qr_rate = 1E-5
+
+    lh_cond_water = 2260 # J / (kg)
 
     def __init__(self, GR, i_microphysics, TAIR, PAIR):
         print('Prepare Microphysics')
@@ -28,11 +31,14 @@ class microphysics:
 
         self.RH = np.zeros( ( GR.nx, GR.ny, GR.nz ) )
 
+        self.surf_evap_flx = np.full( ( GR.nx, GR.ny ), np.nan)
+
         if self.i_microphysics >= 1:
             # specific water vapor content
             self.QV = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
             e_satw = 610.94 * np.exp( (17.625 * (TAIR[GR.iijj] - 273.15)) / (TAIR[GR.iijj] - 273.15 + 243.04) )
             self.QV[GR.iijj] = self.RH_init * (0.622 * e_satw) / PAIR[GR.iijj]
+            self.QV = exchange_BC(GR, self.QV)
             #self.QV[:,:,range(0,GR.nz)] = 0.003 - 0.003*(np.exp(-0.1*np.arange(0,GR.nz))-0.01)
             ## specific cloud liquid water content
             self.QC = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
@@ -62,10 +68,14 @@ class microphysics:
         self.dQVdt_MIC[:] = - qv_diff * self.qv_to_qc_rate
         self.dQCdt_MIC[:] = + qv_diff * self.qv_to_qc_rate - rain_rate
 
+        self.dPOTTdt_MIC = qv_diff * self.qv_to_qc_rate * self.lh_cond_water / con_cp
+
         # surface moisture uptake
         QV_surf_flux = np.maximum((1 - self.RH[:,:,-1]),0) * WIND[:,:,-1][GR.iijj] * \
                                     self.surf_moisture_flux_constant * SOIL.EVAPITY
-        total_evaporation = QV_surf_flux * RHO[:,:,-1][GR.iijj] * dz[:,:,-1] * GR.dt
+        self.surf_evap_flx[:,:] = QV_surf_flux * RHO[:,:,-1][GR.iijj] * dz[:,:,-1] # kg_w/m^2/s
+        #print(np.max(self.surf_evap_flx))
+        total_evaporation = self.surf_evap_flx * GR.dt
 
         self.dQVdt_MIC[:,:,-1] = self.dQVdt_MIC[:,:,-1] + QV_surf_flux
 

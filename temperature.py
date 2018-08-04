@@ -11,7 +11,7 @@ i_radiation = 1
 
 
 def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, \
-                                    UFLX, VFLX, WWIND, RAD):
+                                    UFLX, VFLX, WWIND, RAD, MIC):
 
     t_start = time.time()
 
@@ -64,11 +64,11 @@ def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, \
 
             # RADIATION 
             if RAD.i_radiation:
-                #radiation = - COLP[GR.iijj]*outRate*POTT[:,:,k][GR.iijj]**1 + \
-                #                COLP[GR.iijj]*inpRate*np.cos(GR.lat_rad[GR.iijj])
-                #dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + radiation 
                 dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + \
                                     RAD.dPOTTdt_RAD[:,:,k]*COLP[GR.iijj]
+            if MIC.i_microphysics:
+                dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + \
+                                    MIC.dPOTTdt_MIC[:,:,k]*COLP[GR.iijj]
 
     t_end = time.time()
     GR.temp_comp_time += t_end - t_start

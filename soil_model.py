@@ -42,7 +42,7 @@ class soil:
 
         # DYNAMIC FIELDS
         self.TSOIL = np.full( ( GR.nx, GR.ny, self.nz_soil ), np.nan)
-        self.TSOIL[:,:,0] = 295 - np.sin(GR.lat_rad[GR.iijj])**2*30
+        self.TSOIL[:,:,0] = 295 - np.sin(GR.lat_rad[GR.iijj])**2*25
 
         self.MOIST = np.full( ( GR.nx, GR.ny ), self.moisture_soil )
         self.MOIST[self.OCEANMSK == 1] = self.moisture_ocean
@@ -58,19 +58,25 @@ class soil:
         self.ACCRAIN = np.zeros( ( GR.nx, GR.ny ) ) # mm
 
 
-    def advance_timestep(self, GR, RAD):
+    def advance_timestep(self, GR, RAD, MIC):
 
         t_start = time.time()
 
+        dTSURFdt = np.zeros( (GR.nx, GR.ny) )
 
         if RAD.i_radiation > 0:
             dTSURFdt = (RAD.LWFLXNET[:,:,GR.nzs-1] + RAD.SWFLXNET[:,:,GR.nzs-1])/ \
                             (self.CP * self.RHO * self.DEPTH)
 
-            self.TSOIL[:,:,0] = self.TSOIL[:,:,0] + GR.dt * dTSURFdt
+        if MIC.i_microphysics > 0:
 
-            self.ALBEDOSW, self.ALBEDOLW = self.calc_albedo(GR, self.ALBEDOSW, self.ALBEDOLW,
-                                                            self.TSOIL, self.OCEANMSK)
+            dTSURFdt = dTSURFdt - ( MIC.surf_evap_flx * MIC.lh_cond_water ) / \
+                                        (self.CP * self.RHO * self.DEPTH)
+
+        self.TSOIL[:,:,0] = self.TSOIL[:,:,0] + GR.dt * dTSURFdt
+
+        self.ALBEDOSW, self.ALBEDOLW = self.calc_albedo(GR, self.ALBEDOSW, self.ALBEDOLW,
+                                                        self.TSOIL, self.OCEANMSK)
 
         # calc evaporation capacity
         self.EVAPITY[self.OCEANMSK == 0] = np.minimum(np.maximum(0, self.MOIST[self.OCEANMSK == 0] \
