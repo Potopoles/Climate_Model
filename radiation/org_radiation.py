@@ -11,6 +11,55 @@ from radiation.longwave import org_longwave
 from radiation.shortwave import org_shortwave
 import matplotlib.pyplot as plt
 
+import multiprocessing as mp
+from radiation.namelist_radiation import njobs_rad
+
+
+def calc_par(GR, TAIR, RHO, PHIVB, TSOIL, ALBEDOLW, ALBEDOSW, QC,
+            SWINTOA, MYSUN, dz, solar_constant):
+
+
+        down_diffuse, up_diffuse = \
+                            org_longwave(GR, dz, TAIR, RHO, TSOIL, ALBEDOLW, QC)
+
+        LWFLXDO = - down_diffuse
+        LWFLXUP =   up_diffuse
+
+        # SHORTWAVE
+        if MYSUN > 0:
+
+            # toon et al 1989 method
+            down_diffuse, up_diffuse, down_direct = \
+                                org_shortwave(GR, dz, solar_constant, RHO, SWINTOA,
+                                            MYSUN, ALBEDOSW, QC)
+
+            SWDIFFLXDO = - down_diffuse
+            SWDIRFLXDO = - down_direct
+            SWFLXUP    = up_diffuse
+            SWFLXDO    = - down_diffuse - down_direct
+        else:
+            SWDIFFLXDO = np.zeros(GR.nzs)
+            SWDIRFLXDO = np.zeros(GR.nzs) 
+            SWFLXUP    = np.zeros(GR.nzs) 
+            SWFLXDO    = np.zeros(GR.nzs) 
+
+        LWFLXNET = LWFLXDO - LWFLXUP 
+        SWFLXNET = SWFLXDO - SWFLXUP 
+
+        #print(LWFLXNET)
+        LWFLXDIV = ( LWFLXNET[GR.kk] - LWFLXNET[GR.kk+1] ) / dz[GR.kk]
+        SWFLXDIV = ( SWFLXNET[GR.kk] - SWFLXNET[GR.kk+1] ) / dz[GR.kk]
+        TOTFLXDIV = SWFLXDIV + LWFLXDIV
+        dPOTTdt_RAD = 1/(con_cp * RHO) * TOTFLXDIV
+
+
+        result = (LWFLXDO, LWFLXUP, SWDIFFLXDO, SWDIRFLXDO, SWFLXUP, SWFLXDO,
+                LWFLXNET, SWFLXNET,
+                LWFLXDIV, SWFLXDIV, TOTFLXDIV, dPOTTdt_RAD)
+        return(result)
+
+
+
 
 class radiation:
 
@@ -39,7 +88,6 @@ class radiation:
             #self.SWINTOA = incoming_SW_TOA(GR, self.SWINTOA, self.SOLZEN) 
 
         if self.i_radiation >= 2:
-            # two-stream method fluxes and divergences
             self.LWFLXUP =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
             self.LWFLXDO =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
             self.LWFLXNET =     np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
@@ -65,7 +113,8 @@ class radiation:
         elif self.i_radiation == 3:
             if GR.ts % self.rad_nth_ts == 0:
                 print('calculate radiation')
-                self.simple_radiation(GR, TAIR, RHO, PHIVB, SOIL, MIC)
+                #self.simple_radiation(GR, TAIR, RHO, PHIVB, SOIL, MIC)
+                self.simple_radiation_par(GR, TAIR, RHO, PHIVB, SOIL, MIC)
         elif self.i_radiation == 0:
             pass
         else:
@@ -73,6 +122,93 @@ class radiation:
 
         t_end = time.time()
         GR.rad_comp_time += t_end - t_start
+
+
+
+
+
+
+    def simple_radiation_par(self, GR, TAIR, RHO, PHIVB, SOIL, MIC):
+        ALTVB = PHIVB / con_g
+        dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
+
+        self.SOLZEN = rad_solar_zenith_angle(GR, self.SOLZEN)
+        self.MYSUN = np.cos(self.SOLZEN)
+        self.MYSUN[self.MYSUN < 0] = 0
+        self.solar_constant = calc_current_solar_constant(GR) 
+        self.SWINTOA = self.solar_constant * np.cos(self.SOLZEN)
+
+
+        ij_all = np.full( (GR.nx*GR.ny, 2), np.int)
+        ij_ref_all = np.full( (GR.nx*GR.ny, 2), np.int)
+
+
+        #c = 0
+        #for i in range(0,GR.nx):
+        #    for j in range(0,GR.ny):
+        #        ij_all[c,0] = i
+        #        ij_all[c,1] = j
+        #        ij_ref_all[c,0] = i + GR.nb
+        #        ij_ref_all[c,1] = j + GR.nb
+        #        c += 1
+        #for c in range(0,GR.nx*GR.ny):
+
+        #ii = np.arange(3,6).astype(np.int)
+        ii = np.tile(np.arange(0,GR.nx).astype(np.int),GR.ny)
+        jj = np.repeat(np.arange(0,GR.ny).astype(np.int),GR.nx)
+        ii_ref = np.tile(np.arange(0,GR.nx).astype(np.int),GR.ny)+1
+        jj_ref = np.repeat(np.arange(0,GR.ny).astype(np.int),GR.nx)+1
+
+        #t1 = time.time()
+        p = mp.Pool(processes=njobs_rad)
+
+        input = [(GR, TAIR[ii_ref[c],jj_ref[c],:], RHO[ii_ref[c],jj_ref[c],:],
+                    PHIVB[ii[c],jj[c],:],
+                    SOIL.TSOIL[ii[c],jj[c],0], SOIL.ALBEDOLW[ii[c],jj[c]],
+                    SOIL.ALBEDOSW[ii[c],jj[c]], MIC.QC[ii[c],jj[c],:],
+                    self.SWINTOA[ii[c],jj[c]], self.MYSUN[ii[c],jj[c]],
+                    dz[ii[c],jj[c],:], self.solar_constant) for c in range(0,len(ii))]
+
+        result = p.starmap(calc_par, input)
+        p.close()
+        p.join()
+        #t2 = time.time()
+        #print(len(result))
+        #print(result[len(ii)-1][0])
+        #print(t2 - t1)
+        #quit()
+
+        for c in range(0,len(ii)):
+            i = ii[c]
+            j = jj[c]
+            self.LWFLXDO[i,j,:]     = result[c][0]
+            self.LWFLXUP[i,j,:]     = result[c][1]
+            self.SWDIFFLXDO[i,j,:]  = result[c][2]
+            self.SWDIRFLXDO[i,j,:]  = result[c][3]
+            self.SWFLXUP[i,j,:]     = result[c][4]
+            self.SWFLXDO[i,j,:]     = result[c][5]
+            self.LWFLXNET[i,j,:]    = result[c][6]
+            self.SWFLXNET[i,j,:]    = result[c][7]
+            self.LWFLXDIV[i,j,:]    = result[c][8]
+            self.SWFLXDIV[i,j,:]    = result[c][9]
+            self.TOTFLXDIV[i,j,:]   = result[c][10]
+            self.dPOTTdt_RAD[i,j,:] = result[c][11]
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     def simple_radiation(self, GR, TAIR, RHO, PHIVB, SOIL, MIC):

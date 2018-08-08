@@ -2,32 +2,39 @@ import numpy as np
 from datetime import datetime
 # GRID PARAMS
 nb = 1
-nz = 10
-nz = 5
+nz = 6
+#nz = 20
+#nz = 3
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
 lat0_deg = -80
+lat0_deg = -78
 lat1_deg = 80
+lat1_deg = 78
 lon0_deg = 0
 lon1_deg = 360
 
-dlat_deg = 10
-dlon_deg = 10
+dlat_deg = 3
+dlon_deg = 3
 
 i_curved_earth = 1
 
 # SIMULATION
 output_path = '../output_fine'
 output_path = '../output'
-i_sim_n_days = 1
+#output_path = '../output_cur'
+i_sim_n_days = 0.50
+i_out_nth_hour = 2
+#i_sim_n_days = 1*365.0
+#i_sim_n_days = 100
 i_out_nth_hour = 3
-#i_sim_n_days = 2*365.0
-#i_out_nth_hour = 24
+
+njobs = 1
 
 i_load_from_restart = 0
-i_save_to_restart = 0
-i_restart_nth_day = 1
+i_save_to_restart = 1
+i_restart_nth_day = 0.5
 
 i_diffusion_on = 1
 
@@ -70,13 +77,13 @@ POTT_random_pert = 0.0
 
 # RADIATION
 i_radiation = 3
-i_radiation = 0
+#i_radiation = 0
 
 # MICROPHYSICS
 i_microphysics = 1
 
 # TURBULENCE
-i_turbulence = 1
+i_turbulence = 0
 
 
 
@@ -113,22 +120,13 @@ if i_diffusion_on:
     elif dlat_deg == 3:
         WIND_hor_dif_tau = 15
         POTT_hor_dif_tau = 2E-5
-    elif dlat_deg == 2:
+    elif dlat_deg <= 2:
         WIND_hor_dif_tau = 20
         POTT_hor_dif_tau = 3E-5
-    elif dlat_deg == 1:
-        raise NotImplementedError()
 
 QV_hor_dif_tau = POTT_hor_dif_tau
 
 
 
-
-
-###### TODO
-# With i curved earth = 0 there is some effect in the meridional direction
-#from the pressure gradient term even though the pressure gradient itself
-# is only zonal. --> zonal pressure gradient, no coriolis, only pressure term --> meridional
-# acceleration!
 
 

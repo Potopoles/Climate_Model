@@ -52,7 +52,8 @@ def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
     # calculate radiative fluxes
     A_mat, g_vec = rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2,
                         B_air, B_surf, albedo_surface_LW)
-    fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
+    #fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
+    fluxes = scipy.linalg.solve_banded((2,2), A_mat, g_vec)
 
     up_diffuse = fluxes[range(1,len(fluxes),2)]
     down_diffuse = - fluxes[range(0,len(fluxes),2)]
@@ -105,9 +106,15 @@ def rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2, \
     dm2_[range(1,len(dm2_),2)] = 0
     dm2 = np.zeros(2*GR.nz+2); dm2[:-2] = dm2_
 
-    A_mat = scipy.sparse.diags( (dm2, dm1, d0, dp1[1:], dp2[2:]),
-                                ( -2,  -1,  0,       1,       2),
-                                (GR.nzs*2, GR.nzs*2), format='csr' )
+    #A_mat = scipy.sparse.diags( (dm2, dm1, d0, dp1[1:], dp2[2:]),
+    #                            ( -2,  -1,  0,       1,       2),
+    #                            (GR.nzs*2, GR.nzs*2), format='csr' )
+    A_mat = np.zeros( ( 5, 2*GR.nzs ) )
+    A_mat[0,:] = dp2
+    A_mat[1,:] = dp1
+    A_mat[2,:] = d0
+    A_mat[3,:] = dm1
+    A_mat[4,:] = dm2
 
     return(A_mat, g_vec)
 

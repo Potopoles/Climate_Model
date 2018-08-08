@@ -20,7 +20,7 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
     QVVB = np.zeros( (GR.nx ,GR.ny ,GR.nzs) )
     QVVB[:,:,1:(GR.nzs-1)] = (QV[:,:,:-1][GR.iijj] + QV[:,:,1:][GR.iijj])/2
 
-    if i_turb:
+    if (i_turb and TURB.i_turbulence):
         turb_flux_div = TURB.turbulent_flux_divergence(GR, QV)
 
     for k in range(0,GR.nz):
@@ -56,7 +56,7 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
             dQVdt[:,:,k] = dQVdt[:,:,k] + vertAdv_QV
 
         # TURBULENCE
-        if i_turb:
+        if (i_turb and TURB.i_turbulence):
             dQVdt[:,:,k] = dQVdt[:,:,k] + turb_flux_div[:,:,k] * COLP[GR.iijj]
 
 

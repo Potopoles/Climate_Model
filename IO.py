@@ -11,7 +11,7 @@ from scipy import interpolate
 
 
 
-def load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
+def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
     filename = 'verticalProfileTable.dat'
     profile = np.loadtxt(filename)
     #print(profile)
@@ -44,6 +44,10 @@ def load_profile(GR, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
     
     GR.sigma_vb = (p_vb_test - pTop)/(p_vb_test[-1] - pTop)
     GR.dsigma = np.diff(GR.sigma_vb)
+    for key,subgrid in subgrids.items():
+        subgrid.sigma_vb = GR.sigma_vb
+        subgrid.dsigma = GR.dsigma
+        subgrids[key] = subgrid
 
     for i in GR.ii:
         for j in GR.jj:

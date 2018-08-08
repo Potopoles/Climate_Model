@@ -6,7 +6,7 @@ from IO import load_restart_grid
 
 class Grid:
 
-    def __init__(self):
+    def __init__(self, i_subgrid=0, specs=None):
 
         if i_load_from_restart:
             loadGR = load_restart_grid(dlat_deg, dlat_deg, nz)
@@ -16,14 +16,21 @@ class Grid:
             self.i_out_nth_hour = i_out_nth_hour
             self.i_out_nth_ts = int(self.i_out_nth_hour*3600 / self.dt)
             self.i_restart_nth_day = i_restart_nth_day
-            self.i_restart_nth_ts = self.i_restart_nth_day*24/self.i_out_nth_hour*self.i_out_nth_ts
+            self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
+                                self.i_out_nth_hour*self.i_out_nth_ts
         else:
 
             # GRID DEFINITION IN DEGREES 
-            self.lon0_deg = lon0_deg
-            self.lon1_deg = lon1_deg
-            self.lat0_deg = lat0_deg
-            self.lat1_deg = lat1_deg
+            if not i_subgrid:
+                self.lon0_deg = lon0_deg
+                self.lon1_deg = lon1_deg
+                self.lat0_deg = lat0_deg
+                self.lat1_deg = lat1_deg
+            else:
+                self.lon0_deg = specs['lon0_deg']
+                self.lon1_deg = specs['lon1_deg']
+                self.lat0_deg = specs['lat0_deg']
+                self.lat1_deg = specs['lat1_deg']
             self.dlon_deg = dlon_deg
             self.dlat_deg = dlat_deg
 
@@ -44,7 +51,10 @@ class Grid:
             self.nys = self.ny + 1
             self.nb = nb
 
+
             # INDEX ARRAYS
+            self.kk  = np.arange(0,self.nz)
+            self.kks = np.arange(0,self.nzs)
             self.ii = np.arange((self.nb),(self.nx+self.nb)) 
             self.jj = np.arange((self.nb),(self.ny+self.nb)) 
             self.iis = np.arange((self.nb),(self.nxs+self.nb)) 
@@ -110,11 +120,11 @@ class Grid:
                                         (self.jj-self.nb+0.5)*self.dlat_deg
                 self.latjs_deg[i,self.jjs] = self.lat0_deg + \
                                         (self.jjs-self.nb)*self.dlat_deg
-            #self.lat_deg[self.ii,0] = self.lat0_deg - 0.5*self.dlat_deg
-            #self.lat_deg[self.ii,-1] = self.lat1_deg + 0.5*self.dlat_deg
             for i_s in range(self.nb, self.nxs+self.nb):
                 self.latis_deg[i_s,self.jj] = self.lat0_deg + \
                                         (self.jj-self.nb+0.5)*self.dlat_deg
+
+            print(self.lon_deg.shape)
 
             # 2D MATRIX OF LONGITUDES AND LATITUDES IN RADIANS
             self.lon_rad = self.lon_deg/180*np.pi
@@ -134,30 +144,22 @@ class Grid:
             self.dxjs = exchange_BC(self, self.dxjs)
             self.dy = self.dlat_rad*con_rE
 
+
             if not i_curved_earth:
                 maxdx = np.max(self.dx[self.iijj])
                 self.dx[self.iijj] = maxdx
 
             self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb), np.nan)
             for i in self.ii:
-            #for i in np.arange(0,(self.nx+2*self.nb)):
                 for j in self.jj:
-                #for j in np.arange(0,(self.ny+2*self.nb)): 
                     self.A[i,j] = lat_lon_recangle_area(self.lat_rad[i,j],
                                         self.dlon_rad, self.dlat_rad, i_curved_earth)
-            #self.A[:,0] = 0
-            #self.A[:,-1] = 0
-            #self.A = exchange_BC_periodic_x(self, self.A)
             self.A = exchange_BC(self, self.A)
-            #print(self.A[3,:])
-            #print(self.A[:,1])
-            #print(self.A)
-            #quit()
 
             print('fraction of earth covered: ' + \
                     str(np.round(np.sum(self.A[self.iijj])/(4*np.pi*con_rE**2),2)))
-            print('fraction of cylinder covered: ' + \
-                    str(np.round(np.sum(self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
+            #print('fraction of cylinder covered: ' + \
+            #        str(np.round(np.sum(self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
 
             # CORIOLIS FORCE
             self.corf    = np.full( (self.nx +2*self.nb, self.ny +2*self.nb), np.nan)
@@ -175,35 +177,36 @@ class Grid:
             self.dsigma = np.full( self.nz, np.nan)
 
 
-            # TIME STEP
-            mindx = np.nanmin(self.dx)
-            self.CFL = CFL
-            self.i_out_nth_hour = i_out_nth_hour
-            self.i_sim_n_days = i_sim_n_days
-            self.dt = int(self.CFL*mindx/340)
-            while i_out_nth_hour*3600 % self.dt > 0:
-                self.dt -= 1
-            self.nts = i_sim_n_days*3600*24/self.dt
-            self.ts = 0
-            self.i_out_nth_ts = int(self.i_out_nth_hour*3600 / self.dt)
-            self.i_restart_nth_day = i_restart_nth_day
-            self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
-                    self.i_out_nth_hour*self.i_out_nth_ts
-            self.sim_time_sec = 0
-            self.GMT = GMT_initialization
+            if not i_subgrid:
+                # TIME STEP
+                mindx = np.nanmin(self.dx)
+                self.CFL = CFL
+                self.i_out_nth_hour = i_out_nth_hour
+                self.i_sim_n_days = i_sim_n_days
+                self.dt = int(self.CFL*mindx/340)
+                while i_out_nth_hour*3600 % self.dt > 0:
+                    self.dt -= 1
+                self.nts = i_sim_n_days*3600*24/self.dt
+                self.ts = 0
+                self.i_out_nth_ts = int(self.i_out_nth_hour*3600 / self.dt)
+                self.i_restart_nth_day = i_restart_nth_day
+                self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
+                        self.i_out_nth_hour*self.i_out_nth_ts
+                self.sim_time_sec = 0
+                self.GMT = GMT_initialization
 
 
-            self.total_comp_time = 0
-            self.IO_comp_time = 0
-            self.dyn_comp_time = 0
-            self.wind_comp_time = 0
-            self.vert_comp_time = 0
-            self.temp_comp_time = 0
-            self.cont_comp_time = 0
-            self.diag_comp_time = 0
-            self.rad_comp_time = 0
-            self.mic_comp_time = 0
-            self.soil_comp_time = 0
+                self.total_comp_time = 0
+                self.IO_comp_time = 0
+                self.dyn_comp_time = 0
+                self.wind_comp_time = 0
+                self.vert_comp_time = 0
+                self.temp_comp_time = 0
+                self.cont_comp_time = 0
+                self.diag_comp_time = 0
+                self.rad_comp_time = 0
+                self.mic_comp_time = 0
+                self.soil_comp_time = 0
 
 
 

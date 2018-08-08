@@ -9,7 +9,8 @@ from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
 ######################################################################################
 ######################################################################################
 
-def euler_forward(GR, COLP, PHI, PHIVB, POTT,
+def euler_forward(GR, subrids,
+                    COLP, PHI, PHIVB, POTT,
                     UWIND, VWIND,
                     UFLX, VFLX, UFLXMP, VFLXMP,
                     HSURF, PVTF, PVTFVB, i_spatial_discretization,
@@ -31,11 +32,12 @@ def euler_forward(GR, COLP, PHI, PHIVB, POTT,
 ######################################################################################
 ######################################################################################
 
-def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
-                    UWIND, VWIND, WWIND,
-                    UFLX, VFLX, UFLXMP, VFLXMP,
-                    HSURF, PVTF, PVTFVB, i_spatial_discretization,
-                    RAD, SOIL, MIC, TURB):
+def matsuno(GR, subrids,
+            COLP, PHI, PHIVB, POTT, POTTVB,
+            UWIND, VWIND, WWIND,
+            UFLX, VFLX, UFLXMP, VFLXMP,
+            HSURF, PVTF, PVTFVB, i_spatial_discretization,
+            RAD, SOIL, MIC, TURB):
 
     if i_spatial_discretization == 'UPWIND':
         raise NotImplementedError()
@@ -44,7 +46,8 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## ESTIMATE
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND,\
-        dQVdt, dQCdt = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+                                            COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD, MIC, TURB)
@@ -70,7 +73,8 @@ def matsuno(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## FINAL
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+                                            COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD, MIC, TURB)
@@ -133,11 +137,12 @@ def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, QV0, QC0, \
 
     return(COLP1, UWIND1, VWIND1, POTT1, QV1, QC1)
 
-def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
-            UWIND, VWIND, WWIND,
-            UFLX, VFLX, UFLXMP, VFLXMP,
-            HSURF, PVTF, PVTFVB, i_spatial_discretization,
-            RAD, SOIL, MIC, TURB):
+def RK4(GR, subrids,
+        COLP, PHI, PHIVB, POTT, POTTVB,
+        UWIND, VWIND, WWIND,
+        UFLX, VFLX, UFLXMP, VFLXMP,
+        HSURF, PVTF, PVTFVB, i_spatial_discretization,
+        RAD, SOIL, MIC, TURB):
 
     if i_spatial_discretization == 'UPWIND':
         raise NotImplementedError()
@@ -147,7 +152,8 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## level 1
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, COLP, POTT, POTTVB, HSURF,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+                                            COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD, MIC, TURB)
@@ -198,7 +204,8 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## level 2
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+                                            COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD, MIC, TURB)
@@ -228,7 +235,8 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## level 3
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+                                            COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD, MIC, TURB)
@@ -259,7 +267,8 @@ def RK4(GR, COLP, PHI, PHIVB, POTT, POTTVB,
         ########## level 4
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, COLP_INT, POTT_INT, POTTVB, HSURF,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+                                            COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
                                             RAD, MIC, TURB)

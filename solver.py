@@ -5,9 +5,10 @@ from grid import Grid
 from fields import initialize_fields
 from nc_IO import constant_fields_to_NC, output_to_NC
 from IO import write_restart
+from multiproc import create_subgrids
 from namelist import i_time_stepping, i_spatial_discretization, \
                     i_load_from_restart, i_save_to_restart, \
-                    i_radiation
+                    i_radiation, njobs
 from diagnostics import diagnose_secondary_fields
 from IO_helper_functions import print_ts_info, print_computation_time_info
 if i_time_stepping == 'EULER_FORWARD':
@@ -22,11 +23,12 @@ elif i_time_stepping == 'HEUN':
 
 
 GR = Grid()
+subgrids = create_subgrids(GR, njobs)
 
 COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
 UFLX, VFLX, UFLXMP, VFLXMP, \
 HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
-RAD, SOIL, MIC, TURB = initialize_fields(GR)
+RAD, SOIL, MIC, TURB = initialize_fields(GR, subgrids)
 constant_fields_to_NC(GR, HSURF, RAD, SOIL)
 
 if i_load_from_restart:
@@ -69,12 +71,13 @@ while GR.ts < GR.nts:
     UWIND, VWIND, WWIND,\
     UFLX, VFLX, UFLXMP, VFLXMP, \
     MIC, TURB \
-                = time_stepper(GR, COLP, PHI, PHIVB, POTT, POTTVB,
-                            UWIND, VWIND, WWIND,
-                            UFLX, VFLX, UFLXMP, VFLXMP,
-                            HSURF, PVTF, PVTFVB, 
-                            i_spatial_discretization,
-                            RAD, SOIL, MIC, TURB)
+                = time_stepper(GR, subgrids,
+                        COLP, PHI, PHIVB, POTT, POTTVB,
+                        UWIND, VWIND, WWIND,
+                        UFLX, VFLX, UFLXMP, VFLXMP,
+                        HSURF, PVTF, PVTFVB, 
+                        i_spatial_discretization,
+                        RAD, SOIL, MIC, TURB)
     t_end = time.time()
     GR.dyn_comp_time += t_end - t_start
     ########
@@ -101,7 +104,7 @@ while GR.ts < GR.nts:
         write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
                         UFLX, VFLX, UFLXMP, VFLXMP, \
                         HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
-                        RAD, SOIL, MIC)
+                        RAD, SOIL, MIC, TURB)
 
 
     GR.total_comp_time += time.time() - real_time_ts_start

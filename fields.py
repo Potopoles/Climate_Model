@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from namelist import *
 from boundaries import exchange_BC_all, exchange_BC
 from IO import load_topo, load_restart_fields, load_profile
@@ -9,7 +10,7 @@ from soil_model import soil
 from org_microphysics import microphysics
 from org_turbulence import turbulence
 
-def initialize_fields(GR):
+def initialize_fields(GR, subgrids):
     if i_load_from_restart:
         COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
         UFLX, VFLX, UFLXMP, VFLXMP, \
@@ -56,7 +57,7 @@ def initialize_fields(GR):
         
         # INITIAL CONDITIONS
         GR, COLP, PSURF, POTT, TAIR \
-                = load_profile(GR, COLP, HSURF, PSURF, PVTF, \
+                = load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, \
                                 PVTFVB, POTT, TAIR)
         #quit()
         COLP = gaussian2D(GR, COLP, COLP_gaussian_pert, np.pi*3/4, 0, \
@@ -101,7 +102,6 @@ def initialize_fields(GR):
 
         # MOISTURE & MICROPHYSICS
         MIC = microphysics(GR, i_microphysics, TAIR, PAIR) 
-
 
         # RADIATION
         RAD = radiation(GR, i_radiation)

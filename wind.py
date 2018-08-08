@@ -1,6 +1,6 @@
 import copy
 import numpy as np
-import time
+#import time
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency
@@ -13,8 +13,10 @@ i_num_dif  = 1
 
 def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
                                 COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
+#def wind_tendency_jacobson(job_ind, output, GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
+#                                COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
 
-    t_start = time.time()
+    #t_start = time.time()
 
     dUFLXdt = np.zeros( (GR.nxs,GR.ny ,GR.nz) )
     dVFLXdt = np.zeros( (GR.nx ,GR.nys,GR.nz) )
@@ -39,7 +41,7 @@ def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX,
                 dUFLXdt[:,:,k] += horAdv_UWIND
                 dVFLXdt[:,:,k] += horAdv_VWIND
 
-            if i_hor_adv:
+            if i_vert_adv:
                 # VERTICAL ADVECTION
                 vertAdv_UWIND, vertAdv_VWIND = vertical_advection(GR, WWIND_UWIND, 
                                                                     WWIND_VWIND, k)
@@ -61,13 +63,20 @@ def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX,
 
             if i_num_dif and (WIND_hor_dif_tau > 0):
                 # HORIZONTAL DIFFUSION
-                diff_UWIND, diff_VWIND = horizontal_diffusion(GR, UFLX, VFLX, COLP, \
-                                                                UWIND, VWIND, k)
+                diff_UWIND, diff_VWIND = horizontal_diffusion(GR, UFLX, VFLX, k)
                 dUFLXdt[:,:,k] += diff_UWIND
                 dVFLXdt[:,:,k] += diff_VWIND
 
-    t_end = time.time()
-    GR.wind_comp_time += t_end - t_start
+    #t_end = time.time()
+    #GR.wind_comp_time += t_end - t_start
+
+    #print('yolo')
+    #print(dUFLXdt)
+
+    #out = {}
+    #out['dUFLXdt'] = dUFLXdt
+    #out['dVFLXdt'] = dVFLXdt
+    #output.put( (job_ind, out) )
 
     return(dUFLXdt, dVFLXdt)
 
@@ -148,7 +157,7 @@ def vertical_advection(GR, WWIND_UWIND, WWIND_VWIND, k):
     return(vertAdv_UWIND, vertAdv_VWIND)
 
 
-def horizontal_diffusion(GR, UFLX, VFLX, COLP, UWIND, VWIND, k):
+def horizontal_diffusion(GR, UFLX, VFLX, k):
 
     diff_UWIND = WIND_hor_dif_tau * \
                  (  UFLX[:,:,k][GR.iisjj_im1] + UFLX[:,:,k][GR.iisjj_ip1] \

@@ -110,9 +110,6 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
     dp1[0] = - e2[0]
     dp1[-1] = 0
 
-    A_mat = scipy.sparse.diags( (dm1[1:], d0, dp1),
-                                ( -1,  0,   1),
-                                (GR.nz*2, GR.nz*2), format='csr' )
 
     Cp_tau = omega_s * solar_constant * np.exp( - (taus[1:]) / mysun ) * \
             ( (gamma1 - 1 / mysun) * gamma3 + gamma4 * gamma2 ) / \
@@ -135,7 +132,15 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
     src[0] = 0 - Cm_0[0]
     src[-1] = surf_reflected_SW - Cp_tau[-1] + albedo_surface_SW * Cm_tau[-1]
 
-    fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
+    #A_mat = scipy.sparse.diags( (dm1[1:], d0, dp1),
+    #                            ( -1,  0,   1),
+    #                            (GR.nz*2, GR.nz*2), format='csr' )
+    #fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
+    A_mat = np.zeros( ( 3, 2*GR.nz ) )
+    A_mat[0,1:] = dp1[:-1]
+    A_mat[1,:] = d0
+    A_mat[2,:-1] = dm1[1:]
+    fluxes = scipy.linalg.solve_banded((1,1), A_mat, src)
 
     Y1 = fluxes[range(0,len(fluxes),2)]
     Y2 = fluxes[range(1,len(fluxes),2)]
