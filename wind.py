@@ -5,16 +5,17 @@ from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency
 
-i_hor_adv  = 1
-i_vert_adv = 1
+i_hor_adv  = 0
+i_vert_adv = 0
 i_coriolis = 1
-i_pre_grad = 1
+i_pre_grad = 0
 i_num_dif  = 1
 
-def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
-                                COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
-#def wind_tendency_jacobson(job_ind, output, GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
+
+#def wind_tendency_jacobson_par(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
 #                                COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
+def wind_tendency_jacobson_par(job_ind, output, GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
+                                COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
 
     #t_start = time.time()
 
@@ -67,16 +68,78 @@ def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX,
                 dUFLXdt[:,:,k] += diff_UWIND
                 dVFLXdt[:,:,k] += diff_VWIND
 
+
     #t_end = time.time()
     #GR.wind_comp_time += t_end - t_start
 
     #print('yolo')
     #print(dUFLXdt)
 
-    #out = {}
-    #out['dUFLXdt'] = dUFLXdt
-    #out['dVFLXdt'] = dVFLXdt
-    #output.put( (job_ind, out) )
+    out = {}
+    out['dUFLXdt'] = dUFLXdt
+    out['dVFLXdt'] = dVFLXdt
+    output.put( (job_ind, out) )
+
+    #return(dUFLXdt, dVFLXdt)
+
+
+
+
+
+
+
+def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
+                                COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
+
+    dUFLXdt = np.zeros( (GR.nxs,GR.ny ,GR.nz) )
+    dVFLXdt = np.zeros( (GR.nx ,GR.nys,GR.nz) )
+
+    if i_wind_tendency:
+
+        if i_vert_adv:
+            WWIND_UWIND = np.zeros( (GR.nxs,GR.ny ,GR.nzs) )
+            WWIND_VWIND = np.zeros( (GR.nx ,GR.nys,GR.nzs) )
+            for ks in range(1,GR.nzs-1):
+                WWIND_UWIND[:,:,ks] = vertical_interp_UWIND(GR, COLP_NEW, UWIND,
+                                                        WWIND, WWIND_UWIND, ks)
+                WWIND_VWIND[:,:,ks] = vertical_interp_VWIND(GR, COLP_NEW, VWIND,
+                                                    WWIND, WWIND_VWIND, ks)
+
+        for k in range(0,GR.nz):
+
+            # HORIZONTAL ADVECTION
+            if i_hor_adv:
+                horAdv_UWIND = horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX, k)
+                horAdv_VWIND = horizontal_advection_VWIND(GR, VWIND, UFLX, VFLX, k)
+                dUFLXdt[:,:,k] += horAdv_UWIND
+                dVFLXdt[:,:,k] += horAdv_VWIND
+
+            if i_vert_adv:
+                # VERTICAL ADVECTION
+                vertAdv_UWIND, vertAdv_VWIND = vertical_advection(GR, WWIND_UWIND, 
+                                                                    WWIND_VWIND, k)
+                dUFLXdt[:,:,k] += vertAdv_UWIND
+                dVFLXdt[:,:,k] += vertAdv_VWIND
+
+            if i_coriolis:
+                # CORIOLIS AND SPHERICAL GRID CONVERSION
+                coriolis_UWIND, coriolis_VWIND = coriolis_term(GR, UWIND, VWIND, COLP, k)
+                dUFLXdt[:,:,k] += coriolis_UWIND
+                dVFLXdt[:,:,k] += coriolis_VWIND
+
+            if i_pre_grad:
+                # PRESSURE GRADIENT
+                preGrad_UWIND, preGrad_VWIND = pressure_gradient_term(GR, COLP, PHI, POTT,
+                                                                    PVTF, PVTFVB, k)
+                dUFLXdt[:,:,k] += preGrad_UWIND
+                dVFLXdt[:,:,k] += preGrad_VWIND
+
+            if i_num_dif and (WIND_hor_dif_tau > 0):
+                # HORIZONTAL DIFFUSION
+                diff_UWIND, diff_VWIND = horizontal_diffusion(GR, UFLX, VFLX, k)
+                dUFLXdt[:,:,k] += diff_UWIND
+                dVFLXdt[:,:,k] += diff_VWIND
+
 
     return(dUFLXdt, dVFLXdt)
 

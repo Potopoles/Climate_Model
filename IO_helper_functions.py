@@ -104,6 +104,7 @@ def print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT):
 def print_computation_time_info(GR):
     # FINNAL OUTPUT
     print('DONE')
+    print('took ' + str(np.round(GR.total_comp_time/60,2)) + ' mins.')
     print('Relative amount of CPU time')
     print('#### gernal')
     print('IO         :  ' + str(int(100*GR.IO_comp_time/GR.total_comp_time)) + '  \t%')

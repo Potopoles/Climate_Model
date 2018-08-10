@@ -2,8 +2,9 @@ import copy
 import numpy as np
 import time
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
-#from wind import wind_tendency_jacobson
 from wind import wind_tendency_jacobson
+#from wind import wind_tendency_jacobson_par
+from wind_cython import wind_tendency_jacobson_par
 from temperature import temperature_tendency_jacobson
 from geopotential import diag_geopotential_jacobson
 from boundaries import exchange_BC
@@ -32,47 +33,64 @@ def tendencies_jacobson(GR, subgrids,\
 
     # PROGNOSE WIND
     t_start = time.time()
+    #for q in range(0,5):
     dUFLXdt, dVFLXdt = wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
                                                     COLP, COLP_NEW, HSURF, PHI, POTT,
                                                     PVTF, PVTFVB)
 
-    #output = mp.Queue()
-    #processes = []
-    #for job_ind in range(0,njobs):
+    t_end = time.time()
+    print(t_end - t_start)
+    #print(dUFLXdt)
+    import pickle
+    out = {}
+    out['dUFLXdt'] = dUFLXdt
+    out['dVFLXdt'] = dVFLXdt
+    with open('testarray.pkl', 'wb') as f:
+        pickle.dump(out, f)
+    #print(dUFLXdt)
+    quit()
 
-    #    SGR = subgrids[job_ind]
-    #    processes.append(
-    #        mp.Process(\
-    #            target=wind_tendency_jacobson,
-    #            args = (job_ind, output, subgrids[job_ind],
-    #                    UWIND[SGR.map_iisjj], VWIND[SGR.map_iijjs],
-    #                    WWIND[SGR.map_iijj], 
-    #                    UFLX[SGR.map_iisjj], VFLX[SGR.map_iijjs],
-    #                    COLP[SGR.map_iijj], COLP_NEW[SGR.map_iijj],
-    #                    HSURF[SGR.map_iijj], PHI[SGR.map_iijj],
-    #                    POTT[SGR.map_iijj], PVTF[SGR.map_iijj],
-    #                    PVTFVB[SGR.map_iijj])))
-    #for proc in processes:
-    #    proc.start()
-    #results = [output.get() for p in processes]
-    #results.sort()
-    #dUFLXdt = np.zeros( (GR.nxs, GR.ny, GR.nz) )
-    #dVFLXdt = np.zeros( (GR.nx, GR.nys, GR.nz) )
-    #for job_ind in range(0,njobs):
-    #    SGR = subgrids[job_ind]
-    #    res = results[job_ind][1]
+        #dUFLXdt, dVFLXdt = wind_tendency_jacobson_par(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
+        #                                                COLP, COLP_NEW, HSURF, PHI, POTT,
+        #                                                PVTF, PVTFVB)
 
-    #    dUFLXdt[SGR.mapin_iisjj] = results[job_ind][1]['dUFLXdt']
-    #    dVFLXdt[SGR.mapin_iijjs] = results[job_ind][1]['dVFLXdt']
 
-    #for proc in processes:
-    #    proc.join()
+        #output = mp.Queue()
+        #processes = []
+        #for job_ind in range(0,njobs):
 
-    #print(dUFLXdt[:,:,0])
-    #quit()
+        #    SGR = subgrids[job_ind]
+        #    processes.append(
+        #        mp.Process(\
+        #            target=wind_tendency_jacobson_par,
+        #            args = (job_ind, output, subgrids[job_ind],
+        #                    UWIND[SGR.map_iisjj], VWIND[SGR.map_iijjs],
+        #                    WWIND[SGR.map_iijj], 
+        #                    UFLX[SGR.map_iisjj], VFLX[SGR.map_iijjs],
+        #                    COLP[SGR.map_iijj], COLP_NEW[SGR.map_iijj],
+        #                    HSURF[SGR.map_iijj], PHI[SGR.map_iijj],
+        #                    POTT[SGR.map_iijj], PVTF[SGR.map_iijj],
+        #                    PVTFVB[SGR.map_iijj])))
+        #for proc in processes:
+        #    proc.start()
+        #results = [output.get() for p in processes]
+        #results.sort()
+        #dUFLXdt = np.zeros( (GR.nxs, GR.ny, GR.nz) )
+        #dVFLXdt = np.zeros( (GR.nx, GR.nys, GR.nz) )
+        #for job_ind in range(0,njobs):
+        #    SGR = subgrids[job_ind]
+        #    res = results[job_ind][1]
+
+        #    dUFLXdt[SGR.mapin_iisjj] = results[job_ind][1]['dUFLXdt']
+        #    dVFLXdt[SGR.mapin_iijjs] = results[job_ind][1]['dVFLXdt']
+
+        #for proc in processes:
+        #    proc.join()
 
     t_end = time.time()
     GR.wind_comp_time += t_end - t_start
+    #print(t_end - t_start)
+    #quit()
 
     # PROGNOSE POTT
     dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\

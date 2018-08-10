@@ -3,20 +3,23 @@ from datetime import datetime
 # GRID PARAMS
 nb = 1
 nz = 6
-#nz = 20
+nz = 15
+nz = 30
 #nz = 3
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
 lat0_deg = -80
-lat0_deg = -78
+#lat0_deg = -78
 lat1_deg = 80
-lat1_deg = 78
+#lat1_deg = 78
 lon0_deg = 0
 lon1_deg = 360
 
-dlat_deg = 3
-dlon_deg = 3
+dlat_deg = 1.5
+dlon_deg = 1.5
+dlat_deg = 1
+dlon_deg = 1
 
 i_curved_earth = 1
 
@@ -24,7 +27,7 @@ i_curved_earth = 1
 output_path = '../output_fine'
 output_path = '../output'
 #output_path = '../output_cur'
-i_sim_n_days = 0.50
+i_sim_n_days = 0.5
 i_out_nth_hour = 2
 #i_sim_n_days = 1*365.0
 #i_sim_n_days = 100
@@ -63,10 +66,10 @@ gaussian_dlat = np.pi/15
 #gaussian_dlon = 1000
 #gaussian_dlat = 1000
 u0 = 0
-UWIND_gaussian_pert = 0
+UWIND_gaussian_pert = 10
 UWIND_random_pert = 0
 v0 = 0
-VWIND_gaussian_pert = 0
+VWIND_gaussian_pert = 10
 VWIND_random_pert = 0
 pTop = 10000
 pSurf = 101350
@@ -77,7 +80,7 @@ POTT_random_pert = 0.0
 
 # RADIATION
 i_radiation = 3
-#i_radiation = 0
+i_radiation = 0
 
 # MICROPHYSICS
 i_microphysics = 1

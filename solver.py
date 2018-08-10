@@ -36,6 +36,9 @@ if i_load_from_restart:
 else:
     outCounter = 0
 
+#print(subgrids)
+#quit()
+
 while GR.ts < GR.nts:
     real_time_ts_start = time.time()
     GR.ts += 1
