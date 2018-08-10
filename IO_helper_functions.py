@@ -113,6 +113,7 @@ def print_computation_time_info(GR):
     print('horAdv     :  ' + str(int(100*GR.wind_comp_time/GR.total_comp_time)) + '  \t%')
     print('vertAdv    :  ' + str(int(100*GR.vert_comp_time/GR.total_comp_time)) + '  \t%')
     print('temperature:  ' + str(int(100*GR.temp_comp_time/GR.total_comp_time)) + '  \t%')
+    print('tracer     :  ' + str(int(100*GR.trac_comp_time/GR.total_comp_time)) + '  \t%')
     print('continuity :  ' + str(int(100*GR.cont_comp_time/GR.total_comp_time)) + '  \t%')
     print('diagnostics:  ' + str(int(100*GR.diag_comp_time/GR.total_comp_time)) + '  \t%')
     print('#### other')

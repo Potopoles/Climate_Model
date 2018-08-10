@@ -156,7 +156,7 @@ def cloud_water_tendency(GR, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
 
 
     t_end = time.time()
-    GR.mic_comp_time += t_end - t_start
+    GR.trac_comp_time += t_end - t_start
 
 
     return(dQCdt)

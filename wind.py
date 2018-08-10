@@ -6,7 +6,7 @@ from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency
 
 i_hor_adv  = 1
-i_vert_adv = 0
+i_vert_adv = 1
 i_coriolis = 1
 i_pre_grad = 1
 i_num_dif  = 1

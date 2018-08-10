@@ -51,7 +51,6 @@ class Grid:
             self.nys = self.ny + 1
             self.nb = nb
 
-
             # INDEX ARRAYS
             self.kk  = np.arange(0,self.nz)
             self.kks = np.arange(0,self.nzs)
@@ -202,6 +201,7 @@ class Grid:
                 self.wind_comp_time = 0
                 self.vert_comp_time = 0
                 self.temp_comp_time = 0
+                self.trac_comp_time = 0
                 self.cont_comp_time = 0
                 self.diag_comp_time = 0
                 self.rad_comp_time = 0

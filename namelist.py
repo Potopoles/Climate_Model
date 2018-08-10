@@ -4,8 +4,8 @@ from datetime import datetime
 nb = 1
 nz = 6
 nz = 15
-nz = 30
-#nz = 3
+nz = 20
+#nz = 10
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
@@ -16,10 +16,10 @@ lat1_deg = 78
 lon0_deg = 0
 lon1_deg = 360
 
-dlat_deg = 1.5
-dlon_deg = 1.5
-dlat_deg = 5
-dlon_deg = 5
+dlat_deg = 1.0
+dlon_deg = 1.0
+#dlat_deg = 8
+#dlon_deg = 8
 
 i_curved_earth = 1
 
@@ -28,10 +28,10 @@ output_path = '../output_fine'
 output_path = '../output'
 #output_path = '../output_cur'
 i_sim_n_days = 0.5
-i_out_nth_hour = 2
+i_out_nth_hour = 1/6
 #i_sim_n_days = 1*365.0
 #i_sim_n_days = 100
-i_out_nth_hour = 3
+#i_out_nth_hour = 3
 
 njobs = 1
 
@@ -66,21 +66,21 @@ gaussian_dlat = np.pi/15
 #gaussian_dlon = 1000
 #gaussian_dlat = 1000
 u0 = 0
-UWIND_gaussian_pert = 10
+UWIND_gaussian_pert = 0
 UWIND_random_pert = 0
 v0 = 0
-VWIND_gaussian_pert = 10
+VWIND_gaussian_pert = 0
 VWIND_random_pert = 0
 pTop = 10000
 pSurf = 101350
-COLP_gaussian_pert = -000
+COLP_gaussian_pert = -10000
 COLP_random_pert = 000
 POTT_gaussian_pert = 0
 POTT_random_pert = 0.0
 
 # RADIATION
 i_radiation = 3
-i_radiation = 0
+#i_radiation = 0
 
 # MICROPHYSICS
 i_microphysics = 1

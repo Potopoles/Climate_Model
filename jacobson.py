@@ -34,21 +34,26 @@ def tendencies_jacobson(GR, subgrids,\
     # PROGNOSE WIND
     t_start = time.time()
     #for q in range(0,5):
-    dUFLXdt, dVFLXdt = wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
-                                                    COLP, COLP_NEW, HSURF, PHI, POTT,
-                                                    PVTF, PVTFVB)
+    #dUFLXdt, dVFLXdt = wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
+    #                                                COLP, COLP_NEW, HSURF, PHI, POTT,
+    #                                                PVTF, PVTFVB)
+    dUFLXdt, dVFLXdt = wind_tendency_jacobson_par(GR, njobs, UWIND, VWIND, WWIND, UFLX, VFLX,
+                                                    COLP, COLP_NEW, PHI,
+                                                    POTT, PVTF, PVTFVB)
+    dUFLXdt = np.asarray(dUFLXdt)
+    dVFLXdt = np.asarray(dVFLXdt)
 
-    t_end = time.time()
-    print(t_end - t_start)
-    #print(dUFLXdt)
-    import pickle
-    out = {}
-    out['dUFLXdt'] = dUFLXdt
-    out['dVFLXdt'] = dVFLXdt
-    with open('testarray.pkl', 'wb') as f:
-        pickle.dump(out, f)
-    #print(dUFLXdt)
-    quit()
+    #t_end = time.time()
+    #print(t_end - t_start)
+    ##print(dUFLXdt)
+    #import pickle
+    #out = {}
+    #out['dUFLXdt'] = dUFLXdt
+    #out['dVFLXdt'] = dVFLXdt
+    #with open('testarray.pkl', 'wb') as f:
+    #    pickle.dump(out, f)
+    ##print(dUFLXdt)
+    #quit()
 
         #dUFLXdt, dVFLXdt = wind_tendency_jacobson_par(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
         #                                                COLP, COLP_NEW, HSURF, PHI, POTT,
