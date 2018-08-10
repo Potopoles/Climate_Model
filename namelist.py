@@ -10,16 +10,16 @@ nz = 30
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
 lat0_deg = -80
-#lat0_deg = -78
+lat0_deg = -78
 lat1_deg = 80
-#lat1_deg = 78
+lat1_deg = 78
 lon0_deg = 0
 lon1_deg = 360
 
 dlat_deg = 1.5
 dlon_deg = 1.5
-dlat_deg = 1
-dlon_deg = 1
+dlat_deg = 5
+dlon_deg = 5
 
 i_curved_earth = 1
 
