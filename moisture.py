@@ -3,16 +3,16 @@ import time
 from namelist import QV_hor_dif_tau
 
 
-i_vert_adv     = 0
-i_hor_adv      = 0
-i_turb         = 1
-i_num_dif      = 0
-i_microphysics = 0
+i_hor_adv      = 1
+i_vert_adv     = 1
+i_num_dif      = 1
+i_microphysics = 1
+i_turb         = 0
 
 
 def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
 
-    t_start = time.time()
+    #t_start = time.time()
 
 
     dQVdt = np.zeros( (GR.nx ,GR.ny ,GR.nz) )
@@ -77,8 +77,8 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
     #print(np.max(MIC.dQVdt_MIC))
 
 
-    t_end = time.time()
-    GR.mic_comp_time += t_end - t_start
+    #t_end = time.time()
+    #GR.mic_comp_time += t_end - t_start
 
 
     return(dQVdt)
@@ -88,17 +88,9 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
 
 
 
-
-
-i_vert_adv     = 1
-i_hor_adv      = 1
-i_num_dif      = 1
-i_microphysics = 1
-
-
 def cloud_water_tendency(GR, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
 
-    t_start = time.time()
+    #t_start = time.time()
 
 
     dQCdt = np.zeros( (GR.nx ,GR.ny ,GR.nz) )
@@ -155,8 +147,8 @@ def cloud_water_tendency(GR, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
             dQCdt[:,:,k] = dQCdt[:,:,k] + MIC.dQCdt_MIC[:,:,k] * COLP[GR.iijj]
 
 
-    t_end = time.time()
-    GR.trac_comp_time += t_end - t_start
+    #t_end = time.time()
+    #GR.trac_comp_time += t_end - t_start
 
 
     return(dQCdt)

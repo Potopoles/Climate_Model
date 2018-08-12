@@ -3,12 +3,14 @@ import numpy as np
 import time
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
 from wind import wind_tendency_jacobson
-#from wind import wind_tendency_jacobson_par
+#from par_wind import wind_tendency_jacobson_par
 from wind_cython import wind_tendency_jacobson_par
 from temperature import temperature_tendency_jacobson
+from temperature_cython import temperature_tendency_jacobson_par
 from geopotential import diag_geopotential_jacobson
 from boundaries import exchange_BC
 from moisture import water_vapor_tendency, cloud_water_tendency
+from moisture_cython import water_vapor_tendency_par, cloud_water_tendency_par
 from namelist import pTop, njobs
 from constants import con_Rd
 
@@ -43,17 +45,6 @@ def tendencies_jacobson(GR, subgrids,\
     dUFLXdt = np.asarray(dUFLXdt)
     dVFLXdt = np.asarray(dVFLXdt)
 
-    #t_end = time.time()
-    #print(t_end - t_start)
-    ##print(dUFLXdt)
-    #import pickle
-    #out = {}
-    #out['dUFLXdt'] = dUFLXdt
-    #out['dVFLXdt'] = dVFLXdt
-    #with open('testarray.pkl', 'wb') as f:
-    #    pickle.dump(out, f)
-    ##print(dUFLXdt)
-    #quit()
 
         #dUFLXdt, dVFLXdt = wind_tendency_jacobson_par(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
         #                                                COLP, COLP_NEW, HSURF, PHI, POTT,
@@ -98,12 +89,73 @@ def tendencies_jacobson(GR, subgrids,\
     #quit()
 
     # PROGNOSE POTT
-    dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
-                                            UFLX, VFLX, WWIND, RAD, MIC)
+    t_start = time.time()
+
+    #dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
+    #                                        UFLX, VFLX, WWIND, RAD, MIC)
+
+    #import pickle
+    #out = {}
+    #out['dPOTTdt'] = dPOTTdt
+    #with open('testarray.pkl', 'wb') as f:
+    #    pickle.dump(out, f)
+    #quit()
+
+    dPOTTdt = temperature_tendency_jacobson_par(GR, njobs, POTT, POTTVB, COLP, COLP_NEW,\
+                                            UFLX, VFLX, WWIND, \
+                                            RAD.dPOTTdt_RAD, MIC.dPOTTdt_MIC, \
+                                            MIC.i_microphysics, RAD.i_radiation)
+    dPOTTdt = np.asarray(dPOTTdt)
+
+    #import pickle
+    #with open('testarray.pkl', 'rb') as f:
+    #    out = pickle.load(f)
+    #dPOTTdt_orig = out['dPOTTdt']
+    #print('###################')
+    #nan_here = np.isnan(dPOTTdt)
+    #nan_orig = np.isnan(dPOTTdt_orig)
+    #print('u values ' + str(np.nansum(np.abs(dPOTTdt - dPOTTdt_orig))))
+    #print('u nan ' + str(np.sum(nan_here != nan_orig)))
+    #print('###################')
+    #quit()
+    t_end = time.time()
+    GR.temp_comp_time += t_end - t_start
 
     # MOIST VARIABLES
-    dQVdt = water_vapor_tendency(GR, MIC.QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB)
-    dQCdt = cloud_water_tendency(GR, MIC.QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC)
+    t_start = time.time()
+
+    #dQVdt = water_vapor_tendency(GR, MIC.QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB)
+    #dQCdt = cloud_water_tendency(GR, MIC.QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC)
+
+    #import pickle
+    #out = {}
+    #out['dQVdt'] = dQVdt
+    #with open('testarray.pkl', 'wb') as f:
+    #    pickle.dump(out, f)
+    #quit()
+
+    dQVdt = water_vapor_tendency_par(GR, njobs, MIC.QV, COLP, COLP_NEW,
+                                    UFLX, VFLX, WWIND, MIC.dQVdt_MIC)
+    dQVdt = np.asarray(dQVdt)
+
+    dQCdt = cloud_water_tendency_par(GR, njobs, MIC.QC, COLP, COLP_NEW,
+                                    UFLX, VFLX, WWIND, MIC.dQCdt_MIC)
+    dQCdt = np.asarray(dQCdt)
+
+    #import pickle
+    #with open('testarray.pkl', 'rb') as f:
+    #    out = pickle.load(f)
+    #dQVdt_orig = out['dQVdt']
+    #print('###################')
+    #nan_here = np.isnan(dQVdt)
+    #nan_orig = np.isnan(dQVdt_orig)
+    #print('u values ' + str(np.nansum(np.abs(dQVdt - dQVdt_orig))))
+    #print('u nan ' + str(np.sum(nan_here != nan_orig)))
+    #print('###################')
+    #quit()
+
+    t_end = time.time()
+    GR.trac_comp_time += t_end - t_start
 
     return(dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, WWIND, dQVdt, dQCdt)
 

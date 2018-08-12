@@ -110,10 +110,14 @@ def print_computation_time_info(GR):
     print('IO         :  ' + str(int(100*GR.IO_comp_time/GR.total_comp_time)) + '  \t%')
     print('#### dynamics')
     print('total      :  ' + str(int(100*GR.dyn_comp_time/GR.total_comp_time)) + '  \t%')
-    print('horAdv     :  ' + str(int(100*GR.wind_comp_time/GR.total_comp_time)) + '  \t%')
-    print('vertAdv    :  ' + str(int(100*GR.vert_comp_time/GR.total_comp_time)) + '  \t%')
-    print('temperature:  ' + str(int(100*GR.temp_comp_time/GR.total_comp_time)) + '  \t%')
-    print('tracer     :  ' + str(int(100*GR.trac_comp_time/GR.total_comp_time)) + '  \t%')
+    print('horAdv     :  ' + str(int(100*GR.wind_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.wind_comp_time)) + '\ts')
+    print('vertAdv    :  ' + str(int(100*GR.vert_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.vert_comp_time)) + '\ts')
+    print('temperature:  ' + str(int(100*GR.temp_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.temp_comp_time)) + '\ts')
+    print('tracer     :  ' + str(int(100*GR.trac_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.trac_comp_time)) + '\ts')
     print('continuity :  ' + str(int(100*GR.cont_comp_time/GR.total_comp_time)) + '  \t%')
     print('diagnostics:  ' + str(int(100*GR.diag_comp_time/GR.total_comp_time)) + '  \t%')
     print('#### other')

@@ -34,8 +34,6 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
         double[:,:, ::1] PVTF,
         double[:,:, ::1] PVTFVB):
 
-
-
     cdef int c_njobs = njobs
    
     cdef int nb = GR.nb

@@ -11,6 +11,7 @@ from namelist import *
 from grid import Grid
 from fields import initialize_fields
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
+from temperature_cython import temperature_tendency_jacobson_par
 
 from boundaries import exchange_BC
 from multiproc import create_subgrids 
@@ -37,40 +38,33 @@ if __name__ == '__main__':
     # DIAGNOSE WWIND
     WWIND = vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
 
+    #time0 = time.time()
+    #
+    #dUFLXdt, dVFLXdt = wind_tendency_jacobson_par(GR, njobs, UWIND, VWIND, WWIND, UFLX, VFLX,
+    #                                                COLP, COLP_NEW, PHI,
+    #                                                POTT, PVTF, PVTFVB)
 
-    #print(UWIND.shape)
-    #print(UWIND[GR.iijj].shape)
-    #print(UWIND[GR.nb:(GR.nx+GR.nb),1:10,:].shape)
-    #print(UWIND[GR.nb+0:GR.nx,1:10,:].shape)
-    #quit()
+    #print('###################')
+    #time1 = time.time()
+    #print('sec: ' + str(time1 - time0))
 
-    time0 = time.time()
-    
-    dUFLXdt, dVFLXdt = wind_tendency_jacobson_par(GR, njobs, UWIND, VWIND, WWIND, UFLX, VFLX,
-                                                    COLP, COLP_NEW, PHI,
-                                                    POTT, PVTF, PVTFVB)
+    #import pickle
+    #with open('testarray.pkl', 'rb') as f:
+    #    out = pickle.load(f)
 
-    print('###################')
-    time1 = time.time()
-    print('sec: ' + str(time1 - time0))
+    #dUFLXdt_orig = out['dUFLXdt']
+    #dVFLXdt_orig = out['dVFLXdt']
 
-    import pickle
-    with open('testarray.pkl', 'rb') as f:
-        out = pickle.load(f)
-
-    dUFLXdt_orig = out['dUFLXdt']
-    dVFLXdt_orig = out['dVFLXdt']
-
-    print('###################')
-    nan_here = np.isnan(dUFLXdt)
-    nan_orig = np.isnan(dUFLXdt_orig)
-    print('u values ' + str(np.nansum(np.abs(dUFLXdt - dUFLXdt_orig))))
-    print('u nan ' + str(np.sum(nan_here != nan_orig)))
-    nan_here = np.isnan(dVFLXdt)
-    nan_orig = np.isnan(dVFLXdt_orig)
-    print('v values ' + str(np.nansum(np.abs(dVFLXdt - dVFLXdt_orig))))
-    print('v nan ' + str(np.sum(nan_here != nan_orig)))
-    print('###################')
+    #print('###################')
+    #nan_here = np.isnan(dUFLXdt)
+    #nan_orig = np.isnan(dUFLXdt_orig)
+    #print('u values ' + str(np.nansum(np.abs(dUFLXdt - dUFLXdt_orig))))
+    #print('u nan ' + str(np.sum(nan_here != nan_orig)))
+    #nan_here = np.isnan(dVFLXdt)
+    #nan_orig = np.isnan(dVFLXdt_orig)
+    #print('v values ' + str(np.nansum(np.abs(dVFLXdt - dVFLXdt_orig))))
+    #print('v nan ' + str(np.sum(nan_here != nan_orig)))
+    #print('###################')
 
     #import matplotlib.pyplot as plt
     #k = 5
@@ -86,5 +80,24 @@ if __name__ == '__main__':
     #plt.show()
 
 
+
+
+    dPOTTdt = temperature_tendency_jacobson_par(GR, njobs, POTT, POTTVB, COLP, COLP_NEW,\
+                                            UFLX, VFLX, WWIND, \
+                                            RAD.dPOTTdt_RAD, MIC.dPOTTdt_MIC, \
+                                            MIC.i_microphysics, RAD.i_radiation)
+    dPOTTdt = np.asarray(dPOTTdt)
+
+    import pickle
+    with open('testarray.pkl', 'rb') as f:
+        out = pickle.load(f)
+    dPOTTdt_orig = out['dPOTTdt']
+    print('###################')
+    nan_here = np.isnan(dPOTTdt)
+    nan_orig = np.isnan(dPOTTdt_orig)
+    print('pott values ' + str(np.nansum(np.abs(dPOTTdt - dPOTTdt_orig))))
+    print('pott nan ' + str(np.sum(nan_here != nan_orig)))
+    print('###################')
+    quit()
 
 
