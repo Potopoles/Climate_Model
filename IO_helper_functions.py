@@ -107,9 +107,11 @@ def print_computation_time_info(GR):
     print('took ' + str(np.round(GR.total_comp_time/60,2)) + ' mins.')
     print('Relative amount of CPU time')
     print('#### gernal')
-    print('IO         :  ' + str(int(100*GR.IO_comp_time/GR.total_comp_time)) + '  \t%')
+    print('IO         :  ' + str(int(100*GR.IO_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.IO_comp_time)) + '\ts')
     print('#### dynamics')
-    print('total      :  ' + str(int(100*GR.dyn_comp_time/GR.total_comp_time)) + '  \t%')
+    print('total      :  ' + str(int(100*GR.dyn_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.dyn_comp_time)) + '\ts')
     print('horAdv     :  ' + str(int(100*GR.wind_comp_time/GR.total_comp_time)) + '  \t%\t' \
                            + str(int(GR.wind_comp_time)) + '\ts')
     print('vertAdv    :  ' + str(int(100*GR.vert_comp_time/GR.total_comp_time)) + '  \t%\t' \
@@ -118,12 +120,17 @@ def print_computation_time_info(GR):
                            + str(int(GR.temp_comp_time)) + '\ts')
     print('tracer     :  ' + str(int(100*GR.trac_comp_time/GR.total_comp_time)) + '  \t%\t' \
                            + str(int(GR.trac_comp_time)) + '\ts')
-    print('continuity :  ' + str(int(100*GR.cont_comp_time/GR.total_comp_time)) + '  \t%')
-    print('diagnostics:  ' + str(int(100*GR.diag_comp_time/GR.total_comp_time)) + '  \t%')
+    print('continuity :  ' + str(int(100*GR.cont_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.cont_comp_time)) + '\ts')
+    print('diagnostics:  ' + str(int(100*GR.diag_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.diag_comp_time)) + '\ts')
     print('#### other')
-    print('radiation  :  ' + str(int(100*GR.rad_comp_time/GR.total_comp_time)) + '  \t%')
-    print('microphyis :  ' + str(int(100*GR.mic_comp_time/GR.total_comp_time)) + '  \t%')
-    print('soil       :  ' + str(int(100*GR.soil_comp_time/GR.total_comp_time)) + '  \t%')
+    print('radiation  :  ' + str(int(100*GR.rad_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.rad_comp_time)) + '\ts')
+    print('microphyis :  ' + str(int(100*GR.mic_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.mic_comp_time)) + '\ts')
+    print('soil       :  ' + str(int(100*GR.soil_comp_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.soil_comp_time)) + '\ts')
 
 
 

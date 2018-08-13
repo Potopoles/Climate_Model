@@ -53,6 +53,37 @@ def create_subgrids(GR, njobs):
         SGR = set_map_indices(GR, SGR, 1/2)
         subgrids[1] = SGR 
     ########################################################################
+    if njobs == 3:
+        # subgrid 0
+        specs = {}
+        specs['lon0_deg'] = GR.lon0_deg
+        specs['lon1_deg'] = int((GR.lon1_deg - GR.lon0_deg)*1/3)
+        specs['lat0_deg'] = GR.lat0_deg
+        specs['lat1_deg'] = GR.lat1_deg
+        SGR = Grid(1, specs)
+        SGR = set_map_indices(GR, SGR, 0)
+        subgrids[0] = SGR
+
+        # subgrid 1
+        specs = {}
+        specs['lon0_deg'] = int((GR.lon1_deg - GR.lon0_deg)*1/3)
+        specs['lon1_deg'] = int((GR.lon1_deg - GR.lon0_deg)*2/3) 
+        specs['lat0_deg'] = GR.lat0_deg
+        specs['lat1_deg'] = GR.lat1_deg
+        SGR = Grid(1, specs)
+        SGR = set_map_indices(GR, SGR, 1/3)
+        subgrids[1] = SGR 
+
+        # subgrid 2
+        specs = {}
+        specs['lon0_deg'] = int((GR.lon1_deg - GR.lon0_deg)*2/3)
+        specs['lon1_deg'] = int((GR.lon1_deg - GR.lon0_deg)*3/3) 
+        specs['lat0_deg'] = GR.lat0_deg
+        specs['lat1_deg'] = GR.lat1_deg
+        SGR = Grid(1, specs)
+        SGR = set_map_indices(GR, SGR, 2/3)
+        subgrids[2] = SGR 
+    ########################################################################
     if njobs == 4:
         # subgrid 0
         specs = {}

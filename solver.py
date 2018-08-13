@@ -11,15 +11,10 @@ from namelist import i_time_stepping, i_spatial_discretization, \
                     i_radiation, njobs
 from diagnostics import diagnose_secondary_fields
 from IO_helper_functions import print_ts_info, print_computation_time_info
-if i_time_stepping == 'EULER_FORWARD':
-    from time_integration import euler_forward as time_stepper
-elif i_time_stepping == 'MATSUNO':
+if i_time_stepping == 'MATSUNO':
     from time_integration import matsuno as time_stepper
 elif i_time_stepping == 'RK4':
     from time_integration import RK4 as time_stepper
-elif i_time_stepping == 'HEUN':
-    raise NotImplementedError()
-    from time_integration import heuns_method as time_stepper
 
 
 GR = Grid()

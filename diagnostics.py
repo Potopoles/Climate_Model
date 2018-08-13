@@ -6,7 +6,6 @@ from namelist import pTop
 
 def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
                                 PVTF, PVTFVB, UWIND, VWIND, WIND):
-
     t_start = time.time()
 
     TAIR[GR.iijj] = POTT[GR.iijj] * PVTF[GR.iijj]
@@ -24,3 +23,80 @@ def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, R
     GR.diag_comp_time += t_end - t_start
 
     return(PAIR, TAIR, TAIRVB, RHO, WIND)
+
+
+def diagnose_POTTVB_jacobson(GR, POTTVB, POTT, PVTF, PVTFVB):
+    t_start = time.time()
+
+    for ks in range(1,GR.nzs-1):
+        POTTVB[:,:,ks][GR.iijj] =   ( \
+                    +   (PVTFVB[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj]) * \
+                        POTT[:,:,ks-1][GR.iijj]
+                    +   (PVTF[:,:,ks][GR.iijj] - PVTFVB[:,:,ks][GR.iijj]) * \
+                        POTT[:,:,ks][GR.iijj]
+                                    ) / (PVTF[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj])
+
+    # extrapolate model bottom and model top POTTVB
+    POTTVB[:,:,0][GR.iijj] = POTT[:,:,0][GR.iijj] - \
+            ( POTTVB[:,:,1][GR.iijj] - POTT[:,:,0][GR.iijj] )
+    POTTVB[:,:,-1][GR.iijj] = POTT[:,:,-1][GR.iijj] - \
+            ( POTTVB[:,:,-2][GR.iijj] - POTT[:,:,-1][GR.iijj] )
+
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
+
+    return(POTTVB)
+
+
+
+
+def interp_COLPA(GR, COLP):
+    t_start = time.time()
+
+    COLPA_is = 1/8*(    COLP[GR.iisjj_im1_jp1] * GR.A[GR.iisjj_im1_jp1] + \
+                        COLP[GR.iisjj_jp1    ] * GR.A[GR.iisjj_jp1    ] + \
+                    2 * COLP[GR.iisjj_im1    ] * GR.A[GR.iisjj_im1    ] + \
+                    2 * COLP[GR.iisjj        ] * GR.A[GR.iisjj        ] + \
+                        COLP[GR.iisjj_im1_jm1] * GR.A[GR.iisjj_im1_jm1] + \
+                        COLP[GR.iisjj_jm1    ] * GR.A[GR.iisjj_jm1    ]   )
+
+    # ATTEMPT TO INTERPOLATE ONLY WITH TWO NEIGHBORING POINTS
+    #COLPA_is[:, 0] = 1/2*( COLP[GR.iis-1,GR.jj[ 0]] * GR.A[GR.iis-1,GR.jj[ 0]] + \
+    #                       COLP[GR.iis  ,GR.jj[ 0]] * GR.A[GR.iis  ,GR.jj[ 0]]   )
+    #COLPA_is[:,-1] = 1/2*( COLP[GR.iis-1,GR.jj[-1]] * GR.A[GR.iis-1,GR.jj[-1]] + \
+    #                       COLP[GR.iis  ,GR.jj[-1]] * GR.A[GR.iis  ,GR.jj[-1]]   )
+
+    # ATTEMPT TO SET BOUNDARY AREA TO ZERO (see grid)
+    # consequently change 1/8 to 1/6
+    #COLPA_is[:, 0] = COLPA_is[:, 0]*4/3
+    #COLPA_is[:, -1] = COLPA_is[:, -1]*4/3
+
+    # ATTEMPT TO INTERPOLATE ONLY WITH TWO NEIGHBORING POINTS (JACOBSON)
+    COLPA_is[:,-1] = 1/4*(    COLP[GR.iis-1,GR.jj[-1]] * GR.A[GR.iis-1,GR.jj[-1]] + \
+                              COLP[GR.iis  ,GR.jj[-1]] * GR.A[GR.iis  ,GR.jj[-1]] + \
+                              COLP[GR.iis-1,GR.jj[-2]] * GR.A[GR.iis-1,GR.jj[-2]] + \
+                              COLP[GR.iis  ,GR.jj[-2]] * GR.A[GR.iis  ,GR.jj[-2]]   )
+
+    COLPA_is[:, 0] = 1/4*(    COLP[GR.iis-1,GR.jj[0]] * GR.A[GR.iis-1,GR.jj[0]] + \
+                              COLP[GR.iis  ,GR.jj[0]] * GR.A[GR.iis  ,GR.jj[0]] + \
+                              COLP[GR.iis-1,GR.jj[1]] * GR.A[GR.iis-1,GR.jj[1]] + \
+                              COLP[GR.iis  ,GR.jj[1]] * GR.A[GR.iis  ,GR.jj[1]]   )
+
+
+
+
+    COLPA_js = 1/8*(    COLP[GR.iijjs_ip1_jm1] * GR.A[GR.iijjs_ip1_jm1] + \
+                        COLP[GR.iijjs_ip1    ] * GR.A[GR.iijjs_ip1    ] + \
+                    2 * COLP[GR.iijjs_jm1    ] * GR.A[GR.iijjs_jm1    ] + \
+                    2 * COLP[GR.iijjs        ] * GR.A[GR.iijjs        ] + \
+                        COLP[GR.iijjs_im1_jm1] * GR.A[GR.iijjs_im1_jm1] + \
+                        COLP[GR.iijjs_im1    ] * GR.A[GR.iijjs_im1    ]   )
+
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
+
+    return(COLPA_is, COLPA_js)
+
+
+
+

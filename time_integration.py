@@ -1,38 +1,15 @@
 import copy
 import numpy as np
 from boundaries import exchange_BC
-from upwind import tendencies_upwind, proceed_timestep_upwind, diagnose_fields_upwind
 from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
-                    diagnose_fields_jacobson, interp_COLPA
+                    diagnose_fields_jacobson
+from diagnostics import interp_COLPA
 
 ######################################################################################
 ######################################################################################
 ######################################################################################
 
-def euler_forward(GR, subrids,
-                    COLP, PHI, PHIVB, POTT,
-                    UWIND, VWIND,
-                    UFLX, VFLX, UFLXMP, VFLXMP,
-                    HSURF, PVTF, PVTFVB, i_spatial_discretization,
-                    RAD, SOIL, MIC):
-
-    if i_spatial_discretization == 'UPWIND':
-        raise NotImplementedError()
-
-    elif i_spatial_discretization == 'JACOBSON':
-        raise ValueError('Jacobson spatial discretization is incompatible with euler forward')
-
-    return(COLP, PHI, PHIVB, POTT,
-            UWIND, VWIND,
-            UFLX, VFLX, UFLXMP, VFLXMP)
-
-
-
-######################################################################################
-######################################################################################
-######################################################################################
-
-def matsuno(GR, subrids,
+def matsuno(GR, subgrids,
             COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
             UFLX, VFLX, UFLXMP, VFLXMP,
@@ -46,7 +23,7 @@ def matsuno(GR, subrids,
         ########## ESTIMATE
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND,\
-        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
                                             COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
@@ -73,7 +50,7 @@ def matsuno(GR, subrids,
         ########## FINAL
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
                                             COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
@@ -137,7 +114,7 @@ def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, QV0, QC0, \
 
     return(COLP1, UWIND1, VWIND1, POTT1, QV1, QC1)
 
-def RK4(GR, subrids,
+def RK4(GR, subgrids,
         COLP, PHI, PHIVB, POTT, POTTVB,
         UWIND, VWIND, WWIND,
         UFLX, VFLX, UFLXMP, VFLXMP,
@@ -152,7 +129,7 @@ def RK4(GR, subrids,
         ########## level 1
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
                                             COLP, POTT, POTTVB, HSURF,
                                             UWIND, VWIND, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
@@ -204,7 +181,7 @@ def RK4(GR, subrids,
         ########## level 2
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
                                             COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,
@@ -267,7 +244,7 @@ def RK4(GR, subrids,
         ########## level 4
         dCOLPdt, dUFLXdt, dVFLXdt, \
         dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, subrids,
+        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
                                             COLP_INT, POTT_INT, POTTVB, HSURF,
                                             UWIND_INT, VWIND_INT, WWIND,
                                             UFLX, VFLX, PHI, PVTF, PVTFVB,

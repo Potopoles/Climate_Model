@@ -2,12 +2,17 @@ import copy
 import numpy as np
 import time
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
+
 from wind import wind_tendency_jacobson
-#from par_wind import wind_tendency_jacobson_par
+#from wind_cython_par import wind_tendency_jacobson_par
 from wind_cython import wind_tendency_jacobson_par
+
 from temperature import temperature_tendency_jacobson
 from temperature_cython import temperature_tendency_jacobson_par
 from geopotential import diag_geopotential_jacobson
+from geopotential_cython import diag_geopotential_jacobson_par
+from diagnostics import diagnose_POTTVB_jacobson, interp_COLPA
+from diagnostics_cython import diagnose_POTTVB_jacobson_par, interp_COLPA_par
 from boundaries import exchange_BC
 from moisture import water_vapor_tendency, cloud_water_tendency
 from moisture_cython import water_vapor_tendency_par, cloud_water_tendency_par
@@ -35,7 +40,6 @@ def tendencies_jacobson(GR, subgrids,\
 
     # PROGNOSE WIND
     t_start = time.time()
-    #for q in range(0,5):
     #dUFLXdt, dVFLXdt = wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
     #                                                COLP, COLP_NEW, HSURF, PHI, POTT,
     #                                                PVTF, PVTFVB)
@@ -45,43 +49,47 @@ def tendencies_jacobson(GR, subgrids,\
     dUFLXdt = np.asarray(dUFLXdt)
     dVFLXdt = np.asarray(dVFLXdt)
 
+    #output = mp.Queue()
+    #processes = []
+    #for job_ind in range(0,njobs):
 
-        #dUFLXdt, dVFLXdt = wind_tendency_jacobson_par(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
-        #                                                COLP, COLP_NEW, HSURF, PHI, POTT,
-        #                                                PVTF, PVTFVB)
+    #    SGR = subgrids[job_ind]
+    #    processes.append(
+    #        mp.Process(\
+    #            #target=wind_tendency_jacobson_par,
+    #            #args = (job_ind, output, subgrids[job_ind],
+    #            #        UWIND[SGR.map_iisjj], VWIND[SGR.map_iijjs],
+    #            #        WWIND[SGR.map_iijj], 
+    #            #        UFLX[SGR.map_iisjj], VFLX[SGR.map_iijjs],
+    #            #        COLP[SGR.map_iijj], COLP_NEW[SGR.map_iijj],
+    #            #        HSURF[SGR.map_iijj], PHI[SGR.map_iijj],
+    #            #        POTT[SGR.map_iijj], PVTF[SGR.map_iijj],
+    #            #        PVTFVB[SGR.map_iijj])))
+    #            target=wind_tendency_jacobson_par,
+    #            args = (job_ind, output, subgrids[job_ind], 1,
+    #                    UWIND[SGR.map_iisjj], VWIND[SGR.map_iijjs],
+    #                    WWIND[SGR.map_iijj], 
+    #                    UFLX[SGR.map_iisjj], VFLX[SGR.map_iijjs],
+    #                    COLP[SGR.map_iijj], COLP_NEW[SGR.map_iijj],
+    #                    PHI[SGR.map_iijj],
+    #                    POTT[SGR.map_iijj], PVTF[SGR.map_iijj],
+    #                    PVTFVB[SGR.map_iijj])))
+    #for proc in processes:
+    #    proc.start()
 
+    #results = [output.get() for p in processes]
+    #results.sort()
+    #dUFLXdt = np.zeros( (GR.nxs, GR.ny, GR.nz) )
+    #dVFLXdt = np.zeros( (GR.nx, GR.nys, GR.nz) )
+    #for job_ind in range(0,njobs):
+    #    SGR = subgrids[job_ind]
+    #    res = results[job_ind][1]
 
-        #output = mp.Queue()
-        #processes = []
-        #for job_ind in range(0,njobs):
+    #    dUFLXdt[SGR.mapin_iisjj] = np.asarray(results[job_ind][1]['dUFLXdt'])
+    #    dVFLXdt[SGR.mapin_iijjs] = np.asarray(results[job_ind][1]['dVFLXdt'])
 
-        #    SGR = subgrids[job_ind]
-        #    processes.append(
-        #        mp.Process(\
-        #            target=wind_tendency_jacobson_par,
-        #            args = (job_ind, output, subgrids[job_ind],
-        #                    UWIND[SGR.map_iisjj], VWIND[SGR.map_iijjs],
-        #                    WWIND[SGR.map_iijj], 
-        #                    UFLX[SGR.map_iisjj], VFLX[SGR.map_iijjs],
-        #                    COLP[SGR.map_iijj], COLP_NEW[SGR.map_iijj],
-        #                    HSURF[SGR.map_iijj], PHI[SGR.map_iijj],
-        #                    POTT[SGR.map_iijj], PVTF[SGR.map_iijj],
-        #                    PVTFVB[SGR.map_iijj])))
-        #for proc in processes:
-        #    proc.start()
-        #results = [output.get() for p in processes]
-        #results.sort()
-        #dUFLXdt = np.zeros( (GR.nxs, GR.ny, GR.nz) )
-        #dVFLXdt = np.zeros( (GR.nx, GR.nys, GR.nz) )
-        #for job_ind in range(0,njobs):
-        #    SGR = subgrids[job_ind]
-        #    res = results[job_ind][1]
-
-        #    dUFLXdt[SGR.mapin_iisjj] = results[job_ind][1]['dUFLXdt']
-        #    dVFLXdt[SGR.mapin_iijjs] = results[job_ind][1]['dVFLXdt']
-
-        #for proc in processes:
-        #    proc.join()
+    #for proc in processes:
+    #    proc.join()
 
     t_end = time.time()
     GR.wind_comp_time += t_end - t_start
@@ -166,11 +174,13 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND,
 
     # TIME STEPPING
     COLP_OLD = copy.deepcopy(COLP)
-    COLPA_is_OLD, COLPA_js_OLD = interp_COLPA(GR, COLP_OLD)
+    #COLPA_is_OLD, COLPA_js_OLD = interp_COLPA(GR, COLP_OLD)
+    COLPA_is_OLD, COLPA_js_OLD = interp_COLPA_par(GR, njobs, COLP_OLD)
 
     COLP[GR.iijj] = COLP[GR.iijj] + GR.dt*dCOLPdt
     COLP = exchange_BC(GR, COLP)
-    COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP)
+    #COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP)
+    COLPA_is_NEW, COLPA_js_NEW = interp_COLPA_par(GR, njobs, COLP)
 
     for k in range(0,GR.nz):
         UWIND[:,:,k][GR.iisjj] = UWIND[:,:,k][GR.iisjj] * COLPA_is_OLD/COLPA_is_NEW \
@@ -196,26 +206,51 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND,
     return(UWIND, VWIND, COLP, POTT, QV, QC)
 
 
-def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTVB, POTTVB, TURB):
+def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTFVB, POTTVB, TURB):
 
     t_start = time.time()
 
     PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, 
-                                                POTT, COLP, PVTF, PVTVB)
+                                                POTT, COLP, PVTF, PVTFVB)
 
-    for ks in range(1,GR.nzs-1):
-        POTTVB[:,:,ks][GR.iijj] =   ( \
-                    +   (PVTFVB[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj]) * \
-                        POTT[:,:,ks-1][GR.iijj]
-                    +   (PVTF[:,:,ks][GR.iijj] - PVTFVB[:,:,ks][GR.iijj]) * \
-                        POTT[:,:,ks][GR.iijj]
-                                    ) / (PVTF[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj])
+    #import pickle
+    #out = {}
+    #out['PHI'] = PHI
+    #out['PHIVB'] = PHIVB
+    #out['PVTF'] = PVTF
+    #out['PVTFVB'] = PVTFVB
+    #with open('testarray.pkl', 'wb') as f:
+    #    pickle.dump(out, f)
 
-    # extrapolate model bottom and model top POTTVB
-    POTTVB[:,:,0][GR.iijj] = POTT[:,:,0][GR.iijj] - \
-            ( POTTVB[:,:,1][GR.iijj] - POTT[:,:,0][GR.iijj] )
-    POTTVB[:,:,-1][GR.iijj] = POTT[:,:,-1][GR.iijj] - \
-            ( POTTVB[:,:,-2][GR.iijj] - POTT[:,:,-1][GR.iijj] )
+    PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson_par(GR, njobs, PHI, PHIVB, HSURF, 
+                                                    POTT, COLP, PVTF, PVTFVB)
+    PHI = np.asarray(PHI)
+    PHIVB = np.asarray(PHIVB)
+    PVTF = np.asarray(PVTF)
+    PVTFVB = np.asarray(PVTFVB)
+
+    #import pickle
+    #with open('testarray.pkl', 'rb') as f:
+    #    out = pickle.load(f)
+    #PHI_orig = out['PHI']
+    #PHIVB_orig = out['PHIVB']
+    #PVTF_orig = out['PVTF']
+    #PVTFVB_orig = out['PVTFVB']
+    #print('###################')
+    #nan_here = np.isnan(PHIVB)
+    #nan_orig = np.isnan(PHIVB_orig)
+    #print('u values ' + str(np.nansum(np.abs(PVTF - PVTF_orig))))
+    #print('u nan ' + str(np.sum(nan_here != nan_orig)))
+    #print('###################')
+    #quit()
+
+
+
+    #POTTVB = diagnose_POTTVB_jacobson(GR, POTTVB, POTT, PVTF, PVTFVB)
+
+    POTTVB = diagnose_POTTVB_jacobson_par(GR, njobs, POTTVB, POTT, PVTF, PVTFVB)
+    POTTVB = np.asarray(POTTVB)
+
 
     TURB.diag_rho(GR, COLP, POTT, PVTF, POTTVB, PVTFVB)
     TURB.diag_dz(GR, PHI, PHIVB)
@@ -224,53 +259,6 @@ def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTVB, POT
     GR.diag_comp_time += t_end - t_start
 
     return(PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB)
-
-
-
-
-def interp_COLPA(GR, COLP):
-
-    COLPA_is = 1/8*(    COLP[GR.iisjj_im1_jp1] * GR.A[GR.iisjj_im1_jp1] + \
-                        COLP[GR.iisjj_jp1    ] * GR.A[GR.iisjj_jp1    ] + \
-                    2 * COLP[GR.iisjj_im1    ] * GR.A[GR.iisjj_im1    ] + \
-                    2 * COLP[GR.iisjj        ] * GR.A[GR.iisjj        ] + \
-                        COLP[GR.iisjj_im1_jm1] * GR.A[GR.iisjj_im1_jm1] + \
-                        COLP[GR.iisjj_jm1    ] * GR.A[GR.iisjj_jm1    ]   )
-
-    # ATTEMPT TO INTERPOLATE ONLY WITH TWO NEIGHBORING POINTS
-    #COLPA_is[:, 0] = 1/2*( COLP[GR.iis-1,GR.jj[ 0]] * GR.A[GR.iis-1,GR.jj[ 0]] + \
-    #                       COLP[GR.iis  ,GR.jj[ 0]] * GR.A[GR.iis  ,GR.jj[ 0]]   )
-    #COLPA_is[:,-1] = 1/2*( COLP[GR.iis-1,GR.jj[-1]] * GR.A[GR.iis-1,GR.jj[-1]] + \
-    #                       COLP[GR.iis  ,GR.jj[-1]] * GR.A[GR.iis  ,GR.jj[-1]]   )
-
-    # ATTEMPT TO SET BOUNDARY AREA TO ZERO (see grid)
-    # consequently change 1/8 to 1/6
-    #COLPA_is[:, 0] = COLPA_is[:, 0]*4/3
-    #COLPA_is[:, -1] = COLPA_is[:, -1]*4/3
-
-    # ATTEMPT TO INTERPOLATE ONLY WITH TWO NEIGHBORING POINTS (JACOBSON)
-    COLPA_is[:,-1] = 1/4*(    COLP[GR.iis-1,GR.jj[-1]] * GR.A[GR.iis-1,GR.jj[-1]] + \
-                              COLP[GR.iis  ,GR.jj[-1]] * GR.A[GR.iis  ,GR.jj[-1]] + \
-                              COLP[GR.iis-1,GR.jj[-2]] * GR.A[GR.iis-1,GR.jj[-2]] + \
-                              COLP[GR.iis  ,GR.jj[-2]] * GR.A[GR.iis  ,GR.jj[-2]]   )
-
-    COLPA_is[:, 0] = 1/4*(    COLP[GR.iis-1,GR.jj[0]] * GR.A[GR.iis-1,GR.jj[0]] + \
-                              COLP[GR.iis  ,GR.jj[0]] * GR.A[GR.iis  ,GR.jj[0]] + \
-                              COLP[GR.iis-1,GR.jj[1]] * GR.A[GR.iis-1,GR.jj[1]] + \
-                              COLP[GR.iis  ,GR.jj[1]] * GR.A[GR.iis  ,GR.jj[1]]   )
-
-
-
-
-    COLPA_js = 1/8*(    COLP[GR.iijjs_ip1_jm1] * GR.A[GR.iijjs_ip1_jm1] + \
-                        COLP[GR.iijjs_ip1    ] * GR.A[GR.iijjs_ip1    ] + \
-                    2 * COLP[GR.iijjs_jm1    ] * GR.A[GR.iijjs_jm1    ] + \
-                    2 * COLP[GR.iijjs        ] * GR.A[GR.iijjs        ] + \
-                        COLP[GR.iijjs_im1_jm1] * GR.A[GR.iijjs_im1_jm1] + \
-                        COLP[GR.iijjs_im1    ] * GR.A[GR.iijjs_im1    ]   )
-
-
-    return(COLPA_is, COLPA_js)
 
 
 

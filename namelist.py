@@ -3,9 +3,8 @@ from datetime import datetime
 # GRID PARAMS
 nb = 1
 nz = 6
-nz = 15
 nz = 20
-#nz = 10
+nz = 10
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
@@ -16,27 +15,27 @@ lat1_deg = 78
 lon0_deg = 0
 lon1_deg = 360
 
-dlat_deg = 1.0
-dlon_deg = 1.0
-#dlat_deg = 8
-#dlon_deg = 8
+dlat_deg = 1.5
+dlon_deg = 1.5
+dlat_deg = 6
+dlon_deg = 6
 
 i_curved_earth = 1
 
 # SIMULATION
-output_path = '../output_fine'
 output_path = '../output'
+#output_path = '../output_fine'
 #output_path = '../output_cur'
-i_sim_n_days = 0.5
-i_out_nth_hour = 1/6
-#i_sim_n_days = 1*365.0
+i_sim_n_days = 0.1
+i_out_nth_hour = 2
+i_sim_n_days = 3*365.0
 #i_sim_n_days = 100
-#i_out_nth_hour = 3
+i_out_nth_hour = 2*24
 
-njobs = 1
+njobs = 2
 
 i_load_from_restart = 0
-i_save_to_restart = 1
+i_save_to_restart = 0
 i_restart_nth_day = 0.5
 
 i_diffusion_on = 1
@@ -46,11 +45,9 @@ i_temperature_tendency = 1
 i_colp_tendency = 1
 
 # SPATIAL DISCRETIZATION
-i_spatial_discretization = 'UPWIND'
 i_spatial_discretization = 'JACOBSON'
 
 # TIME DISCRETIZATION
-i_time_stepping = 'EULER_FORWARD'
 i_time_stepping = 'MATSUNO'
 #i_time_stepping = 'RK4'
 if i_time_stepping != 'RK4':
@@ -73,7 +70,7 @@ VWIND_gaussian_pert = 0
 VWIND_random_pert = 0
 pTop = 10000
 pSurf = 101350
-COLP_gaussian_pert = -10000
+COLP_gaussian_pert = -0000
 COLP_random_pert = 000
 POTT_gaussian_pert = 0
 POTT_random_pert = 0.0

@@ -5,8 +5,7 @@ from Cython.Build import cythonize
 #        ext_modules=cythonize('cython_loop.pyx'))
 
 setup(name='Parallel',
-        ext_modules=cythonize('geopotential_cython.pyx'))
-        #ext_modules=cythonize('wind_cython.pyx'))
+        ext_modules=cythonize('wind_cython_par.pyx'))
 
 
 ## run:

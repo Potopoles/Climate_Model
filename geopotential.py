@@ -9,16 +9,22 @@ from boundaries import exchange_BC
 def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
     PAIRVB = np.full( (GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs), np.nan )
 
+    # TODO: WHY IS PAIRVB NOT FILLED AT UPPERMOST AND LOWER MOST HALFLEVEL??? 
     for ks in range(0,GR.nzs):
         PAIRVB[:,:,ks][GR.iijj] = pTop + GR.sigma_vb[ks] * COLP[GR.iijj]
 
     PVTFVB = np.power(PAIRVB/100000, con_kappa)
+
     for k in range(0,GR.nz):
         kp1 = k + 1
         PVTF[:,:,k][GR.iijj] = 1/(1+con_kappa) * \
                     ( PVTFVB[:,:,kp1][GR.iijj] * PAIRVB[:,:,kp1][GR.iijj] - \
                       PVTFVB[:,:,k  ][GR.iijj] * PAIRVB[:,:,k  ][GR.iijj] ) / \
                     ( PAIRVB[:,:,kp1][GR.iijj] - PAIRVB[:,:,k  ][GR.iijj] )
+
+    #var = PVTFVB
+    #print(np.nanmean(var))
+
 
     PVTF = exchange_BC(GR, PVTF)
     PVTFVB = exchange_BC(GR, PVTFVB)
