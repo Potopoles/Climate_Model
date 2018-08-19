@@ -565,12 +565,15 @@ cpdef wind_tendency_jacobson_par( job_ind, output, GR, njobs,\
         #######################################################################
         #######################################################################
 
-
     out = {}
-    out['dUFLXdt'] = dUFLXdt
-    out['dVFLXdt'] = dVFLXdt
+    out['dUFLXdt'] = np.asarray(dUFLXdt)
+    out['dVFLXdt'] = np.asarray(dVFLXdt)
     output.put( (job_ind, out) )
 
+
+    #result = (np.asarray(dUFLXdt),
+    #          np.asarray(dVFLXdt)) 
+    #return(result)
 
 
 

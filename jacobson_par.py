@@ -3,18 +3,17 @@ import numpy as np
 import time
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
 
-from wind import wind_tendency_jacobson
-#from wind_cython_par import wind_tendency_jacobson_par
+#from wind import wind_tendency_jacobson
 from wind_cython import wind_tendency_jacobson_par
 
-from temperature import temperature_tendency_jacobson
+#from temperature import temperature_tendency_jacobson
 from temperature_cython import temperature_tendency_jacobson_par
-from geopotential import diag_geopotential_jacobson
+#from geopotential import diag_geopotential_jacobson
 from geopotential_cython import diag_geopotential_jacobson_par
-from diagnostics import diagnose_POTTVB_jacobson, interp_COLPA
+#from diagnostics import diagnose_POTTVB_jacobson, interp_COLPA
 from diagnostics_cython import diagnose_POTTVB_jacobson_par, interp_COLPA_par
 from boundaries import exchange_BC
-from moisture import water_vapor_tendency, cloud_water_tendency
+#from moisture import water_vapor_tendency, cloud_water_tendency
 from moisture_cython import water_vapor_tendency_par, cloud_water_tendency_par
 from namelist import pTop, njobs
 from constants import con_Rd
@@ -22,7 +21,7 @@ from constants import con_Rd
 # parallel
 import multiprocessing as mp
 
-def tendencies_jacobson(GR, subgrids,\
+def tendencies_jacobson(GR,\
                     COLP, POTT, POTTVB, HSURF,
                     UWIND, VWIND, WWIND,
                     UFLX, VFLX, PHI, PVTF, PVTFVB,
@@ -50,77 +49,8 @@ def tendencies_jacobson(GR, subgrids,\
     dUFLXdt = np.asarray(dUFLXdt)
     dVFLXdt = np.asarray(dVFLXdt)
 
-
-    #output = mp.Queue()
-    #processes = []
-    #for job_ind in range(0,njobs):
-
-    #    SGR = subgrids[job_ind]
-    #    processes.append(
-    #        mp.Process(\
-    #            target=wind_tendency_jacobson_par,
-    #            args = (job_ind, output, subgrids[job_ind], 1,
-    #                    UWIND[SGR.map_iisjj], VWIND[SGR.map_iijjs],
-    #                    WWIND[SGR.map_iijj], 
-    #                    UFLX[SGR.map_iisjj], VFLX[SGR.map_iijjs],
-    #                    COLP[SGR.map_iijj], COLP_NEW[SGR.map_iijj],
-    #                    PHI[SGR.map_iijj],
-    #                    POTT[SGR.map_iijj], PVTF[SGR.map_iijj],
-    #                    PVTFVB[SGR.map_iijj])))
-    #for proc in processes:
-    #    proc.start()
-
-    #results = [output.get() for p in processes]
-    #results.sort()
-    #dUFLXdt = np.zeros( (GR.nxs, GR.ny, GR.nz) )
-    #dVFLXdt = np.zeros( (GR.nx, GR.nys, GR.nz) )
-    #for job_ind in range(0,njobs):
-    #    SGR = subgrids[job_ind]
-    #    #res = results[job_ind][1]
-
-    #    dUFLXdt[SGR.mapin_iisjj] = np.asarray(results[job_ind][1]['dUFLXdt'])
-    #    dVFLXdt[SGR.mapin_iijjs] = np.asarray(results[job_ind][1]['dVFLXdt'])
-
-    #for proc in processes:
-    #    proc.join()
-
-
-
-
-
-    # VERY SLOW!
-    #output = []
-    #p = mp.Pool(processes=njobs)
-
-    #input = [(c, output, subgrids[c], 1,
-    #            UWIND[subgrids[c].map_iisjj], VWIND[subgrids[c].map_iijjs],
-    #            WWIND[subgrids[c].map_iijj], 
-    #            UFLX[subgrids[c].map_iisjj], VFLX[subgrids[c].map_iijjs],
-    #            COLP[subgrids[c].map_iijj], COLP_NEW[subgrids[c].map_iijj],
-    #            PHI[subgrids[c].map_iijj],
-    #            POTT[subgrids[c].map_iijj], PVTF[subgrids[c].map_iijj],
-    #            PVTFVB[subgrids[c].map_iijj]) for c in range(0,njobs)]
-
-    #result = p.starmap(wind_tendency_jacobson_par, input)
-    #p.close()
-    #p.join()
-
-    #dUFLXdt = np.zeros( (GR.nxs, GR.ny, GR.nz) )
-    #dVFLXdt = np.zeros( (GR.nx, GR.nys, GR.nz) )
-    #for c in range(0,njobs):
-    #    SGR = subgrids[c]
-
-    #    dUFLXdt[SGR.mapin_iisjj] = np.asarray(result[c][0])
-    #    dVFLXdt[SGR.mapin_iijjs] = np.asarray(result[c][1])
-
-
-
-
-
     t_end = time.time()
     GR.wind_comp_time += t_end - t_start
-    #print(t_end - t_start)
-    #quit()
 
     # PROGNOSE POTT
     t_start = time.time()
@@ -175,20 +105,19 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND,
                             + GR.dt*dUFLXdt[:,:,k]/COLPA_is_NEW
         VWIND[:,:,k][GR.iijjs] = VWIND[:,:,k][GR.iijjs] * COLPA_js_OLD/COLPA_js_NEW \
                             + GR.dt*dVFLXdt[:,:,k]/COLPA_js_NEW
-        #VWIND[:,:,k][GR.ii,GR.nb] = 0
-        #VWIND[:,:,k][GR.ii,-1-GR.nb] = 0
         POTT[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
                             + GR.dt*dPOTTdt[:,:,k]/COLP[GR.iijj]
         QV[:,:,k][GR.iijj] = QV[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
                             + GR.dt*dQVdt[:,:,k]/COLP[GR.iijj]
         QC[:,:,k][GR.iijj] = QC[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
                             + GR.dt*dQCdt[:,:,k]/COLP[GR.iijj]
+    QV[QV < 0] = 0
+    QC[QC < 0] = 0
+
     UWIND = exchange_BC(GR, UWIND)
     VWIND = exchange_BC(GR, VWIND)
     POTT = exchange_BC(GR, POTT)
-    QV[QV < 0] = 0
     QV = exchange_BC(GR, QV)
-    QC[QC < 0] = 0
     QC = exchange_BC(GR, QC)
 
     return(UWIND, VWIND, COLP, POTT, QV, QC)
@@ -200,15 +129,6 @@ def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTFVB, PO
 
     #PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, 
     #                                            POTT, COLP, PVTF, PVTFVB)
-
-    #import pickle
-    #out = {}
-    #out['PHI'] = PHI
-    #out['PHIVB'] = PHIVB
-    #out['PVTF'] = PVTF
-    #out['PVTFVB'] = PVTFVB
-    #with open('testarray.pkl', 'wb') as f:
-    #    pickle.dump(out, f)
 
     PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson_par(GR, njobs, PHI, PHIVB, HSURF, 
                                                     POTT, COLP, PVTF, PVTFVB)

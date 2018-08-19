@@ -176,37 +176,37 @@ class Grid:
             self.dsigma = np.full( self.nz, np.nan)
 
 
-            if not i_subgrid:
-                # TIME STEP
-                mindx = np.nanmin(self.dx)
-                self.CFL = CFL
-                self.i_out_nth_hour = i_out_nth_hour
-                self.i_sim_n_days = i_sim_n_days
-                self.dt = int(self.CFL*mindx/340)
-                while i_out_nth_hour*3600 % self.dt > 0:
-                    self.dt -= 1
-                self.nts = i_sim_n_days*3600*24/self.dt
-                self.ts = 0
-                self.i_out_nth_ts = int(self.i_out_nth_hour*3600 / self.dt)
-                self.i_restart_nth_day = i_restart_nth_day
-                self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
-                        self.i_out_nth_hour*self.i_out_nth_ts
-                self.sim_time_sec = 0
-                self.GMT = GMT_initialization
+            #if not i_subgrid:
+            # TIME STEP
+            mindx = np.nanmin(self.dx)
+            self.CFL = CFL
+            self.i_out_nth_hour = i_out_nth_hour
+            self.i_sim_n_days = i_sim_n_days
+            self.dt = int(self.CFL*mindx/340)
+            while i_out_nth_hour*3600 % self.dt > 0:
+                self.dt -= 1
+            self.nts = i_sim_n_days*3600*24/self.dt
+            self.ts = 0
+            self.i_out_nth_ts = int(self.i_out_nth_hour*3600 / self.dt)
+            self.i_restart_nth_day = i_restart_nth_day
+            self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
+                    self.i_out_nth_hour*self.i_out_nth_ts
+            self.sim_time_sec = 0
+            self.GMT = GMT_initialization
 
 
-                self.total_comp_time = 0
-                self.IO_comp_time = 0
-                self.dyn_comp_time = 0
-                self.wind_comp_time = 0
-                self.vert_comp_time = 0
-                self.temp_comp_time = 0
-                self.trac_comp_time = 0
-                self.cont_comp_time = 0
-                self.diag_comp_time = 0
-                self.rad_comp_time = 0
-                self.mic_comp_time = 0
-                self.soil_comp_time = 0
+            self.total_comp_time = 0
+            self.IO_comp_time = 0
+            self.dyn_comp_time = 0
+            self.wind_comp_time = 0
+            self.vert_comp_time = 0
+            self.temp_comp_time = 0
+            self.trac_comp_time = 0
+            self.cont_comp_time = 0
+            self.diag_comp_time = 0
+            self.rad_comp_time = 0
+            self.mic_comp_time = 0
+            self.soil_comp_time = 0
 
 
 

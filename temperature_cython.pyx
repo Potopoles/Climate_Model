@@ -1,6 +1,7 @@
 import numpy as np
 import time
-from namelist import POTT_hor_dif_tau, i_temperature_tendency
+from namelist import POTT_hor_dif_tau, i_temperature_tendency, \
+                    i_radiation, i_microphysics
 
 cimport numpy as np
 import cython
@@ -21,10 +22,12 @@ cpdef temperature_tendency_jacobson_par( GR, njobs,\
         double[:,:, ::1] VFLX,
         double[:,:, ::1] WWIND,
         double[:,:, ::1] dPOTTdt_RAD,
-        double[:,:, ::1] dPOTTdt_MIC,
-        int i_mic_microphysics, int i_rad_radiation):
+        double[:,:, ::1] dPOTTdt_MIC):
 
     cdef int c_njobs = njobs
+
+    cdef int c_i_microphysics = i_microphysics
+    cdef int c_i_radiation = i_radiation
    
     cdef int nb = GR.nb
     cdef int nx  = GR.nx
@@ -102,11 +105,11 @@ cpdef temperature_tendency_jacobson_par( GR, njobs,\
                         dPOTTdt[inb,jnb,k] = dPOTTdt[inb,jnb,k] + num_diff
 
                     # RADIATION 
-                    if i_rad_radiation:
+                    if c_i_radiation:
                         dPOTTdt[inb,jnb,k] = dPOTTdt[inb,jnb,k] + \
                                             dPOTTdt_RAD[inb,jnb,k  ]*COLP[i  ,j  ]
                     # MICROPHYSICS 
-                    if i_mic_microphysics:
+                    if c_i_microphysics:
                         dPOTTdt[inb,jnb,k] = dPOTTdt[inb,jnb,k] + \
                                             dPOTTdt_MIC[inb,jnb,k  ]*COLP[i  ,j  ]
 

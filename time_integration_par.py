@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 from boundaries import exchange_BC
-from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
+from jacobson_par import tendencies_jacobson, proceed_timestep_jacobson, \
                     diagnose_fields_jacobson
 from diagnostics import interp_COLPA
 
@@ -9,7 +9,7 @@ from diagnostics import interp_COLPA
 ######################################################################################
 ######################################################################################
 
-def matsuno(GR, subgrids,
+def matsuno(job_ind, output, status, lock, barrier, GR,
             COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
             UFLX, VFLX,
@@ -21,12 +21,19 @@ def matsuno(GR, subgrids,
     ########## ESTIMATE
     dCOLPdt, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND,\
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+    dQVdt, dQCdt = tendencies_jacobson(GR,
                                         COLP, POTT, POTTVB, HSURF,
                                         UWIND, VWIND, WWIND,
                                         UFLX, VFLX, PHI, PVTF, PVTFVB,
                                         dPOTTdt_RAD, dPOTTdt_MIC,
                                         QV, QC, dQVdt_MIC, dQCdt_MIC)
+
+    
+    barrier.wait()
+    #lock.acquire()
+    #status.value += 1
+    print(str(job_ind) + '  ' + str(status.value))
+    #lock.release()
 
     # has to happen after masspoint_flux_tendency function
     UWIND_OLD = copy.deepcopy(UWIND)
@@ -47,7 +54,7 @@ def matsuno(GR, subgrids,
     ########## FINAL
     dCOLPdt, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+    dQVdt, dQCdt = tendencies_jacobson(GR,
                                         COLP, POTT, POTTVB, HSURF,
                                         UWIND, VWIND, WWIND,
                                         UFLX, VFLX, PHI, PVTF, PVTFVB,
@@ -62,11 +69,20 @@ def matsuno(GR, subgrids,
             diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
                                     HSURF, PVTF, PVTFVB, POTTVB)
 
-    
-    return(COLP, PHI, PHIVB, POTT, POTTVB,
-            UWIND, VWIND, WWIND,
-            UFLX, VFLX, QV, QC)
-
+    out = {}
+    out['COLP'] = COLP
+    out['PHI'] = PHI
+    out['PHIVB'] = PHIVB
+    out['POTT'] = POTT
+    out['POTTVB'] = POTTVB
+    out['UWIND'] = UWIND
+    out['VWIND'] = VWIND
+    out['WWIND'] = WWIND
+    out['UFLX'] = UFLX
+    out['VFLX'] = VFLX
+    out['QV'] = QV
+    out['QC'] = QC
+    output.put( (job_ind, out) )
 
 
 
@@ -108,7 +124,7 @@ def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, QV0, QC0, \
 
     return(COLP1, UWIND1, VWIND1, POTT1, QV1, QC1)
 
-def RK4(GR, subgrids,
+def RK4(GR,
         COLP, PHI, PHIVB, POTT, POTTVB,
         UWIND, VWIND, WWIND,
         UFLX, VFLX, 
@@ -119,7 +135,7 @@ def RK4(GR, subgrids,
     ########## level 1
     dCOLPdt, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+    dQVdt, dQCdt = tendencies_jacobson(GR,
                                         COLP, POTT, POTTVB, HSURF,
                                         UWIND, VWIND, WWIND,
                                         UFLX, VFLX, PHI, PVTF, PVTFVB,
@@ -169,7 +185,7 @@ def RK4(GR, subgrids,
     ########## level 2
     dCOLPdt, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+    dQVdt, dQCdt = tendencies_jacobson(GR,
                                         COLP_INT, POTT_INT, POTTVB, HSURF,
                                         UWIND_INT, VWIND_INT, WWIND,
                                         UFLX, VFLX, PHI, PVTF, PVTFVB,
@@ -201,7 +217,7 @@ def RK4(GR, subgrids,
     ########## level 3
     dCOLPdt, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+    dQVdt, dQCdt = tendencies_jacobson(GR,
                                         COLP_INT, POTT_INT, POTTVB, HSURF,
                                         UWIND_INT, VWIND_INT, WWIND,
                                         UFLX, VFLX, PHI, PVTF, PVTFVB,
@@ -234,7 +250,7 @@ def RK4(GR, subgrids,
     ########## level 4
     dCOLPdt, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+    dQVdt, dQCdt = tendencies_jacobson(GR,
                                         COLP_INT, POTT_INT, POTTVB, HSURF,
                                         UWIND_INT, VWIND_INT, WWIND,
                                         UFLX, VFLX, PHI, PVTF, PVTFVB,

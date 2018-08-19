@@ -1,7 +1,7 @@
 import numpy as np
 import time
-#from namelist import i_pseudo_radiation, outRate, inpRate
-from namelist import POTT_hor_dif_tau, i_temperature_tendency
+from namelist import POTT_hor_dif_tau, i_temperature_tendency, \
+                    i_radiation, i_microphysics
 
 
 i_vert_adv  = 1
@@ -11,7 +11,7 @@ i_radiation = 1
 
 
 def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, \
-                                    UFLX, VFLX, WWIND, RAD, MIC):
+                                    UFLX, VFLX, WWIND, dPOTTdt_RAD, dPOTTdt_MIC):
 
     #t_start = time.time()
 
@@ -63,12 +63,12 @@ def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, \
                 dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + num_diff
 
             # RADIATION 
-            if RAD.i_radiation:
+            if i_radiation:
                 dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + \
-                                    RAD.dPOTTdt_RAD[:,:,k]*COLP[GR.iijj]
-            if MIC.i_microphysics:
+                                    dPOTTdt_RAD[:,:,k]*COLP[GR.iijj]
+            if i_microphysics:
                 dPOTTdt[:,:,k] = dPOTTdt[:,:,k] + \
-                                    MIC.dPOTTdt_MIC[:,:,k]*COLP[GR.iijj]
+                                    dPOTTdt_MIC[:,:,k]*COLP[GR.iijj]
 
     #t_end = time.time()
     #GR.temp_comp_time += t_end - t_start

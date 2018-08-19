@@ -13,7 +13,7 @@ from org_turbulence import turbulence
 def initialize_fields(GR, subgrids):
     if i_load_from_restart:
         COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
-        UFLX, VFLX, UFLXMP, VFLXMP, \
+        UFLX, VFLX, \
         HSURF, POTT, TAIR, TAIRVB, RHO, \
         POTTVB, PVTF, PVTFVB, \
         RAD, SOIL, MIC, TURB = load_restart_fields(GR)
@@ -43,11 +43,6 @@ def initialize_fields(GR, subgrids):
         # vertical profile
         PVTF   = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan)
         PVTFVB = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs), np.nan)
-
-        # FOR MASSPOINT_FLUX_TENDENCY_UPSTREAM:
-        # mass fluxes at mass points
-        UFLXMP = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
-        VFLXMP = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
 
         # surface height
         HSURF = load_topo(GR) 
@@ -85,12 +80,9 @@ def initialize_fields(GR, subgrids):
         # TURBULENCE 
         TURB = turbulence(GR, i_turbulence) 
 
-        if i_spatial_discretization == 'UPWIND':
-            raise NotImplementedError()
-        if i_spatial_discretization == 'JACOBSON':
-            PHI, PHIVB, PVTF, PVTFVB, POTTVB, TURB \
-                        = diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                                HSURF, PVTF, PVTFVB, POTTVB, TURB)
+        PHI, PHIVB, PVTF, PVTFVB, POTTVB \
+                    = diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
+                                            HSURF, PVTF, PVTFVB, POTTVB)
 
         PAIR, TAIR, TAIRVB, RHO, WIND = \
                 diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
@@ -110,7 +102,7 @@ def initialize_fields(GR, subgrids):
 
 
     return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
-            UFLX, VFLX, UFLXMP, VFLXMP,
+            UFLX, VFLX, 
             HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB,
             RAD, SOIL, MIC, TURB)
 

@@ -4,8 +4,9 @@ from Cython.Build import cythonize
 #setup(name='Parallel',
 #        ext_modules=cythonize('cython_loop.pyx'))
 
+# TODO
 setup(name='Parallel',
-        ext_modules=cythonize('wind_cython_par.pyx'))
+        ext_modules=cythonize('temperature_cython.pyx'))
 
 
 ## run:

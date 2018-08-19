@@ -6,7 +6,7 @@ from fields import initialize_fields
 from nc_IO import constant_fields_to_NC, output_to_NC
 from IO import write_restart
 from multiproc import create_subgrids
-from namelist import i_time_stepping, i_spatial_discretization, \
+from namelist import i_time_stepping, \
                     i_load_from_restart, i_save_to_restart, \
                     i_radiation, njobs
 from diagnostics import diagnose_secondary_fields
@@ -21,7 +21,7 @@ GR = Grid()
 subgrids = create_subgrids(GR, njobs)
 
 COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
-UFLX, VFLX, UFLXMP, VFLXMP, \
+UFLX, VFLX, \
 HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
 RAD, SOIL, MIC, TURB = initialize_fields(GR, subgrids)
 constant_fields_to_NC(GR, HSURF, RAD, SOIL)
@@ -67,15 +67,14 @@ while GR.ts < GR.nts:
 
     COLP, PHI, PHIVB, POTT, POTTVB, \
     UWIND, VWIND, WWIND,\
-    UFLX, VFLX, UFLXMP, VFLXMP, \
-    MIC, TURB \
+    UFLX, VFLX, QV, QC \
                 = time_stepper(GR, subgrids,
                         COLP, PHI, PHIVB, POTT, POTTVB,
                         UWIND, VWIND, WWIND,
-                        UFLX, VFLX, UFLXMP, VFLXMP,
+                        UFLX, VFLX,
                         HSURF, PVTF, PVTFVB, 
-                        i_spatial_discretization,
-                        RAD, SOIL, MIC, TURB)
+                        RAD.dPOTTdt_RAD, MIC.dPOTTdt_MIC,
+                        MIC.QV, MIC.QC, MIC.dQVdt_MIC, MIC.dQCdt_MIC)
     t_end = time.time()
     GR.dyn_comp_time += t_end - t_start
     ########
@@ -100,7 +99,7 @@ while GR.ts < GR.nts:
     if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
         GR.outCounter = outCounter
         write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
-                        UFLX, VFLX, UFLXMP, VFLXMP, \
+                        UFLX, VFLX, \
                         HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
                         RAD, SOIL, MIC, TURB)
 

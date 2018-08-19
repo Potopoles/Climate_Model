@@ -142,17 +142,6 @@ class radiation:
         ij_all = np.full( (GR.nx*GR.ny, 2), np.int)
         ij_ref_all = np.full( (GR.nx*GR.ny, 2), np.int)
 
-
-        #c = 0
-        #for i in range(0,GR.nx):
-        #    for j in range(0,GR.ny):
-        #        ij_all[c,0] = i
-        #        ij_all[c,1] = j
-        #        ij_ref_all[c,0] = i + GR.nb
-        #        ij_ref_all[c,1] = j + GR.nb
-        #        c += 1
-        #for c in range(0,GR.nx*GR.ny):
-
         #ii = np.arange(3,6).astype(np.int)
         ii = np.tile(np.arange(0,GR.nx).astype(np.int),GR.ny)
         jj = np.repeat(np.arange(0,GR.ny).astype(np.int),GR.nx)
@@ -163,11 +152,11 @@ class radiation:
         p = mp.Pool(processes=njobs_rad)
 
         input = [(GR, TAIR[ii_ref[c],jj_ref[c],:], RHO[ii_ref[c],jj_ref[c],:],
-                    PHIVB[ii[c],jj[c],:],
-                    SOIL.TSOIL[ii[c],jj[c],0], SOIL.ALBEDOLW[ii[c],jj[c]],
-                    SOIL.ALBEDOSW[ii[c],jj[c]], MIC.QC[ii[c],jj[c],:],
-                    self.SWINTOA[ii[c],jj[c]], self.MYSUN[ii[c],jj[c]],
-                    dz[ii[c],jj[c],:], self.solar_constant) for c in range(0,len(ii))]
+                PHIVB[ii[c],jj[c],:],
+                SOIL.TSOIL[ii[c],jj[c],0], SOIL.ALBEDOLW[ii[c],jj[c]],
+                SOIL.ALBEDOSW[ii[c],jj[c]], MIC.QC[ii[c],jj[c],:],
+                self.SWINTOA[ii[c],jj[c]], self.MYSUN[ii[c],jj[c]],
+                dz[ii[c],jj[c],:], self.solar_constant) for c in range(0,len(ii))]
 
         result = p.starmap(calc_par, input)
         p.close()

@@ -73,7 +73,7 @@ def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
 
 
 def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
-                        UFLX, VFLX, UFLXMP, VFLXMP, \
+                        UFLX, VFLX, \
                         HSURF, POTT, TAIR, TAIRVB, RHO,\
                         POTTVB, PVTF, PVTFVB,
                         RAD, SOIL, MIC, TURB):
@@ -92,8 +92,6 @@ def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
     out['WWIND'] = WWIND
     out['UFLX'] = UFLX
     out['VFLX'] = VFLX
-    out['UFLXMP'] = UFLXMP
-    out['VFLXMP'] = VFLXMP
     out['HSURF'] = HSURF
     out['POTT'] = POTT
     out['TAIR'] = TAIR
@@ -138,8 +136,6 @@ def load_restart_fields(GR):
     WWIND = inp['WWIND']
     UFLX = inp['UFLX']
     VFLX = inp['VFLX']
-    UFLXMP = inp['UFLXMP']
-    VFLXMP = inp['VFLXMP']
     HSURF = inp['HSURF']
     POTT = inp['POTT']
     TAIR = inp['TAIR']
@@ -153,7 +149,7 @@ def load_restart_fields(GR):
     MIC = inp['MIC'] 
     TURB = inp['TURB'] 
     return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
-                UFLX, VFLX, UFLXMP, VFLXMP, \
+                UFLX, VFLX, \
                 HSURF, POTT, TAIR, TAIRVB, RHO, \
                 POTTVB, PVTF, PVTFVB,
                 RAD, SOIL, MIC, TURB)
