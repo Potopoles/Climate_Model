@@ -53,9 +53,9 @@ def create_subgrids(GR, njobs):
         SGR = set_map_indices(GR, SGR, 1/2)
         subgrids[1] = SGR 
 
-        print(subgrids[0].ii)
-        print(subgrids[1].ii)
-        quit()
+        #print(subgrids[0].map_iis)
+        #print(subgrids[1].map_iis)
+        #quit()
     ########################################################################
     if njobs == 3:
         # subgrid 0

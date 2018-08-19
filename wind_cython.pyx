@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 cimport numpy as np
-from cython.parallel import prange 
+#from cython.parallel import prange 
 #import time
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
@@ -21,7 +21,7 @@ cdef int i_num_dif = 1
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef wind_tendency_jacobson_par( GR, njobs,\
+cpdef wind_tendency_jacobson_c( GR, njobs,\
         double[:,:, ::1] UWIND,
         double[:,:, ::1] VWIND,
         double[:,:, ::1] WWIND,
@@ -95,7 +95,9 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
 
         # HORIZONTAL ADVECTION
         if i_hor_adv:
-            for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='static', chunksize=chunk):
+            for i   in range(nb,nx +nb):
+            #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs,
+            #           schedule='static', chunksize=chunk):
                 im1 = i - 1
                 ip1 = i + 1
                 for j   in range(nb,ny +nb):
@@ -120,7 +122,9 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
 
             #######################################################################
 
-            for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='static', chunksize=chunk):
+            #for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, \
+            #        schedule='static', chunksize=chunk):
+            for i_s in range(nb,nxs+nb):
                 ism1 = i_s - 1
                 isp1 = i_s + 1
                 for j   in range(nb,ny +nb):
@@ -147,7 +151,9 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
 
             #######################################################################
 
-            for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='static', chunksize=chunk):
+            #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, \
+            #        schedule='static', chunksize=chunk):
+            for i   in range(nb,nx +nb):
                 im1 = i - 1
                 ip1 = i + 1
                 for js  in range(nb,nys+nb):
@@ -174,7 +180,9 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
 
             #######################################################################
 
-            for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='static', chunksize=chunk):
+            #for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, \
+            #        schedule='static', chunksize=chunk):
+            for i_s in range(nb,nxs+nb):
                 ism1 = i_s - 1
                 isp1 = i_s + 1
                 for js  in range(nb,nys+nb):
@@ -199,6 +207,7 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
 
             #######################################################################
 
+            # TODO 3 NECESSARY
             BFLX = exchange_BC(GR, np.asarray(BFLX))
             CFLX = exchange_BC(GR, np.asarray(CFLX))
             DFLX = exchange_BC(GR, np.asarray(DFLX))
@@ -218,7 +227,9 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
         if i_vert_adv:
 
 
-            for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='static', chunksize=chunk):
+            #for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, \
+            #        schedule='static', chunksize=chunk):
+            for i_s in range(nb,nxs+nb):
                 ism1 = i_s - 1
                 isp1 = i_s + 1
                 for j   in range(nb,ny +nb):
@@ -289,7 +300,9 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
 
             #######################################################################
 
-            for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='static', chunksize=chunk):
+            #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, \
+            #        schedule='static', chunksize=chunk):
+            for i   in range(nb,nx +nb):
                 im1 = i - 1
                 ip1 = i + 1
                 for js  in range(nb,nys+nb):
@@ -329,115 +342,114 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
         #######################################################################
         #######################################################################
 
-        #for i_s in range(nb,nxs+nb):
-        #for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='static', chunksize=chunk):
-        with nogil, cython.boundscheck(False), cython.wraparound(False):
-            for i_s in prange(nb,nxs+nb, schedule='static', num_threads=4):
+        #for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, \
+        #       schedule='static', chunksize=chunk):
+        for i_s in range(nb,nxs+nb):
 
-                ism1 = i_s - 1
-                isp1 = i_s + 1
+            ism1 = i_s - 1
+            isp1 = i_s + 1
 
-                for j in range(nb,ny+nb):
-                #for j in prange(nb,ny+nb, nogil=False, num_threads=c_njobs):
+            for j in range(nb,ny+nb):
+            #for j in prange(nb,ny+nb, nogil=False, num_threads=c_njobs):
 
-                    jm1 = j - 1
-                    jp1 = j + 1
+                jm1 = j - 1
+                jp1 = j + 1
 
-                    for k in range(0,nz):
-                    #for k in prange(0,nz, nogil=False, num_threads=c_njobs):
+                for k in range(0,nz):
+                #for k in prange(0,nz, nogil=False, num_threads=c_njobs):
 
-                        kp1 = k+1
+                    kp1 = k+1
 
-                        # HORIZONTAL ADVECTION
-                        if i_hor_adv:
-                            horAdv_UWIND =  + BFLX [ism1,j  ,k] * \
-                                            ( UWIND[ism1,j  ,k] + UWIND[i_s ,j  ,k] )/2. \
-                                            - BFLX [i_s ,j  ,k] * \
-                                            ( UWIND[i_s ,j  ,k] + UWIND[isp1,j  ,k] )/2. \
-                                            \
-                                            + CFLX [i_s ,j  ,k] * \
-                                            ( UWIND[i_s ,jm1,k] + UWIND[i_s ,j  ,k] )/2. \
-                                            - CFLX [i_s ,jp1,k] * \
-                                            ( UWIND[i_s ,j  ,k] + UWIND[i_s ,jp1,k] )/2. \
-                                            \
-                                            + DFLX [ism1,j  ,k] * \
-                                            ( UWIND[ism1,jm1,k] + UWIND[i_s ,j  ,k] )/2. \
-                                            - DFLX [i_s ,jp1,k] * \
-                                            ( UWIND[i_s ,j  ,k] + UWIND[isp1,jp1,k] )/2. \
-                                            \
-                                            + EFLX [i_s ,j  ,k] * \
-                                            ( UWIND[isp1,jm1,k] + UWIND[i_s ,j  ,k] )/2. \
-                                            - EFLX [ism1,jp1,k] * \
-                                            ( UWIND[i_s ,j  ,k] + UWIND[ism1,jp1,k] )/2. 
+                    # HORIZONTAL ADVECTION
+                    if i_hor_adv:
+                        horAdv_UWIND =  + BFLX [ism1,j  ,k] * \
+                                        ( UWIND[ism1,j  ,k] + UWIND[i_s ,j  ,k] )/2. \
+                                        - BFLX [i_s ,j  ,k] * \
+                                        ( UWIND[i_s ,j  ,k] + UWIND[isp1,j  ,k] )/2. \
+                                        \
+                                        + CFLX [i_s ,j  ,k] * \
+                                        ( UWIND[i_s ,jm1,k] + UWIND[i_s ,j  ,k] )/2. \
+                                        - CFLX [i_s ,jp1,k] * \
+                                        ( UWIND[i_s ,j  ,k] + UWIND[i_s ,jp1,k] )/2. \
+                                        \
+                                        + DFLX [ism1,j  ,k] * \
+                                        ( UWIND[ism1,jm1,k] + UWIND[i_s ,j  ,k] )/2. \
+                                        - DFLX [i_s ,jp1,k] * \
+                                        ( UWIND[i_s ,j  ,k] + UWIND[isp1,jp1,k] )/2. \
+                                        \
+                                        + EFLX [i_s ,j  ,k] * \
+                                        ( UWIND[isp1,jm1,k] + UWIND[i_s ,j  ,k] )/2. \
+                                        - EFLX [ism1,jp1,k] * \
+                                        ( UWIND[i_s ,j  ,k] + UWIND[ism1,jp1,k] )/2. 
 
-                            dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + horAdv_UWIND
+                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + horAdv_UWIND
 
-                        #######################################################################
+                    #######################################################################
 
-                        ## VERTICAL ADVECTION
-                        if i_vert_adv == 1:
-                            vertAdv_UWIND = (WWIND_UWIND_ks[i_s ,j  ,k  ] - \
-                                             WWIND_UWIND_ks[i_s,j  ,k+1]  ) / dsigma[k]
-                            dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + vertAdv_UWIND
+                    ## VERTICAL ADVECTION
+                    if i_vert_adv == 1:
+                        vertAdv_UWIND = (WWIND_UWIND_ks[i_s ,j  ,k  ] - \
+                                         WWIND_UWIND_ks[i_s,j  ,k+1]  ) / dsigma[k]
+                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + vertAdv_UWIND
 
-                        #######################################################################
+                    #######################################################################
 
-                        ## HORIZONTAL DIFFUSION
-                        if i_num_dif == 1:
-                            diff_UWIND = c_WIND_hor_dif_tau * \
-                                 (  UFLX[ism1,j  ,k] + UFLX[isp1,j  ,k] \
-                                  + UFLX[i_s ,jm1,k] + UFLX[i_s ,jp1,k] - 4.*UFLX[i_s ,j  ,k])
+                    ## HORIZONTAL DIFFUSION
+                    if i_num_dif == 1:
+                        diff_UWIND = c_WIND_hor_dif_tau * \
+                             (  UFLX[ism1,j  ,k] + UFLX[isp1,j  ,k] \
+                              + UFLX[i_s ,jm1,k] + UFLX[i_s ,jp1,k] - 4.*UFLX[i_s ,j  ,k])
 
-                            dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + diff_UWIND
+                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + diff_UWIND
 
-                        #######################################################################
+                    #######################################################################
 
-                        #### CORIOLIS
-                        if i_coriolis == 1:
-                            coriolis_UWIND = c_con_rE*dlon_rad*dlon_rad/2.*(\
-                                    + COLP[ism1,j  ] * \
-                                    ( VWIND[ism1,j  ,k] + VWIND[ism1,jp1,k] )/2. * \
-                                    ( corf_is[i_s ,j  ] * c_con_rE *\
-                                      cos(latis_rad[i_s ,j  ]) + \
-                                      ( UWIND[ism1,j  ,k] + UWIND[i_s ,j  ,k] )/2. * \
-                                      sin(latis_rad[i_s ,j  ]) ) \
+                    #### CORIOLIS
+                    if i_coriolis == 1:
+                        coriolis_UWIND = c_con_rE*dlon_rad*dlon_rad/2.*(\
+                                + COLP[ism1,j  ] * \
+                                ( VWIND[ism1,j  ,k] + VWIND[ism1,jp1,k] )/2. * \
+                                ( corf_is[i_s ,j  ] * c_con_rE *\
+                                  cos(latis_rad[i_s ,j  ]) + \
+                                  ( UWIND[ism1,j  ,k] + UWIND[i_s ,j  ,k] )/2. * \
+                                  sin(latis_rad[i_s ,j  ]) ) \
 
-                                    + COLP[i_s ,j  ] * \
-                                    ( VWIND[i_s ,j  ,k] + VWIND[i_s ,jp1,k] )/2. * \
-                                    ( corf_is[i_s ,j  ] * c_con_rE *\
-                                      cos(latis_rad[i_s ,j  ]) + \
-                                      ( UWIND[i_s ,j  ,k] + UWIND[isp1,j  ,k] )/2. * \
-                                      sin(latis_rad[i_s ,j  ]) ) \
-                                    )
+                                + COLP[i_s ,j  ] * \
+                                ( VWIND[i_s ,j  ,k] + VWIND[i_s ,jp1,k] )/2. * \
+                                ( corf_is[i_s ,j  ] * c_con_rE *\
+                                  cos(latis_rad[i_s ,j  ]) + \
+                                  ( UWIND[i_s ,j  ,k] + UWIND[isp1,j  ,k] )/2. * \
+                                  sin(latis_rad[i_s ,j  ]) ) \
+                                )
 
-                            dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + coriolis_UWIND
+                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + coriolis_UWIND
 
-                        #######################################################################
+                    #######################################################################
 
-                        #### PRESSURE GRADIENT
-                        if i_pre_grad == 1:
-                            preGrad_UWIND = - dy * ( \
-                                    ( PHI [i_s ,j  ,k]  - PHI [ism1,j  ,k] ) * \
-                                    ( COLP[i_s ,j    ]  + COLP[ism1,j    ] ) /2. + \
-                                    ( COLP[i_s ,j    ]  - COLP[ism1,j    ] ) * c_con_cp/2. * \
-                                    (\
-                                      + POTT[ism1,j  ,k] / dsigma[k] * \
-                                        ( \
-                                            sigma_vb[kp1] * \
-                                            ( PVTFVB[ism1,j  ,kp1] - PVTF  [ism1,j  ,k  ] ) + \
-                                            sigma_vb[k  ] * \
-                                            ( PVTF  [ism1,j  ,k  ] - PVTFVB[ism1,j  ,k  ] )   \
-                                        ) \
-                                      + POTT[i_s ,j  ,k] / dsigma[k] * \
-                                        ( \
-                                            sigma_vb[kp1] * \
-                                            ( PVTFVB[i_s ,j  ,kp1] - PVTF  [i_s ,j  ,k  ] ) + \
-                                            sigma_vb[k  ] * \
-                                            ( PVTF  [i_s ,j  ,k  ] - PVTFVB[i_s ,j  ,k  ] )   \
-                                        ) \
-                                    ) )
+                    #### PRESSURE GRADIENT
+                    if i_pre_grad == 1:
+                        preGrad_UWIND = - dy * ( \
+                                ( PHI [i_s ,j  ,k]  - PHI [ism1,j  ,k] ) * \
+                                ( COLP[i_s ,j    ]  + COLP[ism1,j    ] ) /2. + \
+                                ( COLP[i_s ,j    ]  - COLP[ism1,j    ] ) * c_con_cp/2. * \
+                                (\
+                                  + POTT[ism1,j  ,k] / dsigma[k] * \
+                                    ( \
+                                        sigma_vb[kp1] * \
+                                        ( PVTFVB[ism1,j  ,kp1] - PVTF  [ism1,j  ,k  ] ) + \
+                                        sigma_vb[k  ] * \
+                                        ( PVTF  [ism1,j  ,k  ] - PVTFVB[ism1,j  ,k  ] )   \
+                                    ) \
+                                  + POTT[i_s ,j  ,k] / dsigma[k] * \
+                                    ( \
+                                        sigma_vb[kp1] * \
+                                        ( PVTFVB[i_s ,j  ,kp1] - PVTF  [i_s ,j  ,k  ] ) + \
+                                        sigma_vb[k  ] * \
+                                        ( PVTF  [i_s ,j  ,k  ] - PVTFVB[i_s ,j  ,k  ] )   \
+                                    ) \
+                                ) )
 
-                            dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + preGrad_UWIND
+                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + preGrad_UWIND
 
         #######################################################################
         #######################################################################
@@ -449,116 +461,114 @@ cpdef wind_tendency_jacobson_par( GR, njobs,\
         #######################################################################
         #######################################################################
 
-        #for i in range(nb,nx+nb):
-        #for i in prange(nb,nx+nb, nogil=True, num_threads=c_njobs, schedule='static', chunksize=chunk):
-        with nogil, cython.boundscheck(False), cython.wraparound(False):
-            for i in prange(nb,nx +nb, schedule='static', num_threads=4):
+        #for i in prange(nb,nx+nb, nogil=True, num_threads=c_njobs,\
+        #       schedule='static', chunksize=chunk):
+        for i in range(nb,nx+nb):
+            im1 = i - 1
+            ip1 = i + 1
 
-                im1 = i - 1
-                ip1 = i + 1
+            for js in range(nb,nys+nb):
+            #for js in prange(nb,nys+nb, nogil=False, num_threads=c_njobs):
 
-                for js in range(nb,nys+nb):
-                #for js in prange(nb,nys+nb, nogil=False, num_threads=c_njobs):
+                jsm1 = js - 1
+                jsp1 = js + 1
 
-                    jsm1 = js - 1
-                    jsp1 = js + 1
+                for k in range(0,nz):
+                #for k in prange(0,nz, nogil=False, num_threads=c_njobs):
 
-                    for k in range(0,nz):
-                    #for k in prange(0,nz, nogil=False, num_threads=c_njobs):
+                    kp1 = k+1
 
-                        kp1 = k+1
+                    # HORIZONTAL ADVECTION
+                    if i_hor_adv:
+                        horAdv_VWIND =  + RFLX [i  ,jsm1,k] * \
+                                        ( VWIND[i  ,jsm1,k] + VWIND[i  ,js  ,k] )/2. \
+                                        - RFLX [i  ,js  ,k] * \
+                                        ( VWIND[i  ,js  ,k] + VWIND[i  ,jsp1,k] )/2. \
+                                        \
+                                        + QFLX [i  ,js  ,k] * \
+                                        ( VWIND[im1,js  ,k] + VWIND[i  ,js  ,k] )/2. \
+                                        - QFLX [ip1,js  ,k] * \
+                                        ( VWIND[i  ,js  ,k] + VWIND[ip1,js  ,k] )/2. \
+                                        \
+                                        + SFLX [i  ,jsm1,k] * \
+                                        ( VWIND[im1,jsm1,k] + VWIND[i  ,js  ,k] )/2. \
+                                        - SFLX [ip1,js  ,k] * \
+                                        ( VWIND[i  ,js  ,k] + VWIND[ip1,jsp1,k] )/2. \
+                                        \
+                                        + TFLX [ip1,jsm1,k] * \
+                                        ( VWIND[ip1,jsm1,k] + VWIND[i  ,js  ,k] )/2. \
+                                        - TFLX [i  ,js  ,k] * \
+                                        ( VWIND[i  ,js  ,k] + VWIND[im1,jsp1,k] )/2. 
 
-                        # HORIZONTAL ADVECTION
-                        if i_hor_adv:
-                            horAdv_VWIND =  + RFLX [i  ,jsm1,k] * \
-                                            ( VWIND[i  ,jsm1,k] + VWIND[i  ,js  ,k] )/2. \
-                                            - RFLX [i  ,js  ,k] * \
-                                            ( VWIND[i  ,js  ,k] + VWIND[i  ,jsp1,k] )/2. \
-                                            \
-                                            + QFLX [i  ,js  ,k] * \
-                                            ( VWIND[im1,js  ,k] + VWIND[i  ,js  ,k] )/2. \
-                                            - QFLX [ip1,js  ,k] * \
-                                            ( VWIND[i  ,js  ,k] + VWIND[ip1,js  ,k] )/2. \
-                                            \
-                                            + SFLX [i  ,jsm1,k] * \
-                                            ( VWIND[im1,jsm1,k] + VWIND[i  ,js  ,k] )/2. \
-                                            - SFLX [ip1,js  ,k] * \
-                                            ( VWIND[i  ,js  ,k] + VWIND[ip1,jsp1,k] )/2. \
-                                            \
-                                            + TFLX [ip1,jsm1,k] * \
-                                            ( VWIND[ip1,jsm1,k] + VWIND[i  ,js  ,k] )/2. \
-                                            - TFLX [i  ,js  ,k] * \
-                                            ( VWIND[i  ,js  ,k] + VWIND[im1,jsp1,k] )/2. 
+                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + horAdv_VWIND
 
-                            dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + horAdv_VWIND
+                    #######################################################################
 
-                        #######################################################################
+                    ## VERTICAL ADVECTION
+                    if i_vert_adv == 1:
+                        vertAdv_VWIND = (WWIND_VWIND_ks[i  ,js  ,k  ] - \
+                                         WWIND_VWIND_ks[i  ,js  ,k+1]  ) / dsigma[k]
+                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + vertAdv_VWIND
 
-                        ## VERTICAL ADVECTION
-                        if i_vert_adv == 1:
-                            vertAdv_VWIND = (WWIND_VWIND_ks[i  ,js  ,k  ] - \
-                                             WWIND_VWIND_ks[i  ,js  ,k+1]  ) / dsigma[k]
-                            dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + vertAdv_VWIND
+                    #######################################################################
 
-                        #######################################################################
-
-                        ## HORIZONTAL DIFFUSION
-                        if i_num_dif == 1:
-                            diff_VWIND = c_WIND_hor_dif_tau * \
-                                 (  VFLX[im1,js  ,k] + VFLX[ip1,js  ,k] \
-                                  + VFLX[i  ,jsm1,k] + VFLX[i  ,jsp1,k] - 4.*VFLX[i ,js  ,k])
+                    ## HORIZONTAL DIFFUSION
+                    if i_num_dif == 1:
+                        diff_VWIND = c_WIND_hor_dif_tau * \
+                             (  VFLX[im1,js  ,k] + VFLX[ip1,js  ,k] \
+                              + VFLX[i  ,jsm1,k] + VFLX[i  ,jsp1,k] - 4.*VFLX[i ,js  ,k])
 
 
-                            dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + diff_VWIND
+                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + diff_VWIND
 
-                        #######################################################################
+                    #######################################################################
 
-                        #### CORIOLIS
-                        if i_coriolis == 1:
-                            coriolis_VWIND = - c_con_rE*dlon_rad*dlon_rad/2.*(\
-                                    + COLP[i,jsm1] * \
-                                    ( UWIND[i  ,jsm1,k] + UWIND[ip1,jsm1,k] )/2. * \
-                                    ( corf[i  ,jsm1] * c_con_rE *\
-                                      cos(lat_rad[i  ,jsm1]) + \
-                                      ( UWIND[i  ,jsm1,k] + UWIND[ip1,jsm1,k] )/2. * \
-                                      sin(lat_rad[i  ,jsm1]) ) \
+                    #### CORIOLIS
+                    if i_coriolis == 1:
+                        coriolis_VWIND = - c_con_rE*dlon_rad*dlon_rad/2.*(\
+                                + COLP[i,jsm1] * \
+                                ( UWIND[i  ,jsm1,k] + UWIND[ip1,jsm1,k] )/2. * \
+                                ( corf[i  ,jsm1] * c_con_rE *\
+                                  cos(lat_rad[i  ,jsm1]) + \
+                                  ( UWIND[i  ,jsm1,k] + UWIND[ip1,jsm1,k] )/2. * \
+                                  sin(lat_rad[i  ,jsm1]) ) \
 
-                                    + COLP[i  ,js  ] * \
-                                    ( UWIND[i  ,js  ,k] + UWIND[ip1,js ,k] )/2. * \
-                                    ( corf[i  ,js  ] * c_con_rE *\
-                                      cos(lat_rad[i  ,js  ]) + \
-                                      ( UWIND[i  ,js ,k] + UWIND[ip1,js ,k] )/2. * \
-                                      sin(lat_rad[i  ,js  ]) ) \
-                                    )
+                                + COLP[i  ,js  ] * \
+                                ( UWIND[i  ,js  ,k] + UWIND[ip1,js ,k] )/2. * \
+                                ( corf[i  ,js  ] * c_con_rE *\
+                                  cos(lat_rad[i  ,js  ]) + \
+                                  ( UWIND[i  ,js ,k] + UWIND[ip1,js ,k] )/2. * \
+                                  sin(lat_rad[i  ,js  ]) ) \
+                                )
 
-                            dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + coriolis_VWIND
+                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + coriolis_VWIND
 
-                        #######################################################################
+                    #######################################################################
 
-                        #### PRESSURE GRADIENT
-                        if i_pre_grad == 1:
-                            preGrad_VWIND = - dxjs[i  ,js  ] * ( \
-                                    ( PHI [i ,js  ,k]  - PHI [i,jsm1 ,k] ) * \
-                                    ( COLP[i ,js    ]  + COLP[i,jsm1   ] ) /2. + \
-                                    ( COLP[i ,js    ]  - COLP[i,jsm1   ] ) * c_con_cp/2. * \
-                                    (\
-                                      + POTT[i  ,jsm1,k] / dsigma[k] * \
-                                        ( \
-                                            sigma_vb[kp1] * \
-                                            ( PVTFVB[i ,jsm1,kp1] - PVTF  [i  ,jsm1,k  ] ) + \
-                                            sigma_vb[k  ] * \
-                                            ( PVTF  [i ,jsm1,k  ] - PVTFVB[i  ,jsm1,k  ] )   \
-                                        ) \
-                                      + POTT[i  ,js  ,k] / dsigma[k] * \
-                                        ( \
-                                            sigma_vb[kp1] * \
-                                            ( PVTFVB[i ,js  ,kp1] - PVTF  [i  ,js ,k  ] ) + \
-                                            sigma_vb[k  ] * \
-                                            ( PVTF  [i ,js  ,k  ] - PVTFVB[i  ,js ,k  ] )   \
-                                        ) \
-                                    ) )
+                    #### PRESSURE GRADIENT
+                    if i_pre_grad == 1:
+                        preGrad_VWIND = - dxjs[i  ,js  ] * ( \
+                                ( PHI [i ,js  ,k]  - PHI [i,jsm1 ,k] ) * \
+                                ( COLP[i ,js    ]  + COLP[i,jsm1   ] ) /2. + \
+                                ( COLP[i ,js    ]  - COLP[i,jsm1   ] ) * c_con_cp/2. * \
+                                (\
+                                  + POTT[i  ,jsm1,k] / dsigma[k] * \
+                                    ( \
+                                        sigma_vb[kp1] * \
+                                        ( PVTFVB[i ,jsm1,kp1] - PVTF  [i  ,jsm1,k  ] ) + \
+                                        sigma_vb[k  ] * \
+                                        ( PVTF  [i ,jsm1,k  ] - PVTFVB[i  ,jsm1,k  ] )   \
+                                    ) \
+                                  + POTT[i  ,js  ,k] / dsigma[k] * \
+                                    ( \
+                                        sigma_vb[kp1] * \
+                                        ( PVTFVB[i ,js  ,kp1] - PVTF  [i  ,js ,k  ] ) + \
+                                        sigma_vb[k  ] * \
+                                        ( PVTF  [i ,js  ,k  ] - PVTFVB[i  ,js ,k  ] )   \
+                                    ) \
+                                ) )
 
-                            dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + preGrad_VWIND
+                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + preGrad_VWIND
 
         #######################################################################
         #######################################################################

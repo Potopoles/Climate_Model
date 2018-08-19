@@ -6,7 +6,7 @@ from boundaries import exchange_BC
 
 cimport numpy as np
 import cython
-from cython.parallel import prange 
+#from cython.parallel import prange 
 from libc.math cimport pow
 
 from geopotential import diag_pvt_factor
@@ -15,7 +15,7 @@ from geopotential import diag_pvt_factor
 @cython.boundscheck(False)
 @cython.wraparound(False)
 #@cython.cdivision(True)
-cpdef diag_pvt_factor_par(GR, njobs,
+cpdef diag_pvt_factor_c(GR, njobs,
         double[:,   ::1] COLP,
         double[:,:, ::1] PVTF,
         double[:,:, ::1] PVTFVB):
@@ -74,7 +74,7 @@ cpdef diag_pvt_factor_par(GR, njobs,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef diag_geopotential_jacobson_par(GR, njobs,
+cpdef diag_geopotential_jacobson_c(GR, njobs,
         double[:,:, ::1] PHI,
         double[:,:, ::1] PHIVB,
         double[:,   ::1] HSURF,
@@ -99,8 +99,10 @@ cpdef diag_geopotential_jacobson_par(GR, njobs,
 
     PVTF, PVTFVB = diag_pvt_factor(GR, np.asarray(COLP), np.asarray(PVTF), np.asarray(PVTFVB))
 
-    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
-        for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+    #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
+    for i   in range(nb,nx +nb):
+        #for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+        for j   in range(nb,ny +nb):
 
             PHIVB[i,j,nzs-1] = HSURF[i,j]*c_con_g
             PHI  [i,j,nz -1] = PHIVB[i,j,nzs-1] - c_con_cp*  \

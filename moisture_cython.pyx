@@ -4,7 +4,7 @@ from namelist import QV_hor_dif_tau
 
 cimport numpy as np
 import cython
-from cython.parallel import prange 
+#from cython.parallel import prange 
 
 cdef int i_hor_adv      = 1
 cdef int i_vert_adv     = 1
@@ -14,7 +14,7 @@ cdef int i_microphysics = 1
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef water_vapor_tendency_par( GR, njobs,\
+cpdef water_vapor_tendency_c( GR, njobs,\
         double[:,:, ::1] QV,
         double[:,   ::1] COLP,
         double[:,   ::1] COLP_NEW,
@@ -41,11 +41,13 @@ cpdef water_vapor_tendency_par( GR, njobs,\
     cdef double[:,:, ::1] dQVdt = np.zeros( (nx ,ny ,nz ) )
     cdef double[:,:, ::1] QVVB  = np.zeros( (nx ,ny ,nzs) )
 
-    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
+    #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
+    for i   in range(nb,nx +nb):
         im1 = i - 1
         ip1 = i + 1
         inb = i - nb
-        for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+        #for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+        for j   in range(nb,ny +nb):
             jm1 = j - 1
             jp1 = j + 1
             jnb = j - nb
@@ -119,7 +121,7 @@ cpdef water_vapor_tendency_par( GR, njobs,\
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef cloud_water_tendency_par( GR, njobs,\
+cpdef cloud_water_tendency_c( GR, njobs,\
         double[:,:, ::1] QC,
         double[:,   ::1] COLP,
         double[:,   ::1] COLP_NEW,
@@ -146,11 +148,13 @@ cpdef cloud_water_tendency_par( GR, njobs,\
     cdef double[:,:, ::1] dQCdt = np.zeros( (nx ,ny ,nz ) )
     cdef double[:,:, ::1] QCVB  = np.zeros( (nx ,ny ,nzs) )
 
-    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
+    #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
+    for i   in range(nb,nx +nb):
         im1 = i - 1
         ip1 = i + 1
         inb = i - nb
-        for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+        #for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+        for j   in range(nb,ny +nb):
             jm1 = j - 1
             jp1 = j + 1
             jnb = j - nb

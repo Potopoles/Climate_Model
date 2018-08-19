@@ -1,5 +1,5 @@
 #import pyximport; pyximport.install()
-from wind_cython import wind_tendency_jacobson_par
+from wind_cython import wind_tendency_jacobson_c
 import numpy as np
 import time
 import copy
@@ -11,7 +11,7 @@ from namelist import *
 from grid import Grid
 from fields import initialize_fields
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
-from temperature_cython import temperature_tendency_jacobson_par
+from temperature_cython import temperature_tendency_jacobson_c
 
 from boundaries import exchange_BC
 from multiproc import create_subgrids 
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     #time0 = time.time()
     #
-    #dUFLXdt, dVFLXdt = wind_tendency_jacobson_par(GR, njobs, UWIND, VWIND, WWIND, UFLX, VFLX,
+    #dUFLXdt, dVFLXdt = wind_tendency_jacobson_c(GR, njobs, UWIND, VWIND, WWIND, UFLX, VFLX,
     #                                                COLP, COLP_NEW, PHI,
     #                                                POTT, PVTF, PVTFVB)
 
@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
 
 
-    #dPOTTdt = temperature_tendency_jacobson_par(GR, njobs, POTT, POTTVB, COLP, COLP_NEW,\
+    #dPOTTdt = temperature_tendency_jacobson_c(GR, njobs, POTT, POTTVB, COLP, COLP_NEW,\
     #                                        UFLX, VFLX, WWIND, \
     #                                        RAD.dPOTTdt_RAD, MIC.dPOTTdt_MIC, \
     #                                        MIC.i_microphysics, RAD.i_radiation)

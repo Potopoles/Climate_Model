@@ -16,6 +16,7 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
                 (COLP[GR.iijjs_jm1] + COLP[GR.iijjs])/2 *\
                 VWIND[:,:,k][GR.iijjs] * GR.dxjs[GR.iijjs]
 
+    # TODO 1 NECESSARY
     UFLX = exchange_BC(GR, UFLX)
     VFLX = exchange_BC(GR, VFLX)
 
@@ -66,7 +67,6 @@ def vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND):
                                     COLP_NEW[GR.iijj]
 
 
-    WWIND = exchange_BC(GR, WWIND)
 
     t_end = time.time()
     GR.vert_comp_time += t_end - t_start

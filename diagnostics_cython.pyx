@@ -5,7 +5,7 @@ from namelist import pTop
 
 cimport numpy as np
 import cython
-from cython.parallel import prange 
+#from cython.parallel import prange 
 
 
 #def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
@@ -32,7 +32,7 @@ from cython.parallel import prange
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef diagnose_POTTVB_jacobson_par(GR, njobs,
+cpdef diagnose_POTTVB_jacobson_c(GR, njobs,
         double[:,:, ::1] POTTVB,
         double[:,:, ::1] POTT,
         double[:,:, ::1] PVTF,
@@ -49,8 +49,10 @@ cpdef diagnose_POTTVB_jacobson_par(GR, njobs,
 
     t_start = time.time()
 
-    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
-        for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+    #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
+    for i   in range(nb,nx +nb):
+        #for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+        for j   in range(nb,ny +nb):
 
             for ks in range(1,nzs-1):
                 ksm1 = ks - 1
@@ -80,7 +82,7 @@ cpdef diagnose_POTTVB_jacobson_par(GR, njobs,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cpdef interp_COLPA_par(GR, njobs, 
+cpdef interp_COLPA_c(GR, njobs, 
     double[:, ::1] COLP):
 
 
@@ -101,10 +103,12 @@ cpdef interp_COLPA_par(GR, njobs,
 
     t_start = time.time()
 
-    for i_s in prange(nb,nxs +nb, nogil=True, num_threads=c_njobs):
+    #for i_s in prange(nb,nxs +nb, nogil=True, num_threads=c_njobs):
+    for i_s in range(nb,nxs +nb):
         ism1 = i_s - 1
         isnb = i_s - nb
-        for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+        #for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+        for j   in range(nb,ny +nb):
             jp1 = j + 1
             jm1 = j - 1
             jnb = j - nb
@@ -136,11 +140,13 @@ cpdef interp_COLPA_par(GR, njobs,
 
 
 
-    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
+    #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
+    for i   in range(nb,nx +nb):
         ip1 = i + 1
         im1 = i - 1
         inb = i - 1
-        for js in prange(nb,nys+nb, nogil=False, num_threads=c_njobs):
+        #for js in prange(nb,nys+nb, nogil=False, num_threads=c_njobs):
+        for js in range(nb,nys+nb):
             jsm1 = js - 1
             jsnb = js - 1
 

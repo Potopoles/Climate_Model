@@ -19,16 +19,6 @@ def matsuno(GR, subgrids,
 
 
     ########## ESTIMATE
-    dCOLPdt, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND,\
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-                                        COLP, POTT, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
-
-    # has to happen after masspoint_flux_tendency function
     UWIND_OLD = copy.deepcopy(UWIND)
     VWIND_OLD = copy.deepcopy(VWIND)
     COLP_OLD = copy.deepcopy(COLP)
@@ -36,27 +26,38 @@ def matsuno(GR, subgrids,
     QV_OLD = copy.deepcopy(QV)
     QC_OLD = copy.deepcopy(QC)
 
+    COLP_NEW, dUFLXdt, dVFLXdt, \
+    dPOTTdt, WWIND,\
+    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+                                        COLP, COLP, POTT, POTTVB, HSURF,
+                                        UWIND, VWIND, WWIND,
+                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                        dPOTTdt_RAD, dPOTTdt_MIC,
+                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
+
     UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND, VWIND,
-                                        COLP, POTT, QV, QC,
-                                        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+                                        COLP, COLP_NEW, POTT, QV, QC,
+                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
 
     PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
             diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
                                     HSURF, PVTF, PVTFVB, POTTVB)
 
     ########## FINAL
-    dCOLPdt, dUFLXdt, dVFLXdt, \
+    COLP, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND, \
     dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-                                        COLP, POTT, POTTVB, HSURF,
+                                        COLP_OLD, COLP, POTT, POTTVB, HSURF,
                                         UWIND, VWIND, WWIND,
                                         UFLX, VFLX, PHI, PVTF, PVTFVB,
                                         dPOTTdt_RAD, dPOTTdt_MIC,
                                         QV, QC, dQVdt_MIC, dQCdt_MIC)
 
     UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
-                                            COLP_OLD, POTT_OLD, QV_OLD, QC_OLD,
-                                            dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+                                            COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
+                                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+
+    #COLP = copy.deepcopy(COLP_NEW)
 
     PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
             diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
@@ -117,17 +118,7 @@ def RK4(GR, subgrids,
         QV, QC, dQVdt_MIC, dQCdt_MIC):
 
     ########## level 1
-    dCOLPdt, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-                                        COLP, POTT, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
-
     # INITIAL FIELDS
-    # has to happen after masspoint_flux_tendency function
     UWIND_START = copy.deepcopy(UWIND)
     VWIND_START = copy.deepcopy(VWIND)
     COLP_START = copy.deepcopy(COLP)
@@ -143,6 +134,15 @@ def RK4(GR, subgrids,
     POTT_INT = copy.deepcopy(POTT)
     QV_INT = copy.deepcopy(QV)
     QC_INT = copy.deepcopy(QC)
+
+    dCOLPdt, dUFLXdt, dVFLXdt, \
+    dPOTTdt, WWIND, \
+    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+                                        COLP, POTT, POTTVB, HSURF,
+                                        UWIND, VWIND, WWIND,
+                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                        dPOTTdt_RAD, dPOTTdt_MIC,
+                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
 
     dUFLX = GR.dt*dUFLXdt
     dVFLX = GR.dt*dVFLXdt
