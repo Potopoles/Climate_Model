@@ -1,6 +1,6 @@
 import copy
 import numpy as np
-from boundaries import exchange_BC
+#from boundaries_par import exchange_BC
 from jacobson_par import tendencies_jacobson, proceed_timestep_jacobson, \
                     diagnose_fields_jacobson
 from diagnostics import interp_COLPA
@@ -9,7 +9,9 @@ from diagnostics import interp_COLPA
 ######################################################################################
 ######################################################################################
 
-def matsuno(job_ind, output, status, lock, barrier, GR,
+def matsuno(job_ind, output, status,
+            uvflx_helix, windflx_helix,
+            lock, barrier, GR,
             COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
             UFLX, VFLX,
@@ -19,23 +21,6 @@ def matsuno(job_ind, output, status, lock, barrier, GR,
 
 
     ########## ESTIMATE
-    dCOLPdt, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND,\
-    dQVdt, dQCdt = tendencies_jacobson(GR,
-                                        COLP, POTT, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
-
-    
-    barrier.wait()
-    #lock.acquire()
-    #status.value += 1
-    print(str(job_ind) + '  ' + str(status.value))
-    #lock.release()
-
-    # has to happen after masspoint_flux_tendency function
     UWIND_OLD = copy.deepcopy(UWIND)
     VWIND_OLD = copy.deepcopy(VWIND)
     COLP_OLD = copy.deepcopy(COLP)
@@ -43,32 +28,53 @@ def matsuno(job_ind, output, status, lock, barrier, GR,
     QV_OLD = copy.deepcopy(QV)
     QC_OLD = copy.deepcopy(QC)
 
-    UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND, VWIND,
-                                        COLP, POTT, QV, QC,
-                                        dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    COLP_NEW, dUFLXdt, dVFLXdt, \
+    dPOTTdt, WWIND,\
+    dQVdt, dQCdt = tendencies_jacobson(GR, status,
+                                        uvflx_helix, windflx_helix,
+                                        lock, barrier,
+                                        COLP, COLP, POTT, POTTVB, HSURF,
+                                        UWIND, VWIND, WWIND,
+                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                        dPOTTdt_RAD, dPOTTdt_MIC,
+                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
+
+
+    UWIND, VWIND, COLP, POTT, \
+    QV, QC = proceed_timestep_jacobson(GR, status, uvflx_helix, lock, barrier, 
+                                        UWIND, VWIND,
+                                        COLP, COLP_NEW, POTT, QV, QC,
+                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
 
     PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
             diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
                                     HSURF, PVTF, PVTFVB, POTTVB)
 
     ########## FINAL
-    dCOLPdt, dUFLXdt, dVFLXdt, \
+    COLP, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR,
-                                        COLP, POTT, POTTVB, HSURF,
+    dQVdt, dQCdt = tendencies_jacobson(GR, status,
+                                        uvflx_helix, windflx_helix, 
+                                        lock, barrier,
+                                        COLP_OLD, COLP, POTT, POTTVB, HSURF,
                                         UWIND, VWIND, WWIND,
                                         UFLX, VFLX, PHI, PVTF, PVTFVB,
                                         dPOTTdt_RAD, dPOTTdt_MIC,
                                         QV, QC, dQVdt_MIC, dQCdt_MIC)
 
-    UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
-                                            COLP_OLD, POTT_OLD, QV_OLD, QC_OLD,
-                                            dCOLPdt, dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    UWIND, VWIND, COLP, POTT, \
+    QV, QC = proceed_timestep_jacobson(GR, status, uvflx_helix, lock, barrier,
+                                        UWIND_OLD, VWIND_OLD,
+                                        COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
+                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+
+    #COLP = copy.deepcopy(COLP_NEW)
 
     PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
             diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
                                     HSURF, PVTF, PVTFVB, POTTVB)
 
+    
     out = {}
     out['COLP'] = COLP
     out['PHI'] = PHI
@@ -83,6 +89,7 @@ def matsuno(job_ind, output, status, lock, barrier, GR,
     out['QV'] = QV
     out['QC'] = QC
     output.put( (job_ind, out) )
+
 
 
 
@@ -114,12 +121,13 @@ def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, QV0, QC0, \
         QC1[:,:,k][GR.iijj] = QC0[:,:,k][GR.iijj] * \
                         COLP0[GR.iijj]/COLP1[GR.iijj] + \
                         dQC[:,:,k]/factor/COLP1[GR.iijj]
+    QV1[QV1 < 0] = 0
+    QC1[QC1 < 0] = 0
+    # TODO 4 NECESSARY
     UWIND1 = exchange_BC(GR, UWIND1)
     VWIND1 = exchange_BC(GR, VWIND1)
     POTT1  = exchange_BC(GR, POTT1)
-    QV1[QV1 < 0] = 0
     QV1  = exchange_BC(GR, QV1)
-    QC1[QC1 < 0] = 0
     QC1  = exchange_BC(GR, QC1)
 
     return(COLP1, UWIND1, VWIND1, POTT1, QV1, QC1)
@@ -132,18 +140,7 @@ def RK4(GR,
         dPOTTdt_RAD, dPOTTdt_MIC,
         QV, QC, dQVdt_MIC, dQCdt_MIC):
 
-    ########## level 1
-    dCOLPdt, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR,
-                                        COLP, POTT, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
-
     # INITIAL FIELDS
-    # has to happen after masspoint_flux_tendency function
     UWIND_START = copy.deepcopy(UWIND)
     VWIND_START = copy.deepcopy(VWIND)
     COLP_START = copy.deepcopy(COLP)
@@ -159,6 +156,16 @@ def RK4(GR,
     POTT_INT = copy.deepcopy(POTT)
     QV_INT = copy.deepcopy(QV)
     QC_INT = copy.deepcopy(QC)
+
+    ########## level 1
+    dCOLPdt, dUFLXdt, dVFLXdt, \
+    dPOTTdt, WWIND, \
+    dQVdt, dQCdt = tendencies_jacobson(GR,
+                                        COLP, POTT, POTTVB, HSURF,
+                                        UWIND, VWIND, WWIND,
+                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                        dPOTTdt_RAD, dPOTTdt_MIC,
+                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
 
     dUFLX = GR.dt*dUFLXdt
     dVFLX = GR.dt*dVFLXdt

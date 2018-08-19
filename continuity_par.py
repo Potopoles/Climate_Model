@@ -1,10 +1,11 @@
 import numpy as np
 import time
 from namelist import  i_colp_tendency, COLP_hor_dif_tau
-from boundaries import exchange_BC
+from boundaries_par import exchange_BC_uvflx
 
 
-def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
+def colp_tendency_jacobson(GR, status, uvflx_helix, lock, barrier,
+                            COLP, UWIND, VWIND, UFLX, VFLX):
 
     t_start = time.time()
 
@@ -17,8 +18,8 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
                 VWIND[:,:,k][GR.iijjs] * GR.dxjs[GR.iijjs]
 
     # TODO 1 NECESSARY
-    UFLX = exchange_BC(GR, UFLX)
-    VFLX = exchange_BC(GR, VFLX)
+    UFLX, VFLX = exchange_BC_uvflx(GR, UFLX, VFLX, uvflx_helix, GR.uvflx_helix_inds,
+                                    barrier, status, lock)
 
     FLXDIV =  np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb,GR.nz), np.nan)
     for k in range(0,GR.nz):
@@ -75,30 +76,3 @@ def vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND):
 
 
 
-#########################################################################################
-#########################################################################################
-#########################################################################################
-#########################################################################################
-#########################################################################################
-
-
-
-#def colp_tendency_upwind(GR, COLP, UWIND, VWIND, UFLX, VFLX):
-#    UFLX[GR.iisjj] = \
-#            GR.dy * (np.maximum(UWIND[GR.iisjj],0) * COLP[GR.iisjj_im1] + \
-#                        np.minimum(UWIND[GR.iisjj],0) * COLP[GR.iisjj])
-#    UFLX = exchange_BC(GR, UFLX)
-#
-#    VFLX[GR.iijjs] = \
-#            GR.dxjs[GR.iijjs] * ( np.maximum(VWIND[GR.iijjs],0) * COLP[GR.iijjs_jm1] + \
-#                                    np.minimum(VWIND[GR.iijjs],0) * COLP[GR.iijjs] )
-#    VFLX = exchange_BC(GR, VFLX)
-#
-#
-#    fluxdiv = ( - (UFLX[GR.iijj_ip1] - UFLX[GR.iijj]) - \
-#                    (VFLX[GR.iijj_jp1] - VFLX[GR.iijj]) ) \
-#                / GR.A[GR.iijj]
-#
-#    dCOLPdt = fluxdiv
-#
-#    return(dCOLPdt)

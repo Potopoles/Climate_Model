@@ -14,11 +14,11 @@ from IO_helper_functions import print_ts_info, print_computation_time_info
 if i_time_stepping == 'MATSUNO':
     from time_integration import matsuno as time_stepper
 elif i_time_stepping == 'RK4':
-    from time_integration import RK4 as time_stepper
+    from OLD_time_integration import RK4 as time_stepper
 
 
 GR = Grid()
-subgrids = create_subgrids(GR, njobs)
+GR, subgrids = create_subgrids(GR, njobs)
 
 COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
 UFLX, VFLX, \

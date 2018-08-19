@@ -1,5 +1,5 @@
 #import pyximport; pyximport.install()
-from wind_cython import wind_tendency_jacobson_c
+from wind_cython_par import wind_tendency_jacobson_c
 import numpy as np
 import time
 import copy
@@ -13,7 +13,7 @@ from fields import initialize_fields
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
 from temperature_cython import temperature_tendency_jacobson_c
 
-from boundaries import exchange_BC
+from boundaries_par import exchange_BC_par
 from multiproc import create_subgrids 
 from namelist import njobs
 from time_integration_par import matsuno as time_stepper
@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
 
     GR = Grid()
-    subgrids = create_subgrids(GR, njobs)
+    GR, subgrids = create_subgrids(GR, njobs)
 
     COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
     UFLX, VFLX, \
@@ -33,6 +33,12 @@ if __name__ == '__main__':
     time0 = time.time()
 
     status = mp.Value('i', 0)
+    uvflx_helix = mp.Array('f', GR.uvflx_helix_size)
+    uvflx_helix[:] = np.repeat(np.nan, len(uvflx_helix[:]))
+    windflx_helix = mp.Array('f', 1)
+    print('length uvflx_helix ' + str(len(uvflx_helix[:])))
+    #print(np.asarray(uvflx_helix[:]).reshape(GR.ny,GR.nz).shape)
+    #quit()
     lock = mp.Lock()
     barrier = mp.Barrier(parties=njobs)
 
@@ -47,7 +53,9 @@ if __name__ == '__main__':
         processes.append(
             mp.Process(\
                 target=time_stepper,
-                args = (job_ind, output, status, lock, barrier, subgrids[job_ind],
+                args = (job_ind, output, status,
+                        uvflx_helix, windflx_helix,
+                        lock, barrier, subgrids[job_ind],
                         COLP[SGR.map_iijj],
                         PHI[SGR.map_iijj], PHIVB[SGR.map_iijj], 
                         POTT[SGR.map_iijj], POTTVB[SGR.map_iijj],
@@ -61,6 +69,7 @@ if __name__ == '__main__':
                         MIC.dQVdt_MIC[SGR.mapin_iijj], MIC.dQCdt_MIC[SGR.mapin_iijj])))
     for proc in processes:
         proc.start()
+
 
     results = [output.get() for p in processes]
     results.sort()
@@ -89,6 +98,10 @@ if __name__ == '__main__':
     time1 = time.time()
     print(time1 - time0)
 
+    #plt.contourf(UFLX[:,:,1].T)
+    #plt.colorbar()
+    #plt.show()
+    print(UFLX[:,:,1].T)
     quit()
 
     #dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\

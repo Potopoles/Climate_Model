@@ -99,12 +99,13 @@ def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, QV0, QC0, \
         QC1[:,:,k][GR.iijj] = QC0[:,:,k][GR.iijj] * \
                         COLP0[GR.iijj]/COLP1[GR.iijj] + \
                         dQC[:,:,k]/factor/COLP1[GR.iijj]
+    QV1[QV1 < 0] = 0
+    QC1[QC1 < 0] = 0
+    # TODO 4 NECESSARY
     UWIND1 = exchange_BC(GR, UWIND1)
     VWIND1 = exchange_BC(GR, VWIND1)
     POTT1  = exchange_BC(GR, POTT1)
-    QV1[QV1 < 0] = 0
     QV1  = exchange_BC(GR, QV1)
-    QC1[QC1 < 0] = 0
     QC1  = exchange_BC(GR, QC1)
 
     return(COLP1, UWIND1, VWIND1, POTT1, QV1, QC1)
@@ -117,7 +118,6 @@ def RK4(GR, subgrids,
         dPOTTdt_RAD, dPOTTdt_MIC,
         QV, QC, dQVdt_MIC, dQCdt_MIC):
 
-    ########## level 1
     # INITIAL FIELDS
     UWIND_START = copy.deepcopy(UWIND)
     VWIND_START = copy.deepcopy(VWIND)
@@ -135,6 +135,7 @@ def RK4(GR, subgrids,
     QV_INT = copy.deepcopy(QV)
     QC_INT = copy.deepcopy(QC)
 
+    ########## level 1
     dCOLPdt, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND, \
     dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
