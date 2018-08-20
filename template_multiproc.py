@@ -13,7 +13,7 @@ from fields import initialize_fields
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
 from temperature_cython import temperature_tendency_jacobson_c
 
-from boundaries_par import exchange_BC_par
+from boundaries import exchange_BC
 from multiproc import create_subgrids 
 from namelist import njobs
 from time_integration_par import matsuno as time_stepper
@@ -56,17 +56,20 @@ if __name__ == '__main__':
                 args = (job_ind, output, status,
                         uvflx_helix, windflx_helix,
                         lock, barrier, subgrids[job_ind],
-                        COLP[SGR.map_iijj],
-                        PHI[SGR.map_iijj], PHIVB[SGR.map_iijj], 
-                        POTT[SGR.map_iijj], POTTVB[SGR.map_iijj],
-                        UWIND[SGR.map_iisjj], VWIND[SGR.map_iijjs],
-                        WWIND[SGR.map_iijj], 
-                        UFLX[SGR.map_iisjj], VFLX[SGR.map_iijjs],
-                        HSURF[SGR.map_iijj],
-                        PVTF[SGR.map_iijj], PVTFVB[SGR.map_iijj],
-                        RAD.dPOTTdt_RAD[SGR.mapin_iijj], MIC.dPOTTdt_MIC[SGR.mapin_iijj],
-                        MIC.QV[SGR.map_iijj], MIC.QC[SGR.map_iijj],
-                        MIC.dQVdt_MIC[SGR.mapin_iijj], MIC.dQCdt_MIC[SGR.mapin_iijj])))
+                        COLP[SGR.GRmap_out_iijj],
+                        PHI[SGR.GRmap_out_iijj], PHIVB[SGR.GRmap_out_iijj], 
+                        POTT[SGR.GRmap_out_iijj], POTTVB[SGR.GRmap_out_iijj],
+                        UWIND[SGR.GRmap_out_iisjj], VWIND[SGR.GRmap_out_iijjs],
+                        WWIND[SGR.GRmap_out_iijj], 
+                        UFLX[SGR.GRmap_out_iisjj], VFLX[SGR.GRmap_out_iijjs],
+                        HSURF[SGR.GRmap_out_iijj],
+                        PVTF[SGR.GRmap_out_iijj], PVTFVB[SGR.GRmap_out_iijj],
+                        RAD.dPOTTdt_RAD[SGR.GRimap_out_iijj],
+                        MIC.dPOTTdt_MIC[SGR.GRimap_out_iijj],
+                        MIC.QV[SGR.GRmap_out_iijj], MIC.QC[SGR.GRmap_out_iijj],
+                        MIC.dQVdt_MIC[SGR.GRimap_out_iijj],
+                        MIC.dQCdt_MIC[SGR.GRimap_out_iijj])))
+
     for proc in processes:
         proc.start()
 
@@ -75,33 +78,74 @@ if __name__ == '__main__':
     results.sort()
     dUFLXdt = np.zeros( (GR.nxs, GR.ny, GR.nz) )
     dVFLXdt = np.zeros( (GR.nx, GR.nys, GR.nz) )
+    #for job_ind in range(0,njobs):
     for job_ind in range(0,njobs):
         SGR = subgrids[job_ind]
         #res = results[job_ind][1]
 
-        COLP[SGR.map_iijj]     = np.asarray(results[job_ind][1]['COLP'])
-        PHI[SGR.map_iijj]      = np.asarray(results[job_ind][1]['PHI'])
-        PHIVB[SGR.map_iijj]    = np.asarray(results[job_ind][1]['PHIVB'])
-        POTT[SGR.map_iijj]     = np.asarray(results[job_ind][1]['POTT'])
-        POTTVB[SGR.map_iijj]   = np.asarray(results[job_ind][1]['POTTVB'])
-        UWIND[SGR.map_iisjj]   = np.asarray(results[job_ind][1]['UWIND'])
-        VWIND[SGR.map_iijjs]   = np.asarray(results[job_ind][1]['VWIND'])
-        WWIND[SGR.map_iijj]    = np.asarray(results[job_ind][1]['WWIND'])
-        UFLX[SGR.map_iisjj]    = np.asarray(results[job_ind][1]['UFLX'])
-        VFLX[SGR.map_iijjs]    = np.asarray(results[job_ind][1]['VFLX'])
-        MIC.QV[SGR.map_iijj]   = np.asarray(results[job_ind][1]['QV'])
-        MIC.QC[SGR.map_iijj]   = np.asarray(results[job_ind][1]['QC'])
+        #COLP[SGR.map_iijj]     = np.asarray(results[job_ind][1]['COLP'])
+        #PHI[SGR.map_iijj]      = np.asarray(results[job_ind][1]['PHI'])
+        #PHIVB[SGR.map_iijj]    = np.asarray(results[job_ind][1]['PHIVB'])
+        #POTT[SGR.map_iijj]     = np.asarray(results[job_ind][1]['POTT'])
+        #POTTVB[SGR.map_iijj]   = np.asarray(results[job_ind][1]['POTTVB'])
+        #UWIND[SGR.map_iisjj]   = np.asarray(results[job_ind][1]['UWIND'])
+        #VWIND[SGR.map_iijjs]   = np.asarray(results[job_ind][1]['VWIND'])
+        #WWIND[SGR.map_iijj]    = np.asarray(results[job_ind][1]['WWIND'])
+        #print(SGR.SGRmap_out_iisjj)
+        #print(SGR.GRmap_in_iisjj)
+        #print()
+        #UFLX[SGR.GRmap_in_iisjj]  = np.asarray(results[job_ind][1]['UFLX'] \
+        #                                            [SGR.SGRmap_out_iisjj])
+        #VFLX[SGR.GRmap_in_iijjs]  = np.asarray(results[job_ind][1]['VFLX'] \
+        #                                            [SGR.SGRmap_out_iijjs])
+        #MIC.QV[SGR.map_iijj]   = np.asarray(results[job_ind][1]['QV'])
+        #MIC.QC[SGR.map_iijj]   = np.asarray(results[job_ind][1]['QC'])
+
+    for job_ind in range(0,njobs):
+        SGR = subgrids[job_ind]
 
     for proc in processes:
         proc.join()
 
+    #quit()
+
     time1 = time.time()
     print(time1 - time0)
 
-    #plt.contourf(UFLX[:,:,1].T)
-    #plt.colorbar()
-    #plt.show()
-    print(UFLX[:,:,1].T)
+    UFLX = exchange_BC(GR, UFLX)
+    VFLX = exchange_BC(GR, VFLX)
+
+    #print(UFLX[:,:,1].T)
+    #print(VFLX[:,:,1].T)
+    #print()
+
+    #print(UFLX.shape)
+    #print(VFLX.shape)
+
+    import pickle
+    with open('testarray.pkl', 'rb') as f:
+        out = pickle.load(f)
+    var_orig = out['VFLX']
+    #print(var_orig[:,:,1].T)
+    #quit()
+    var = VFLX
+    print('###################')
+    nan_here = np.isnan(var)
+    nan_orig = np.isnan(var_orig)
+    diff = var - var_orig
+    print('values ' + str(np.nansum(np.abs(diff))))
+    print('  nans ' + str(np.sum(nan_here != nan_orig)))
+    print('###################')
+
+    #quit()
+
+    plt.contourf(diff[:,:,1].T)
+    #plt.contourf(var[:,:,1].T)
+    #plt.contourf(var_orig[:,:,1].T)
+    plt.colorbar()
+    plt.show()
+    quit()
+
     quit()
 
     #dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\

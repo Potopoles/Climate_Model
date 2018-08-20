@@ -35,6 +35,7 @@ def tendencies_jacobson(GR, status,
     FLXDIV = colp_tendency_jacobson(GR, status,
                                     uvflx_helix, lock, barrier, COLP, UWIND,\
                                                         VWIND, UFLX, VFLX)
+
     COLP_NEW = copy.deepcopy(COLP)
     COLP_NEW[GR.iijj] = COLP_OLD[GR.iijj] + GR.dt*dCOLPdt
 

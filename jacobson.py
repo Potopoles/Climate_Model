@@ -33,6 +33,17 @@ def tendencies_jacobson(GR, subgrids,\
     # PROGNOSE COLP
     dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
                                                         VWIND, UFLX, VFLX)
+    ##print(UFLX[:,:,1].T)
+    #print(VFLX[:,:,1].T)
+    #import pickle
+    #out = {}
+    #out['UFLX'] = UFLX
+    #out['VFLX'] = VFLX
+    #with open('testarray.pkl', 'wb') as f:
+    #    pickle.dump(out, f)
+
+    #quit()
+
     COLP_NEW = copy.deepcopy(COLP)
     COLP_NEW[GR.iijj] = COLP_OLD[GR.iijj] + GR.dt*dCOLPdt
 

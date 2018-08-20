@@ -2,27 +2,63 @@ import numpy as np
 import copy
 #import time
 import multiprocessing as mp
+from namelist import njobs
 
 from grid import Grid
 
-def set_map_indices(GR, SGR, x_shift_fact):
-    SGR.map_ii  = np.arange(0,SGR.nx +2*SGR.nb).astype(np.int) + int(GR.nx*x_shift_fact)
-    SGR.map_iis = np.arange(0,SGR.nxs+2*SGR.nb).astype(np.int) + int(GR.nx*x_shift_fact)
-    SGR.map_jj  = np.arange(0,SGR.ny +2*SGR.nb).astype(np.int)
-    SGR.map_jjs = np.arange(0,SGR.nys+2*SGR.nb).astype(np.int)
+def set_map_indices(GR, SGR, grid_no, ngrids):
+    x_shift_fact = grid_no / ngrids
+    # GRID MAP OUT
+    SGR.GRmap_out_ii  = np.arange(0,SGR.nx +2*SGR.nb).astype(np.int) + int(GR.nx*x_shift_fact)
+    SGR.GRmap_out_iis = np.arange(0,SGR.nxs+2*SGR.nb).astype(np.int) + int(GR.nx*x_shift_fact)
+    SGR.GRmap_out_jj  = np.arange(0,SGR.ny +2*SGR.nb).astype(np.int)
+    SGR.GRmap_out_jjs = np.arange(0,SGR.nys+2*SGR.nb).astype(np.int)
+    SGR.GRmap_out_iijj      = np.ix_(SGR.GRmap_out_ii        ,SGR.GRmap_out_jj  )
+    SGR.GRmap_out_iisjj     = np.ix_(SGR.GRmap_out_iis       ,SGR.GRmap_out_jj  )
+    SGR.GRmap_out_iijjs     = np.ix_(SGR.GRmap_out_ii        ,SGR.GRmap_out_jjs  )
 
-    SGR.map_iijj  = np.ix_(SGR.map_ii   ,SGR.map_jj  )
-    SGR.map_iisjj = np.ix_(SGR.map_iis  ,SGR.map_jj  )
-    SGR.map_iijjs = np.ix_(SGR.map_ii   ,SGR.map_jjs  )
+    # GRID MAP OUT INNER (WITHOUT BORDERS OF SGR ARRAY)
+    SGR.GRimap_out_ii  = np.arange(0,SGR.nx ).astype(np.int) + int(GR.nx*x_shift_fact)
+    SGR.GRimap_out_jj  = np.arange(0,SGR.ny ).astype(np.int)
+    SGR.GRimap_out_iijj  = np.ix_(SGR.GRimap_out_ii, SGR.GRimap_out_jj )
 
-    SGR.mapin_ii  = np.arange(0,SGR.nx ).astype(np.int) + int(GR.nx*x_shift_fact)
-    SGR.mapin_iis = np.arange(0,SGR.nxs).astype(np.int) + int(GR.nx*x_shift_fact)
-    SGR.mapin_jj  = np.arange(0,SGR.ny ).astype(np.int)
-    SGR.mapin_jjs = np.arange(0,SGR.nys).astype(np.int)
+    # GRID MAP IN 
+    ind_range = np.arange(GR.nb,SGR.nx+GR.nb).astype(np.int)
+    shift = int(GR.nx*x_shift_fact)
+    SGR.GRmap_in_ii  = ind_range + shift
+    ind_range = np.arange(GR.nb,SGR.nx+GR.nb).astype(np.int)
+    shift = int(GR.nx*x_shift_fact)
+    inds = ind_range + shift
+    if ngrids - 1 == grid_no:
+        inds = np.append(inds, GR.iis[-1])
+    SGR.GRmap_in_iis = inds 
+    SGR.GRmap_in_jj  = np.arange(GR.nb,SGR.ny +GR.nb).astype(np.int)
+    SGR.GRmap_in_jjs = np.arange(GR.nb,SGR.nys+GR.nb).astype(np.int)
+    SGR.GRmap_in_iijj  = np.ix_(SGR.GRmap_in_ii   ,SGR.GRmap_in_jj  )
+    SGR.GRmap_in_iisjj = np.ix_(SGR.GRmap_in_iis  ,SGR.GRmap_in_jj  )
+    SGR.GRmap_in_iijjs = np.ix_(SGR.GRmap_in_ii   ,SGR.GRmap_in_jjs  )
 
-    SGR.mapin_iijj  = np.ix_(SGR.mapin_ii   ,SGR.mapin_jj  )
-    SGR.mapin_iisjj = np.ix_(SGR.mapin_iis  ,SGR.mapin_jj  )
-    SGR.mapin_iijjs = np.ix_(SGR.mapin_ii   ,SGR.mapin_jjs  )
+    # GRID MAP IN INNER (WITHOUT BORDERS OF SGR ARRAY)
+    SGR.GRimap_in_ii  = SGR.GRmap_in_ii - 1
+    SGR.GRimap_in_jj  = SGR.GRmap_in_jj - 1
+    SGR.GRimap_in_iijj  = np.ix_(SGR.GRimap_in_ii, SGR.GRimap_in_jj )
+
+    SGR.SGRmap_out_ii  = SGR.ii
+    SGR.SGRmap_out_jj  = SGR.jj
+    SGR.SGRmap_out_jjs = SGR.jjs
+    if ngrids - 1 == grid_no:
+        SGR.SGRmap_out_iis = SGR.iis
+    else:
+        SGR.SGRmap_out_iis = SGR.iis[:-1]
+    SGR.SGRmap_out_iijj  = np.ix_(SGR.SGRmap_out_ii   ,SGR.SGRmap_out_jj  )
+    SGR.SGRmap_out_iisjj = np.ix_(SGR.SGRmap_out_iis  ,SGR.SGRmap_out_jj  )
+    SGR.SGRmap_out_iijjs = np.ix_(SGR.SGRmap_out_ii   ,SGR.SGRmap_out_jjs  )
+    
+    #print(SGR.GRmap_out_iijj)
+    #print(SGR.GRimap_out_iijj)
+    #print(SGR.GRmap_in_iijjs)
+    #print(SGR.SGRmap_out_iijjs)
+    #print()
     return(SGR)
 
 
@@ -82,10 +118,13 @@ def set_helix_take_inds(SGR, SGR_left, SGR_right):
 
 def create_subgrids(GR, njobs):
     subgrids = {}
+
+    if GR.nx % njobs > 0:
+        raise ValueError('grid does not divide by number of jobs')
     
     ########################################################################
     if njobs == 1:
-        GR = set_map_indices(GR, GR, 0)
+        GR = set_map_indices(GR, GR, 0, 1)
         GR, uvflx_max = set_helix_give_inds(GR, 0)
         subgrids[0] = GR
 
@@ -100,7 +139,7 @@ def create_subgrids(GR, njobs):
         specs['lat0_deg'] = GR.lat0_deg
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
-        SGR = set_map_indices(GR, SGR, 0)
+        SGR = set_map_indices(GR, SGR, 0, 2)
         SGR, uvflx_max = set_helix_give_inds(SGR, 0)
         subgrids[0] = SGR
 
@@ -111,7 +150,7 @@ def create_subgrids(GR, njobs):
         specs['lat0_deg'] = GR.lat0_deg
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
-        SGR = set_map_indices(GR, SGR, 1/2)
+        SGR = set_map_indices(GR, SGR, 1, 2)
         SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[1] = SGR 
 
@@ -129,7 +168,7 @@ def create_subgrids(GR, njobs):
         specs['lat0_deg'] = GR.lat0_deg
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
-        SGR = set_map_indices(GR, SGR, 0)
+        SGR = set_map_indices(GR, SGR, 0, 3)
         SGR, uvflx_max = set_helix_give_inds(SGR, 0)
         subgrids[0] = SGR
 
@@ -140,7 +179,7 @@ def create_subgrids(GR, njobs):
         specs['lat0_deg'] = GR.lat0_deg
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
-        SGR = set_map_indices(GR, SGR, 1/3)
+        SGR = set_map_indices(GR, SGR, 1, 3)
         SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[1] = SGR 
 
@@ -151,10 +190,13 @@ def create_subgrids(GR, njobs):
         specs['lat0_deg'] = GR.lat0_deg
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
-        SGR = set_map_indices(GR, SGR, 2/3)
+        SGR = set_map_indices(GR, SGR, 2, 3)
         SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[2] = SGR 
 
+        #print(GR.iisjj)
+        ##print(GR.iijj)
+        #quit()
         GR.uvflx_helix_size = uvflx_max
         # subgrid 0
         subgrids[0] = set_helix_take_inds(subgrids[0], subgrids[2], subgrids[1])
@@ -171,7 +213,7 @@ def create_subgrids(GR, njobs):
         specs['lat0_deg'] = GR.lat0_deg
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
-        SGR = set_map_indices(GR, SGR, 0)
+        SGR = set_map_indices(GR, SGR, 0, 4)
         SGR, uvflx_max = set_helix_give_inds(SGR, 0)
         subgrids[0] = SGR
 
@@ -182,7 +224,7 @@ def create_subgrids(GR, njobs):
         specs['lat0_deg'] = GR.lat0_deg
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
-        SGR = set_map_indices(GR, SGR, 1/4)
+        SGR = set_map_indices(GR, SGR, 1, 4)
         SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[1] = SGR 
 
@@ -193,7 +235,7 @@ def create_subgrids(GR, njobs):
         specs['lat0_deg'] = GR.lat0_deg
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
-        SGR = set_map_indices(GR, SGR, 2/4)
+        SGR = set_map_indices(GR, SGR, 2, 4)
         SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[2] = SGR 
 
@@ -204,7 +246,7 @@ def create_subgrids(GR, njobs):
         specs['lat0_deg'] = GR.lat0_deg
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
-        SGR = set_map_indices(GR, SGR, 3/4)
+        SGR = set_map_indices(GR, SGR, 3, 4)
         SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[3] = SGR 
 

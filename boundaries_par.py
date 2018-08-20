@@ -8,10 +8,19 @@ def exchange_BC_uvflx(GR, UFLX, VFLX, helix, helix_inds,
 
     ################# PUT INTO HELIX
     ################################
+    # staggered
+    #FIELD[GR.nb,:,k]
+    #FIELD[GR.nxs-1,:,k]
+    # unstaggered
+    #FIELD[GR.nx,:]
+    #FIELD[GR.nb,:]
+
     UFLX_left  = UFLX[GR.nb,1:-1].flatten()
-    UFLX_right = UFLX[GR.nxs+GR.nb-1,1:-1].flatten()
+    #UFLX_right = UFLX[GR.nxs+GR.nb-1,1:-1].flatten()
+    UFLX_right = UFLX[GR.nxs-1,1:-1].flatten()
     VFLX_left  = VFLX[GR.nb,1:-1].flatten()
-    VFLX_right = VFLX[GR.nx +GR.nb-1,1:-1].flatten()
+    #VFLX_right = VFLX[GR.nx +GR.nb-1,1:-1].flatten()
+    VFLX_right = VFLX[GR.nx,1:-1].flatten()
 
     inds = helix_inds['give_UFLX']
     helix[inds[0][0]:inds[0][1]] = UFLX_left
@@ -31,13 +40,19 @@ def exchange_BC_uvflx(GR, UFLX, VFLX, helix, helix_inds,
     VFLX_left  = helix[inds[0][0]:inds[0][1]]
     VFLX_right = helix[inds[1][0]:inds[1][1]]
 
+    # staggered
+    #FIELD[0,:,k] 
+    #FIELD[GR.nxs+GR.nb-1,:,k]
+    # unstaggered
+    #FIELD[0,:]
+    #FIELD[GR.nx+GR.nb,:]
 
     uflx_shape = UFLX[0,1:-1].shape
     UFLX[0,1:-1]              = np.asarray(UFLX_left ).reshape(uflx_shape)
     UFLX[GR.nxs+GR.nb-1,1:-1] = np.asarray(UFLX_right).reshape(uflx_shape) 
     vflx_shape = VFLX[0,1:-1].shape
     VFLX[0,1:-1]              = np.asarray(VFLX_left ).reshape(vflx_shape)
-    VFLX[GR.nx +GR.nb-1,1:-1] = np.asarray(VFLX_right).reshape(vflx_shape) 
+    VFLX[GR.nx +GR.nb  ,1:-1] = np.asarray(VFLX_right).reshape(vflx_shape) 
 
     #status.value += 1
     #if status.value == 1:
@@ -49,8 +64,8 @@ def exchange_BC_uvflx(GR, UFLX, VFLX, helix, helix_inds,
     #    print(status.value)
     #lock.release()
 
-    UFLX = exchange_BC_rigid_y(GR, VFLX)
-    VFLX = exchange_BC_rigid_y(GR, UFLX)
+    UFLX = exchange_BC_rigid_y(GR, UFLX)
+    VFLX = exchange_BC_rigid_y(GR, VFLX)
 
     barrier.wait()
     return(UFLX, VFLX)

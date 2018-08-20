@@ -1,5 +1,6 @@
 import copy
 import numpy as np
+import time
 #from boundaries_par import exchange_BC
 from jacobson_par import tendencies_jacobson, proceed_timestep_jacobson, \
                     diagnose_fields_jacobson
@@ -20,60 +21,69 @@ def matsuno(job_ind, output, status,
             QV, QC, dQVdt_MIC, dQCdt_MIC):
 
 
-    ########## ESTIMATE
-    UWIND_OLD = copy.deepcopy(UWIND)
-    VWIND_OLD = copy.deepcopy(VWIND)
-    COLP_OLD = copy.deepcopy(COLP)
-    POTT_OLD = copy.deepcopy(POTT)
-    QV_OLD = copy.deepcopy(QV)
-    QC_OLD = copy.deepcopy(QC)
-
-    COLP_NEW, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND,\
-    dQVdt, dQCdt = tendencies_jacobson(GR, status,
-                                        uvflx_helix, windflx_helix,
-                                        lock, barrier,
-                                        COLP, COLP, POTT, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
+    time0 = time.time()
 
 
-    UWIND, VWIND, COLP, POTT, \
-    QV, QC = proceed_timestep_jacobson(GR, status, uvflx_helix, lock, barrier, 
-                                        UWIND, VWIND,
-                                        COLP, COLP_NEW, POTT, QV, QC,
-                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    for count in range(0,10):
+        print(count)
 
-    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-            diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                    HSURF, PVTF, PVTFVB, POTTVB)
+        ########## ESTIMATE
+        UWIND_OLD = copy.deepcopy(UWIND)
+        VWIND_OLD = copy.deepcopy(VWIND)
+        COLP_OLD = copy.deepcopy(COLP)
+        POTT_OLD = copy.deepcopy(POTT)
+        QV_OLD = copy.deepcopy(QV)
+        QC_OLD = copy.deepcopy(QC)
 
-    ########## FINAL
-    COLP, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR, status,
-                                        uvflx_helix, windflx_helix, 
-                                        lock, barrier,
-                                        COLP_OLD, COLP, POTT, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
+        COLP_NEW, dUFLXdt, dVFLXdt, \
+        dPOTTdt, WWIND,\
+        dQVdt, dQCdt = tendencies_jacobson(GR, status,
+                                            uvflx_helix, windflx_helix,
+                                            lock, barrier,
+                                            COLP, COLP, POTT, POTTVB, HSURF,
+                                            UWIND, VWIND, WWIND,
+                                            UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                            dPOTTdt_RAD, dPOTTdt_MIC,
+                                            QV, QC, dQVdt_MIC, dQCdt_MIC)
 
-    UWIND, VWIND, COLP, POTT, \
-    QV, QC = proceed_timestep_jacobson(GR, status, uvflx_helix, lock, barrier,
-                                        UWIND_OLD, VWIND_OLD,
-                                        COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
-                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
 
-    #COLP = copy.deepcopy(COLP_NEW)
+        UWIND, VWIND, COLP, POTT, \
+        QV, QC = proceed_timestep_jacobson(GR, status, uvflx_helix, lock, barrier, 
+                                            UWIND, VWIND,
+                                            COLP, COLP_NEW, POTT, QV, QC,
+                                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
 
-    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-            diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                    HSURF, PVTF, PVTFVB, POTTVB)
+        PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+                diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
+                                        HSURF, PVTF, PVTFVB, POTTVB)
 
+    ########### FINAL
+    #COLP, dUFLXdt, dVFLXdt, \
+    #dPOTTdt, WWIND, \
+    #dQVdt, dQCdt, UFLX = tendencies_jacobson(GR, status,
+    #                                    uvflx_helix, windflx_helix, 
+    #                                    lock, barrier,
+    #                                    COLP_OLD, COLP, POTT, POTTVB, HSURF,
+    #                                    UWIND, VWIND, WWIND,
+    #                                    UFLX, VFLX, PHI, PVTF, PVTFVB,
+    #                                    dPOTTdt_RAD, dPOTTdt_MIC,
+    #                                    QV, QC, dQVdt_MIC, dQCdt_MIC)
+
+    #UWIND, VWIND, COLP, POTT, \
+    #QV, QC = proceed_timestep_jacobson(GR, status, uvflx_helix, lock, barrier,
+    #                                    UWIND_OLD, VWIND_OLD,
+    #                                    COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
+    #                                    dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+
+    ##COLP = copy.deepcopy(COLP_NEW)
+
+    #PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+    #        diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
+    #                                HSURF, PVTF, PVTFVB, POTTVB)
+
+
+    time1 = time.time()
+    print(time1 - time0)
     
     out = {}
     out['COLP'] = COLP
@@ -84,8 +94,8 @@ def matsuno(job_ind, output, status,
     out['UWIND'] = UWIND
     out['VWIND'] = VWIND
     out['WWIND'] = WWIND
-    out['UFLX'] = UFLX
-    out['VFLX'] = VFLX
+    #out['UFLX'] = UFLX
+    #out['VFLX'] = VFLX
     out['QV'] = QV
     out['QC'] = QC
     output.put( (job_ind, out) )

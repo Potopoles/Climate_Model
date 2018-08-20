@@ -17,51 +17,53 @@ def matsuno(GR, subgrids,
             dPOTTdt_RAD, dPOTTdt_MIC,
             QV, QC, dQVdt_MIC, dQCdt_MIC):
 
+    for count in range(0,10):
+        print(count)
 
-    ########## ESTIMATE
-    UWIND_OLD = copy.deepcopy(UWIND)
-    VWIND_OLD = copy.deepcopy(VWIND)
-    COLP_OLD = copy.deepcopy(COLP)
-    POTT_OLD = copy.deepcopy(POTT)
-    QV_OLD = copy.deepcopy(QV)
-    QC_OLD = copy.deepcopy(QC)
+        ########## ESTIMATE
+        UWIND_OLD = copy.deepcopy(UWIND)
+        VWIND_OLD = copy.deepcopy(VWIND)
+        COLP_OLD = copy.deepcopy(COLP)
+        POTT_OLD = copy.deepcopy(POTT)
+        QV_OLD = copy.deepcopy(QV)
+        QC_OLD = copy.deepcopy(QC)
 
-    COLP_NEW, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND,\
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-                                        COLP, COLP, POTT, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
+        COLP_NEW, dUFLXdt, dVFLXdt, \
+        dPOTTdt, WWIND,\
+        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+                                            COLP, COLP, POTT, POTTVB, HSURF,
+                                            UWIND, VWIND, WWIND,
+                                            UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                            dPOTTdt_RAD, dPOTTdt_MIC,
+                                            QV, QC, dQVdt_MIC, dQCdt_MIC)
 
-    UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND, VWIND,
-                                        COLP, COLP_NEW, POTT, QV, QC,
-                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-
-    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-            diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                    HSURF, PVTF, PVTFVB, POTTVB)
-
-    ########## FINAL
-    COLP, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-                                        COLP_OLD, COLP, POTT, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
-
-    UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
-                                            COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
+        UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND, VWIND,
+                                            COLP, COLP_NEW, POTT, QV, QC,
                                             dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
 
-    #COLP = copy.deepcopy(COLP_NEW)
+        PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+                diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
+                                        HSURF, PVTF, PVTFVB, POTTVB)
 
-    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-            diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                    HSURF, PVTF, PVTFVB, POTTVB)
+    ########### FINAL
+    #COLP, dUFLXdt, dVFLXdt, \
+    #dPOTTdt, WWIND, \
+    #dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+    #                                    COLP_OLD, COLP, POTT, POTTVB, HSURF,
+    #                                    UWIND, VWIND, WWIND,
+    #                                    UFLX, VFLX, PHI, PVTF, PVTFVB,
+    #                                    dPOTTdt_RAD, dPOTTdt_MIC,
+    #                                    QV, QC, dQVdt_MIC, dQCdt_MIC)
+
+    #UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
+    #                                        COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
+    #                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+
+    ##COLP = copy.deepcopy(COLP_NEW)
+
+    #PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+    #        diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
+    #                                HSURF, PVTF, PVTFVB, POTTVB)
 
     
     return(COLP, PHI, PHIVB, POTT, POTTVB,
