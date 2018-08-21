@@ -3,7 +3,7 @@ import numpy as np
 cimport numpy as np
 #from cython.parallel import prange 
 #import time
-from boundaries_par import exchange_BC_par
+from boundaries_par import exchange_BC_brflx
 from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency
 from libc.stdio cimport printf
@@ -23,7 +23,7 @@ cdef int i_num_dif = 1
 @cython.wraparound(False)
 cpdef wind_tendency_jacobson_c( GR, njobs,\
         status,
-        windflx_helix,
+        brflx_helix,
         lock,
         barrier,
         double[:,:, ::1] UWIND,
@@ -211,17 +211,15 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
 
             #######################################################################
 
-            ## TODO 3 NECESSARY
-            #BFLX = exchange_BC_par(GR, status, helix, lock, barrier, np.asarray(BFLX))
-            #CFLX = exchange_BC_par(GR, status, helix, lock, barrier, np.asarray(CFLX))
-            #DFLX = exchange_BC_par(GR, status, helix, lock, barrier, np.asarray(DFLX))
-            #EFLX = exchange_BC_par(GR, status, helix, lock, barrier, np.asarray(EFLX))
-
-            #RFLX = exchange_BC_par(GR, status, helix, lock, barrier, np.asarray(RFLX))
-            #QFLX = exchange_BC_par(GR, status, helix, lock, barrier, np.asarray(QFLX))
-            #SFLX = exchange_BC_par(GR, status, helix, lock, barrier, np.asarray(SFLX))
-            #TFLX = exchange_BC_par(GR, status, helix, lock, barrier, np.asarray(TFLX))
-
+            # TODO 3 NECESSARY
+            BFLX, CFLX, DFLX, EFLX, \
+            RFLX, QFLX, SFLX, TFLX = exchange_BC_brflx(GR,
+                                            np.asarray(BFLX), np.asarray(CFLX),
+                                            np.asarray(DFLX), np.asarray(EFLX),
+                                            np.asarray(RFLX), np.asarray(QFLX),
+                                            np.asarray(SFLX), np.asarray(TFLX),
+                                            brflx_helix, GR.helix_inds,
+                                            barrier, status, lock)
         #######################################################################
         #######################################################################
         #######################################################################

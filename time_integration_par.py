@@ -11,7 +11,7 @@ from diagnostics import interp_COLPA
 ######################################################################################
 
 def matsuno(job_ind, output, status,
-            uvflx_helix, windflx_helix,
+            uvflx_helix, contin_helix, brflx_helix, prog_helix,
             lock, barrier, GR,
             COLP, PHI, PHIVB, POTT, POTTVB,
             UWIND, VWIND, WWIND,
@@ -24,38 +24,38 @@ def matsuno(job_ind, output, status,
     time0 = time.time()
 
 
-    for count in range(0,10):
-        print(count)
+    #for count in range(0,10):
+    #    print(count)
 
-        ########## ESTIMATE
-        UWIND_OLD = copy.deepcopy(UWIND)
-        VWIND_OLD = copy.deepcopy(VWIND)
-        COLP_OLD = copy.deepcopy(COLP)
-        POTT_OLD = copy.deepcopy(POTT)
-        QV_OLD = copy.deepcopy(QV)
-        QC_OLD = copy.deepcopy(QC)
+    ########## ESTIMATE
+    UWIND_OLD = copy.deepcopy(UWIND)
+    VWIND_OLD = copy.deepcopy(VWIND)
+    COLP_OLD = copy.deepcopy(COLP)
+    POTT_OLD = copy.deepcopy(POTT)
+    QV_OLD = copy.deepcopy(QV)
+    QC_OLD = copy.deepcopy(QC)
 
-        COLP_NEW, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND,\
-        dQVdt, dQCdt = tendencies_jacobson(GR, status,
-                                            uvflx_helix, windflx_helix,
-                                            lock, barrier,
-                                            COLP, COLP, POTT, POTTVB, HSURF,
-                                            UWIND, VWIND, WWIND,
-                                            UFLX, VFLX, PHI, PVTF, PVTFVB,
-                                            dPOTTdt_RAD, dPOTTdt_MIC,
-                                            QV, QC, dQVdt_MIC, dQCdt_MIC)
+    COLP_NEW, dUFLXdt, dVFLXdt, \
+    dPOTTdt, WWIND,\
+    dQVdt, dQCdt, UFLX, VFLX = tendencies_jacobson(GR, status,
+                                        uvflx_helix, contin_helix, brflx_helix,
+                                        lock, barrier,
+                                        COLP, COLP, POTT, POTTVB, HSURF,
+                                        UWIND, VWIND, WWIND,
+                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                        dPOTTdt_RAD, dPOTTdt_MIC,
+                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
 
 
-        UWIND, VWIND, COLP, POTT, \
-        QV, QC = proceed_timestep_jacobson(GR, status, uvflx_helix, lock, barrier, 
-                                            UWIND, VWIND,
-                                            COLP, COLP_NEW, POTT, QV, QC,
-                                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    UWIND, VWIND, COLP, POTT, \
+    QV, QC = proceed_timestep_jacobson(GR, status, prog_helix, lock, barrier, 
+                                        UWIND, VWIND,
+                                        COLP, COLP_NEW, POTT, QV, QC,
+                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
 
-        PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-                diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                        HSURF, PVTF, PVTFVB, POTTVB)
+    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+            diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
+                                    HSURF, PVTF, PVTFVB, POTTVB)
 
     ########### FINAL
     #COLP, dUFLXdt, dVFLXdt, \
@@ -94,8 +94,8 @@ def matsuno(job_ind, output, status,
     out['UWIND'] = UWIND
     out['VWIND'] = VWIND
     out['WWIND'] = WWIND
-    #out['UFLX'] = UFLX
-    #out['VFLX'] = VFLX
+    out['UFLX'] = UFLX
+    out['VFLX'] = VFLX
     out['QV'] = QV
     out['QC'] = QC
     output.put( (job_ind, out) )

@@ -1,6 +1,7 @@
 import numpy as np
 import time
 from namelist import  i_colp_tendency, COLP_hor_dif_tau
+from namelist import njobs #TODO delete later
 from boundaries_par import exchange_BC_uvflx
 
 
@@ -18,8 +19,28 @@ def colp_tendency_jacobson(GR, status, uvflx_helix, lock, barrier,
                 VWIND[:,:,k][GR.iijjs] * GR.dxjs[GR.iijjs]
 
     # TODO 1 NECESSARY
-    UFLX, VFLX = exchange_BC_uvflx(GR, UFLX, VFLX, uvflx_helix, GR.uvflx_helix_inds,
+    UFLX, VFLX = exchange_BC_uvflx(GR, UFLX, VFLX,
+                                    uvflx_helix, GR.helix_inds,
                                     barrier, status, lock)
+    #if GR.grid_id == njobs - 1:
+
+    #    import pickle
+    #    with open('testarray.pkl', 'rb') as f:
+    #        out = pickle.load(f)
+    #    var_orig = out['UFLX'][GR.GRmap_in_iisjj]
+    #    var = UFLX[GR.SGRmap_out_iisjj]
+    #    print('###################')
+    #    nan_here = np.isnan(var)
+    #    nan_orig = np.isnan(var_orig)
+    #    diff = var - var_orig
+    #    print('values ' + str(np.nansum(np.abs(diff))))
+    #    print('  nans ' + str(np.sum(nan_here != nan_orig)))
+    #    print('###################')
+
+    #    print(diff[:,:,1].T)
+    #    quit()
+    #    print(UFLX[:,:,1].T)
+    #    quit()
 
     FLXDIV =  np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb,GR.nz), np.nan)
     for k in range(0,GR.nz):

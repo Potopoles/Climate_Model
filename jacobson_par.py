@@ -12,7 +12,7 @@ from temperature_cython import temperature_tendency_jacobson_c
 from geopotential_cython import diag_geopotential_jacobson_c
 #from diagnostics import diagnose_POTTVB_jacobson, interp_COLPA
 from diagnostics_cython import diagnose_POTTVB_jacobson_c, interp_COLPA_c
-from boundaries_par import exchange_BC_par
+from boundaries_par import exchange_BC_contin, exchange_BC_prog
 #from moisture import water_vapor_tendency, cloud_water_tendency
 from moisture_cython import water_vapor_tendency_c, cloud_water_tendency_c
 from namelist import pTop, njobs
@@ -22,7 +22,7 @@ from constants import con_Rd
 import multiprocessing as mp
 
 def tendencies_jacobson(GR, status,
-                    uvflx_helix, windflx_helix,
+                    uvflx_helix, contin_helix, brflx_helix,
                     lock, barrier,\
                     COLP_OLD, COLP, POTT, POTTVB, HSURF,
                     UWIND, VWIND, WWIND,
@@ -41,9 +41,11 @@ def tendencies_jacobson(GR, status,
 
     # DIAGNOSE WWIND
     WWIND = vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
-    ## TODO 2 NECESSARY
-    #COLP_NEW = exchange_BC_par(GR, status, helix, lock, barrier, COLP_NEW)
-    #WWIND = exchange_BC_par(GR, status, helix, lock, barrier, WWIND)
+
+    ### TODO 2 NECESSARY
+    COLP_NEW, WWIND = exchange_BC_contin(GR, COLP_NEW, WWIND,
+                                    contin_helix, GR.helix_inds,
+                                    barrier, status, lock)
 
     # PROGNOSE WIND
     t_start = time.time()
@@ -51,7 +53,7 @@ def tendencies_jacobson(GR, status,
     #                                                COLP, COLP_NEW, HSURF, PHI, POTT,
     #                                                PVTF, PVTFVB)
     dUFLXdt, dVFLXdt = wind_tendency_jacobson_c(GR, njobs,
-                                                status, windflx_helix, lock, barrier,
+                                                status, brflx_helix, lock, barrier,
                                                 UWIND, VWIND, WWIND, UFLX, VFLX,
                                                 COLP, COLP_NEW, PHI,
                                                 POTT, PVTF, PVTFVB)
@@ -92,10 +94,11 @@ def tendencies_jacobson(GR, status,
     t_end = time.time()
     GR.trac_comp_time += t_end - t_start
 
-    return(COLP_NEW, dUFLXdt, dVFLXdt, dPOTTdt, WWIND, dQVdt, dQCdt)
+    return(COLP_NEW, dUFLXdt, dVFLXdt, dPOTTdt, WWIND, dQVdt, dQCdt, UFLX, VFLX)
 
 
-def proceed_timestep_jacobson(GR, status, helix, lock, barrier,
+def proceed_timestep_jacobson(GR, status,
+                    prog_helix, lock, barrier,
                     UWIND, VWIND,
                     COLP_OLD, COLP, POTT, QV, QC,
                     dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt):
@@ -122,6 +125,10 @@ def proceed_timestep_jacobson(GR, status, helix, lock, barrier,
     QC[QC < 0] = 0
 
     ## TODO 4 NECESSARY
+    UWIND, VWIND, POTT, QV, QC = exchange_BC_prog(GR,
+                                    UWIND, VWIND, POTT, QV, QC,
+                                    prog_helix, GR.helix_inds,
+                                    barrier, status, lock)
     #UWIND = exchange_BC_par(GR, status, helix, lock, barrier, UWIND)
     #VWIND = exchange_BC_par(GR, status, helix, lock, barrier, VWIND)
     #POTT = exchange_BC_par(GR, status, helix, lock, barrier, POTT)

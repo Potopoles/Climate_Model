@@ -62,58 +62,84 @@ def set_map_indices(GR, SGR, grid_no, ngrids):
     return(SGR)
 
 
-
-
-
-def set_helix_give_inds(SGR, ind0):
-    helix_inds = {}
-    #######################################
-    ########## uvflx_helix_inds ###########
-    #######################################
-    ######### UFLX #############
-    helix_inds['give_UFLX'] = []
-    length = SGR.ny*SGR.nz
+def add_give_inds(SGR, give_var, ind0, dimy, dimz):
+    SGR.helix_inds[give_var] = []
+    length = dimy*dimz
     # left border
-    helix_inds['give_UFLX'].append( ( ind0 + 0*length, \
+    SGR.helix_inds[give_var].append( ( ind0 + 0*length, \
                                  ind0 + 1*length) )
     ind0 += length
     # right border
-    helix_inds['give_UFLX'].append( ( ind0 + 0*length, \
+    SGR.helix_inds[give_var].append( ( ind0 + 0*length, \
                                  ind0 + 1*length) )
     ind0 += length
-
-    ######### VFLX #############
-    helix_inds['give_VFLX'] = []
-    length = SGR.nys*SGR.nz
-    # left border
-    helix_inds['give_VFLX'].append( ( ind0 + 0*length, \
-                                 ind0 + 1*length) )
-    ind0 += length
-    # right border
-    helix_inds['give_VFLX'].append( ( ind0 + 0*length, \
-                                 ind0 + 1*length) )
-    ind0 += length
-
-    SGR.uvflx_helix_inds = helix_inds
     return(SGR, ind0)
 
 
-def set_helix_take_inds(SGR, SGR_left, SGR_right):
-    SGR.uvflx_helix_inds['take_UFLX'] = []
-    SGR.uvflx_helix_inds['take_VFLX'] = []
 
-    # left border
-    SGR.uvflx_helix_inds['take_UFLX'].append(
-                        SGR_left.uvflx_helix_inds['give_UFLX'][1])
-    SGR.uvflx_helix_inds['take_VFLX'].append(
-                        SGR_left.uvflx_helix_inds['give_VFLX'][1])
-    # right border
-    SGR.uvflx_helix_inds['take_UFLX'].append(
-                        SGR_right.uvflx_helix_inds['give_UFLX'][0])
-    SGR.uvflx_helix_inds['take_VFLX'].append(
-                        SGR_right.uvflx_helix_inds['give_VFLX'][0])
+def set_helix_give_inds(subgrids, GR):
+    GR.helix_size = {}
+    grid_id = 0
+    for no,SGR in subgrids.items():
+        SGR.helix_inds = {}
+        SGR.grid_id = grid_id
+        grid_id += 1
+    ######### uvflx #############
+    ind0 = 0
+    for no,SGR in subgrids.items():
+        SGR, ind0 = add_give_inds(SGR, 'give_UFLX', ind0, SGR.ny, SGR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_VFLX', ind0, SGR.nys, SGR.nz)
+    GR.helix_size['uvflx'] = ind0
+
+    ######### contin #############
+    ind0 = 0
+    for no,SGR in subgrids.items():
+        SGR, ind0 = add_give_inds(SGR, 'give_COLP', ind0, SGR.ny, 1)
+        SGR, ind0 = add_give_inds(SGR, 'give_WWIND', ind0, SGR.ny, SGR.nzs)
+    GR.helix_size['contin'] = ind0
+
+    ######### brflx #############
+    ind0 = 0
+    for no,SGR in subgrids.items():
+        SGR, ind0 = add_give_inds(SGR, 'give_BFLX', ind0, SGR.ny, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_CFLX', ind0, SGR.nys, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_DFLX', ind0, SGR.nys, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_EFLX', ind0, SGR.nys, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_RFLX', ind0, SGR.ny, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_QFLX', ind0, SGR.nys, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_SFLX', ind0, SGR.ny, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_TFLX', ind0, SGR.ny, GR.nz)
+    GR.helix_size['brflx'] = ind0
+
+    ######### prog #############
+    ind0 = 0
+    for no,SGR in subgrids.items():
+        SGR, ind0 = add_give_inds(SGR, 'give_UWIND', ind0, SGR.ny, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_VWIND', ind0, SGR.nys, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_POTT' , ind0, SGR.ny, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_QV'   , ind0, SGR.ny, GR.nz)
+        SGR, ind0 = add_give_inds(SGR, 'give_QC'   , ind0, SGR.ny, GR.nz)
+    GR.helix_size['prog'] = ind0
+
+    return(subgrids, GR)
+
+
+
+def set_helix_take_inds(SGR, SGR_left, SGR_right):
+    keys = ['UFLX', 'VFLX', 'COLP', 'WWIND',
+            'BFLX', 'CFLX', 'DFLX', 'EFLX',
+            'RFLX', 'QFLX', 'SFLX', 'TFLX',
+            'UWIND', 'VWIND', 'POTT', 'QV', 'QC']
+
+    for key in keys:
+        SGR.helix_inds['take_'+key] = []
+        # left border
+        SGR.helix_inds['take_'+key].append(SGR_left.helix_inds['give_'+key][1])
+        # right border
+        SGR.helix_inds['take_'+key].append(SGR_right.helix_inds['give_'+key][0])
 
     return(SGR)
+
 
 
 def create_subgrids(GR, njobs):
@@ -125,10 +151,10 @@ def create_subgrids(GR, njobs):
     ########################################################################
     if njobs == 1:
         GR = set_map_indices(GR, GR, 0, 1)
-        GR, uvflx_max = set_helix_give_inds(GR, 0)
         subgrids[0] = GR
 
-        GR.uvflx_helix_size = uvflx_max
+        subgrids, GR = set_helix_give_inds(subgrids, GR)
+
         subgrids[0] = set_helix_take_inds(subgrids[0], subgrids[0], subgrids[0])
     ########################################################################
     if njobs == 2:
@@ -140,7 +166,6 @@ def create_subgrids(GR, njobs):
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
         SGR = set_map_indices(GR, SGR, 0, 2)
-        SGR, uvflx_max = set_helix_give_inds(SGR, 0)
         subgrids[0] = SGR
 
         # subgrid 1
@@ -151,14 +176,15 @@ def create_subgrids(GR, njobs):
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
         SGR = set_map_indices(GR, SGR, 1, 2)
-        SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[1] = SGR 
 
-        GR.uvflx_helix_size = uvflx_max
-        # subgrid 0
+        subgrids, GR = set_helix_give_inds(subgrids, GR)
+
         subgrids[0] = set_helix_take_inds(subgrids[0], subgrids[1], subgrids[1])
-        # subgrid 1
         subgrids[1] = set_helix_take_inds(subgrids[1], subgrids[0], subgrids[0])
+
+        #print(subgrids[0].helix_inds)
+        #quit()
     ########################################################################
     if njobs == 3:
         # subgrid 0
@@ -169,7 +195,6 @@ def create_subgrids(GR, njobs):
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
         SGR = set_map_indices(GR, SGR, 0, 3)
-        SGR, uvflx_max = set_helix_give_inds(SGR, 0)
         subgrids[0] = SGR
 
         # subgrid 1
@@ -180,7 +205,6 @@ def create_subgrids(GR, njobs):
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
         SGR = set_map_indices(GR, SGR, 1, 3)
-        SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[1] = SGR 
 
         # subgrid 2
@@ -191,19 +215,16 @@ def create_subgrids(GR, njobs):
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
         SGR = set_map_indices(GR, SGR, 2, 3)
-        SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[2] = SGR 
 
-        #print(GR.iisjj)
-        ##print(GR.iijj)
-        #quit()
-        GR.uvflx_helix_size = uvflx_max
-        # subgrid 0
+        subgrids, GR = set_helix_give_inds(subgrids, GR)
+
         subgrids[0] = set_helix_take_inds(subgrids[0], subgrids[2], subgrids[1])
-        # subgrid 1
         subgrids[1] = set_helix_take_inds(subgrids[1], subgrids[0], subgrids[2])
-        # subgrid 2
         subgrids[2] = set_helix_take_inds(subgrids[2], subgrids[1], subgrids[0])
+
+        #print(subgrids[0].helix_inds)
+        #quit()
     ########################################################################
     if njobs == 4:
         # subgrid 0
@@ -214,7 +235,6 @@ def create_subgrids(GR, njobs):
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
         SGR = set_map_indices(GR, SGR, 0, 4)
-        SGR, uvflx_max = set_helix_give_inds(SGR, 0)
         subgrids[0] = SGR
 
         # subgrid 1
@@ -225,7 +245,6 @@ def create_subgrids(GR, njobs):
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
         SGR = set_map_indices(GR, SGR, 1, 4)
-        SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[1] = SGR 
 
         # subgrid 2
@@ -236,7 +255,6 @@ def create_subgrids(GR, njobs):
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
         SGR = set_map_indices(GR, SGR, 2, 4)
-        SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[2] = SGR 
 
         # subgrid 3
@@ -247,17 +265,13 @@ def create_subgrids(GR, njobs):
         specs['lat1_deg'] = GR.lat1_deg
         SGR = Grid(1, specs)
         SGR = set_map_indices(GR, SGR, 3, 4)
-        SGR, uvflx_max = set_helix_give_inds(SGR, uvflx_max)
         subgrids[3] = SGR 
 
-        GR.uvflx_helix_size = uvflx_max
-        # subgrid 0
+        subgrids, GR = set_helix_give_inds(subgrids, GR)
+
         subgrids[0] = set_helix_take_inds(subgrids[0], subgrids[3], subgrids[1])
-        # subgrid 1
         subgrids[1] = set_helix_take_inds(subgrids[1], subgrids[0], subgrids[2])
-        # subgrid 2
         subgrids[2] = set_helix_take_inds(subgrids[2], subgrids[1], subgrids[3])
-        # subgrid 3
         subgrids[3] = set_helix_take_inds(subgrids[3], subgrids[2], subgrids[0])
     ########################################################################
 
