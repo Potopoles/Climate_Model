@@ -6,7 +6,6 @@ from namelist import pTop
 
 def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
                                 PVTF, PVTFVB, UWIND, VWIND, WIND):
-    t_start = time.time()
 
     TAIR[GR.iijj] = POTT[GR.iijj] * PVTF[GR.iijj]
     TAIRVB[GR.iijj] = POTTVB[GR.iijj] * PVTFVB[GR.iijj]
@@ -19,14 +18,10 @@ def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, R
                         ((VWIND[:,:,k][GR.iijj] + VWIND[:,:,k][GR.iijj_jp1])/2)**2 )
 
 
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
-
     return(PAIR, TAIR, TAIRVB, RHO, WIND)
 
 
 def diagnose_POTTVB_jacobson(GR, POTTVB, POTT, PVTF, PVTFVB):
-    t_start = time.time()
 
     for ks in range(1,GR.nzs-1):
         POTTVB[:,:,ks][GR.iijj] =   ( \
@@ -42,16 +37,12 @@ def diagnose_POTTVB_jacobson(GR, POTTVB, POTT, PVTF, PVTFVB):
     POTTVB[:,:,-1][GR.iijj] = POTT[:,:,-1][GR.iijj] - \
             ( POTTVB[:,:,-2][GR.iijj] - POTT[:,:,-1][GR.iijj] )
 
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
-
     return(POTTVB)
 
 
 
 
 def interp_COLPA(GR, COLP):
-    t_start = time.time()
 
     COLPA_is = 1/8*(    COLP[GR.iisjj_im1_jp1] * GR.A[GR.iisjj_im1_jp1] + \
                         COLP[GR.iisjj_jp1    ] * GR.A[GR.iisjj_jp1    ] + \
@@ -91,9 +82,6 @@ def interp_COLPA(GR, COLP):
                     2 * COLP[GR.iijjs        ] * GR.A[GR.iijjs        ] + \
                         COLP[GR.iijjs_im1_jm1] * GR.A[GR.iijjs_im1_jm1] + \
                         COLP[GR.iijjs_im1    ] * GR.A[GR.iijjs_im1    ]   )
-
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
 
     return(COLPA_is, COLPA_js)
 

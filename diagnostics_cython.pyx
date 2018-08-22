@@ -1,33 +1,56 @@
 import numpy as np
-import time
 from constants import con_kappa, con_g, con_Rd
-from namelist import pTop
+from namelist import pTop, njobs
 
 cimport numpy as np
 import cython
-#from cython.parallel import prange 
+from cython.parallel import prange 
 
 
-#def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
-#                                PVTF, PVTFVB, UWIND, VWIND, WIND):
-#
-#    t_start = time.time()
-#
-#    TAIR[GR.iijj] = POTT[GR.iijj] * PVTF[GR.iijj]
-#    TAIRVB[GR.iijj] = POTTVB[GR.iijj] * PVTFVB[GR.iijj]
-#    PAIR[GR.iijj] = 100000*np.power(PVTF[GR.iijj], 1/con_kappa)
-#    RHO[GR.iijj] = PAIR[GR.iijj] / (con_Rd * TAIR[GR.iijj])
-#
-#    for k in range(0,GR.nz):
-#        WIND[:,:,k][GR.iijj] = np.sqrt( ((UWIND[:,:,k][GR.iijj] + \
-#                                        UWIND[:,:,k][GR.iijj_ip1])/2)**2 + \
-#                        ((VWIND[:,:,k][GR.iijj] + VWIND[:,:,k][GR.iijj_jp1])/2)**2 )
-#
-#
-#    t_end = time.time()
-#    GR.diag_comp_time += t_end - t_start
-#
-#    return(PAIR, TAIR, TAIRVB, RHO, WIND)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef diagnose_secondary_fields_c(GR, \
+                                double[:,   ::1] COLP,
+                                double[:,:, ::1] PAIR,
+                                double[:,:, ::1] PHI,
+                                double[:,:, ::1] POTT,
+                                double[:,:, ::1] POTTVB,
+                                double[:,:, ::1] TAIR,
+                                double[:,:, ::1] TAIRVB,
+                                double[:,:, ::1] RHO,
+                                double[:,:, ::1] PVTF,
+                                double[:,:, ::1] PVTFVB,
+                                double[:,:, ::1] UWIND,
+                                double[:,:, ::1] VWIND,
+                                double[:,:, ::1] WIND):
+
+    cdef int c_njobs = njobs
+
+    cdef int nb = GR.nb
+    cdef int nx  = GR.nx
+    cdef int ny  = GR.ny
+    cdef int nz = GR.nz
+    cdef int nzs = GR.nzs
+    cdef int i, j, k, ks
+    cdef double c_con_kappa = con_kappa
+    cdef double c_con_Rd = con_Rd
+
+
+    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+    #for i   in range(nb,nx +nb):
+        for j   in range(nb,ny +nb):
+            for k in range(0,nz):
+                TAIR[i,j,k] = POTT[i,j,k] * PVTF[i,j,k]
+                PAIR[i,j,k] = 100000.*(PVTF[i,j,k])**(1./c_con_kappa)
+                RHO[i,j,k] = PAIR[i,j,k] / (c_con_Rd * TAIR[i,j,k])
+                WIND[i,j,k] = ( ((UWIND[i,j,k] + UWIND[i+1,j,k])/2.)**2. + \
+                                ((VWIND[i,j,k] + VWIND[i,j+1,k])/2.)**2. )**(1./2.)
+
+            for ks in range(0,nzs):
+                TAIRVB[i,j,ks] = POTTVB[i,j,ks] * PVTFVB[i,j,ks]
+
+
+    return(PAIR, TAIR, TAIRVB, RHO, WIND)
 
 
 @cython.boundscheck(False)
@@ -47,11 +70,9 @@ cpdef diagnose_POTTVB_jacobson_c(GR, njobs,
 
     cdef int i, j, ks, ksm1
 
-    t_start = time.time()
 
-    #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
-    for i   in range(nb,nx +nb):
-        #for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+    #for i   in range(nb,nx +nb):
         for j   in range(nb,ny +nb):
 
             for ks in range(1,nzs-1):
@@ -70,8 +91,6 @@ cpdef diagnose_POTTVB_jacobson_c(GR, njobs,
             POTTVB[i,j,-1] = POTT[i,j,-1] - \
                     ( POTTVB[i,j,-2] - POTT[i,j,-1] )
 
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
 
     return(POTTVB)
 
@@ -101,13 +120,10 @@ cpdef interp_COLPA_c(GR, njobs,
     cdef double[:, ::1] COLPA_is = np.zeros( (nxs,ny ) )
     cdef double[:, ::1] COLPA_js = np.zeros( (nx ,nys) )
 
-    t_start = time.time()
-
-    #for i_s in prange(nb,nxs +nb, nogil=True, num_threads=c_njobs):
-    for i_s in range(nb,nxs +nb):
+    for i_s in prange(nb,nxs +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+    #for i_s in range(nb,nxs +nb):
         ism1 = i_s - 1
         isnb = i_s - nb
-        #for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
         for j   in range(nb,ny +nb):
             jp1 = j + 1
             jm1 = j - 1
@@ -140,12 +156,11 @@ cpdef interp_COLPA_c(GR, njobs,
 
 
 
-    #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
-    for i   in range(nb,nx +nb):
+    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+    #for i   in range(nb,nx +nb):
         ip1 = i + 1
         im1 = i - 1
         inb = i - 1
-        #for js in prange(nb,nys+nb, nogil=False, num_threads=c_njobs):
         for js in range(nb,nys+nb):
             jsm1 = js - 1
             jsnb = js - 1
@@ -158,8 +173,6 @@ cpdef interp_COLPA_c(GR, njobs,
                                     COLP[im1,jsm1] * A[im1,jsm1] + \
                                     COLP[im1,js  ] * A[im1,js  ]   )
 
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
 
     return(COLPA_is, COLPA_js)
 

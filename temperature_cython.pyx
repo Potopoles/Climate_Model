@@ -1,11 +1,10 @@
 import numpy as np
-import time
 from namelist import POTT_hor_dif_tau, i_temperature_tendency, \
                     i_radiation, i_microphysics
 
 cimport numpy as np
 import cython
-#from cython.parallel import prange 
+from cython.parallel import prange 
 
 cdef int i_hor_adv = 1
 cdef int i_vert_adv = 1
@@ -44,12 +43,11 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
     cdef double[:,:, ::1] dPOTTdt = np.zeros( (nx ,ny ,nz) )
 
     if i_temperature_tendency:
-        #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
-        for i   in range(nb,nx +nb):
+        for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+        #for i   in range(nb,nx +nb):
             im1 = i - 1
             ip1 = i + 1
             inb = i - nb
-            #for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
             for j   in range(nb,ny +nb):
                 jm1 = j - 1
                 jp1 = j + 1

@@ -1,12 +1,11 @@
 import numpy as np
-import time
 from constants import con_g, con_kappa, con_cp
 from namelist import pTop
 from boundaries import exchange_BC
 
 cimport numpy as np
 import cython
-#from cython.parallel import prange 
+from cython.parallel import prange 
 from libc.math cimport pow
 
 from geopotential import diag_pvt_factor
@@ -36,9 +35,8 @@ cpdef diag_pvt_factor_c(GR, njobs,
 
     cdef double[:,:, ::1] PAIRVB = np.full( (nx+2*nb ,ny+2*nb ,nzs), np.nan )
 
-    #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
-    #    for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
-    for i   in range(nb,nx +nb):
+    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+    #for i   in range(nb,nx +nb):
         for j   in range(nb,ny +nb):
 
             for ks in range(0,nzs):
@@ -49,7 +47,8 @@ cpdef diag_pvt_factor_c(GR, njobs,
     # SOLUTION (inefficient): do it outside of loop
     PVTFVB = np.power(np.asarray(PAIRVB)/100000, con_kappa)
 
-    for i   in range(nb,nx +nb):
+    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+    #for i   in range(nb,nx +nb):
         for j   in range(nb,ny +nb):
             for k in range(0,nz):
                 kp1 = k + 1
@@ -57,15 +56,6 @@ cpdef diag_pvt_factor_c(GR, njobs,
                             ( PVTFVB[i,j,kp1] * PAIRVB[i,j,kp1] - \
                               PVTFVB[i,j,k  ] * PAIRVB[i,j,k  ] ) / \
                             ( PAIRVB[i,j,kp1] - PAIRVB[i,j,k  ] )
-
-
-    #var = PVTFVB
-    #print(np.nanmean(var))
-    #print(np.nanmax(var))
-    #quit()
-
-    PVTF = exchange_BC(GR, np.asarray(PVTF))
-    PVTFVB = exchange_BC(GR, np.asarray(PVTFVB))
 
 
     return(PVTF, PVTFVB)
@@ -99,9 +89,8 @@ cpdef diag_geopotential_jacobson_c(GR, njobs,
 
     PVTF, PVTFVB = diag_pvt_factor(GR, np.asarray(COLP), np.asarray(PVTF), np.asarray(PVTFVB))
 
-    #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs):
-    for i   in range(nb,nx +nb):
-        #for j   in prange(nb,ny +nb, nogil=False, num_threads=c_njobs):
+    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+    #for i   in range(nb,nx +nb):
         for j   in range(nb,ny +nb):
 
             PHIVB[i,j,nzs-1] = HSURF[i,j]*c_con_g
@@ -125,8 +114,11 @@ cpdef diag_geopotential_jacobson_c(GR, njobs,
                             (PVTFVB[i,j,0  ] - PVTF[i,j,0  ])
             PHIVB[i,j,0  ] = PHI[i,j,0  ] - dphi
 
-    PHI = exchange_BC(GR, np.asarray(PHI))
 
+    # TODO 5 NECESSARY
+    PVTF = exchange_BC(GR, np.asarray(PVTF))
+    PVTFVB = exchange_BC(GR, np.asarray(PVTFVB))
+    PHI = exchange_BC(GR, np.asarray(PHI))
 
     return(PHI, PHIVB, PVTF, PVTFVB)
 

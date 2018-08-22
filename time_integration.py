@@ -19,11 +19,6 @@ def matsuno(GR, subgrids,
             QV, QC, dQVdt_MIC, dQCdt_MIC):
 
     
-    #time0 = time.time()
-
-    #for count in range(0,10):
-    #    print(count)
-
     ########## ESTIMATE
     UWIND_OLD = copy.deepcopy(UWIND)
     VWIND_OLD = copy.deepcopy(VWIND)
@@ -41,55 +36,62 @@ def matsuno(GR, subgrids,
                                         dPOTTdt_RAD, dPOTTdt_MIC,
                                         QV, QC, dQVdt_MIC, dQCdt_MIC)
 
+    t_start = time.time()
     UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND, VWIND,
                                         COLP, COLP_NEW, POTT, QV, QC,
                                         dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    t_end = time.time()
+    GR.step_comp_time += t_end - t_start
 
 
+    t_start = time.time()
     PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
             diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
                                     HSURF, PVTF, PVTFVB, POTTVB)
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
 
-    import pickle
-    print('did it')
-    out = {}
-    out['COLP'] = COLP
-    out['WWIND'] = WWIND
-    out['UWIND'] = UWIND
-    out['VWIND'] = VWIND
-    out['POTT'] = POTT
-    out['QV'] = QV
-    out['QC'] = QC
-    out['PHI'] = PHI
-    out['POTTVB'] = POTTVB
-    with open('testarray.pkl', 'wb') as f:
-        pickle.dump(out, f)
-    quit()
-
-
-    ########### FINAL
-    #COLP, dUFLXdt, dVFLXdt, \
-    #dPOTTdt, WWIND, \
-    #dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-    #                                    COLP_OLD, COLP, POTT, POTTVB, HSURF,
-    #                                    UWIND, VWIND, WWIND,
-    #                                    UFLX, VFLX, PHI, PVTF, PVTFVB,
-    #                                    dPOTTdt_RAD, dPOTTdt_MIC,
-    #                                    QV, QC, dQVdt_MIC, dQCdt_MIC)
-
-    #UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
-    #                                        COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
-    #                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-
-    ##COLP = copy.deepcopy(COLP_NEW)
-
-    #PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-    #        diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-    #                                HSURF, PVTF, PVTFVB, POTTVB)
-
-    #time1 = time.time()
-    #print(time1 - time0)
+    #import pickle
+    #print('did it')
+    #out = {}
+    #out['COLP'] = COLP
+    #out['WWIND'] = WWIND
+    #out['UWIND'] = UWIND
+    #out['VWIND'] = VWIND
+    #out['POTT'] = POTT
+    #out['QV'] = QV
+    #out['QC'] = QC
+    #out['PHI'] = PHI
+    #out['POTTVB'] = POTTVB
+    #with open('testarray.pkl', 'wb') as f:
+    #    pickle.dump(out, f)
     #quit()
+
+
+    ########## FINAL
+    COLP, dUFLXdt, dVFLXdt, \
+    dPOTTdt, WWIND, \
+    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
+                                        COLP_OLD, COLP, POTT, POTTVB, HSURF,
+                                        UWIND, VWIND, WWIND,
+                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                        dPOTTdt_RAD, dPOTTdt_MIC,
+                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
+
+    t_start = time.time()
+    UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
+                                            COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
+                                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    t_end = time.time()
+    GR.step_comp_time += t_end - t_start
+
+
+    t_start = time.time()
+    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
+            diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
+                                    HSURF, PVTF, PVTFVB, POTTVB)
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
 
     
     return(COLP, PHI, PHIVB, POTT, POTTVB,

@@ -199,11 +199,12 @@ class Grid:
             self.IO_comp_time = 0
             self.dyn_comp_time = 0
             self.wind_comp_time = 0
-            self.vert_comp_time = 0
             self.temp_comp_time = 0
             self.trac_comp_time = 0
             self.cont_comp_time = 0
             self.diag_comp_time = 0
+            self.step_comp_time = 0
+
             self.rad_comp_time = 0
             self.mic_comp_time = 0
             self.soil_comp_time = 0

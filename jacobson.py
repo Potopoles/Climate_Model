@@ -3,8 +3,7 @@ import numpy as np
 import time
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
 
-from wind import wind_tendency_jacobson
-#from wind_cython_par import wind_tendency_jacobson_par
+#from wind import wind_tendency_jacobson
 from wind_cython import wind_tendency_jacobson_c
 
 #from temperature import temperature_tendency_jacobson
@@ -30,6 +29,8 @@ def tendencies_jacobson(GR, subgrids,\
                     QV, QC, dQVdt_MIC, dQCdt_MIC):
 
 
+    ##############################
+    t_start = time.time()
     # PROGNOSE COLP
     dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
                                                         VWIND, UFLX, VFLX)
@@ -41,25 +42,19 @@ def tendencies_jacobson(GR, subgrids,\
     # DIAGNOSE WWIND
     WWIND = vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
 
-    #import pickle
-    #print('did it')
-    #out = {}
-    #out['UFLX'] = UFLX
-    #out['VFLX'] = VFLX
-    #out['COLP'] = COLP_NEW
-    #out['WWIND'] = WWIND
-    ##out['UWIND'] = UWIND
-    ##out['VWIND'] = VWIND
-    #with open('testarray.pkl', 'wb') as f:
-    #    pickle.dump(out, f)
-    #quit()
-
     # TODO 2 NECESSARY
     COLP_NEW = exchange_BC(GR, COLP_NEW)
     WWIND = exchange_BC(GR, WWIND)
 
-    # PROGNOSE WIND
+    t_end = time.time()
+    GR.cont_comp_time += t_end - t_start
+    ##############################
+
+
+
+    ##############################
     t_start = time.time()
+    # PROGNOSE WIND
     #dUFLXdt, dVFLXdt = wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
     #                                                COLP, COLP_NEW, HSURF, PHI, POTT,
     #                                                PVTF, PVTFVB)
@@ -68,51 +63,15 @@ def tendencies_jacobson(GR, subgrids,\
                                                     POTT, PVTF, PVTFVB)
     dUFLXdt = np.asarray(dUFLXdt)
     dVFLXdt = np.asarray(dVFLXdt)
-
-
-    #output = mp.Queue()
-    #processes = []
-    #for job_ind in range(0,njobs):
-
-    #    SGR = subgrids[job_ind]
-    #    processes.append(
-    #        mp.Process(\
-    #            target=wind_tendency_jacobson_c,
-    #            args = (job_ind, output, subgrids[job_ind], 1,
-    #                    UWIND[SGR.map_iisjj], VWIND[SGR.map_iijjs],
-    #                    WWIND[SGR.map_iijj], 
-    #                    UFLX[SGR.map_iisjj], VFLX[SGR.map_iijjs],
-    #                    COLP[SGR.map_iijj], COLP_NEW[SGR.map_iijj],
-    #                    PHI[SGR.map_iijj],
-    #                    POTT[SGR.map_iijj], PVTF[SGR.map_iijj],
-    #                    PVTFVB[SGR.map_iijj])))
-    #for proc in processes:
-    #    proc.start()
-
-    #results = [output.get() for p in processes]
-    #results.sort()
-    #dUFLXdt = np.zeros( (GR.nxs, GR.ny, GR.nz) )
-    #dVFLXdt = np.zeros( (GR.nx, GR.nys, GR.nz) )
-    #for job_ind in range(0,njobs):
-    #    SGR = subgrids[job_ind]
-    #    #res = results[job_ind][1]
-
-    #    dUFLXdt[SGR.mapin_iisjj] = np.asarray(results[job_ind][1]['dUFLXdt'])
-    #    dVFLXdt[SGR.mapin_iijjs] = np.asarray(results[job_ind][1]['dVFLXdt'])
-
-    #for proc in processes:
-    #    proc.join()
-
-
-
     t_end = time.time()
     GR.wind_comp_time += t_end - t_start
-    #print(t_end - t_start)
-    #quit()
+    ##############################
 
-    # PROGNOSE POTT
+
+
+    ##############################
     t_start = time.time()
-
+    # PROGNOSE POTT
     #dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
     #                                        UFLX, VFLX, WWIND, \
     #                                        dPOTTdt_RAD, dPOTTdt_MIC)
@@ -120,26 +79,26 @@ def tendencies_jacobson(GR, subgrids,\
                                             UFLX, VFLX, WWIND, \
                                             dPOTTdt_RAD, dPOTTdt_MIC)
     dPOTTdt = np.asarray(dPOTTdt)
-
     t_end = time.time()
     GR.temp_comp_time += t_end - t_start
+    ##############################
 
-    # MOIST VARIABLES
+
+
+    ##############################
     t_start = time.time()
-
+    # MOIST VARIABLES
     #dQVdt = water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND)
     #dQCdt = cloud_water_tendency(GR, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND)
-
     dQVdt = water_vapor_tendency_c(GR, njobs, QV, COLP, COLP_NEW,
                                     UFLX, VFLX, WWIND, dQVdt_MIC)
     dQVdt = np.asarray(dQVdt)
     dQCdt = cloud_water_tendency_c(GR, njobs, QC, COLP, COLP_NEW,
                                     UFLX, VFLX, WWIND, dQCdt_MIC)
     dQCdt = np.asarray(dQCdt)
-
-
     t_end = time.time()
     GR.trac_comp_time += t_end - t_start
+    ##############################
 
     return(COLP_NEW, dUFLXdt, dVFLXdt, dPOTTdt, WWIND, dQVdt, dQCdt)
 
@@ -181,19 +140,9 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND,
 
 def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTFVB, POTTVB):
 
-    t_start = time.time()
 
     #PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, 
     #                                            POTT, COLP, PVTF, PVTFVB)
-
-    #import pickle
-    #out = {}
-    #out['PHI'] = PHI
-    #out['PHIVB'] = PHIVB
-    #out['PVTF'] = PVTF
-    #out['PVTFVB'] = PVTFVB
-    #with open('testarray.pkl', 'wb') as f:
-    #    pickle.dump(out, f)
 
     PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson_c(GR, njobs, PHI, PHIVB, HSURF, 
                                                     POTT, COLP, PVTF, PVTFVB)
@@ -202,20 +151,6 @@ def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTFVB, PO
     PVTF = np.asarray(PVTF)
     PVTFVB = np.asarray(PVTFVB)
 
-    #import pickle
-    #with open('testarray.pkl', 'rb') as f:
-    #    out = pickle.load(f)
-    #PHI_orig = out['PHI']
-    #PHIVB_orig = out['PHIVB']
-    #PVTF_orig = out['PVTF']
-    #PVTFVB_orig = out['PVTFVB']
-    #print('###################')
-    #nan_here = np.isnan(PHIVB)
-    #nan_orig = np.isnan(PHIVB_orig)
-    #print('u values ' + str(np.nansum(np.abs(PVTF - PVTF_orig))))
-    #print('u nan ' + str(np.sum(nan_here != nan_orig)))
-    #print('###################')
-    #quit()
 
 
 
@@ -228,8 +163,6 @@ def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTFVB, PO
     #TURB.diag_rho(GR, COLP, POTT, PVTF, POTTVB, PVTFVB)
     #TURB.diag_dz(GR, PHI, PHIVB)
 
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
 
     return(PHI, PHIVB, PVTF, PVTFVB, POTTVB)
 

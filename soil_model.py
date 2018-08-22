@@ -60,8 +60,6 @@ class soil:
 
     def advance_timestep(self, GR, RAD, MIC):
 
-        t_start = time.time()
-
         dTSURFdt = np.zeros( (GR.nx, GR.ny) )
 
         if RAD.i_radiation > 0:
@@ -82,8 +80,6 @@ class soil:
         self.EVAPITY[self.OCEANMSK == 0] = np.minimum(np.maximum(0, self.MOIST[self.OCEANMSK == 0] \
                                                         / self.evapity_thresh), 1)
 
-        t_end = time.time()
-        GR.soil_comp_time += t_end - t_start
 
 
     def calc_albedo(self, GR, ALBEDOSW, ALBEDOLW, TSOIL, OCEANMSK):

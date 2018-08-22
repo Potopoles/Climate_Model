@@ -9,7 +9,8 @@ from multiproc import create_subgrids
 from namelist import i_time_stepping, \
                     i_load_from_restart, i_save_to_restart, \
                     i_radiation, njobs
-from diagnostics import diagnose_secondary_fields
+#from diagnostics import diagnose_secondary_fields
+from diagnostics_cython import diagnose_secondary_fields_c
 from IO_helper_functions import print_ts_info, print_computation_time_info
 if i_time_stepping == 'MATSUNO':
     from time_integration import matsuno as time_stepper
@@ -31,8 +32,6 @@ if i_load_from_restart:
 else:
     outCounter = 0
 
-#print(subgrids)
-#quit()
 
 while GR.ts < GR.nts:
     real_time_ts_start = time.time()
@@ -42,29 +41,44 @@ while GR.ts < GR.nts:
 
     print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT)
 
-    ######## DIAGNOSTICS (not related to dynamics)
+    ######### DIAGNOSTICS (not related to dynamics)
+    t_start = time.time()
     PAIR, TAIR, TAIRVB, RHO, WIND = \
-            diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
+            diagnose_secondary_fields_c(GR, COLP, PAIR, PHI, POTT, POTTVB,
                                     TAIR, TAIRVB, RHO,\
                                     PVTF, PVTFVB, UWIND, VWIND, WIND)
-    ########
+    PAIR = np.asarray(PAIR)
+    TAIR = np.asarray(TAIR)
+    TAIRVB = np.asarray(TAIRVB)
+    RHO = np.asarray(RHO)
+    WIND = np.asarray(WIND)
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
+    #########
 
-    ######## RADIATION
+    ######### RADIATION
+    t_start = time.time()
     RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC)
-    ########
+    t_end = time.time()
+    GR.rad_comp_time += t_end - t_start
+    #########
 
-    ######## MICROPHYSICS
+    ######### MICROPHYSICS
+    t_start = time.time()
     MIC.calc_microphysics(GR, WIND, SOIL, TAIR, PAIR, RHO, PHIVB)
-    #quit()
-    ########
+    t_end = time.time()
+    GR.mic_comp_time += t_end - t_start
+    #########
 
-    ######## SOIL
+    ######### SOIL
+    t_start = time.time()
     SOIL.advance_timestep(GR, RAD, MIC)
-    ########
+    t_end = time.time()
+    GR.soil_comp_time += t_end - t_start
+    #########
 
     ######## DYNAMICS
     t_start = time.time()
-
     COLP, PHI, PHIVB, POTT, POTTVB, \
     UWIND, VWIND, WWIND,\
     UFLX, VFLX, QV, QC \

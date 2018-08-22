@@ -78,14 +78,12 @@ class radiation:
         if self.i_radiation >= 1:
             # solar zenith angle
             self.SOLZEN = np.full( ( GR.nx, GR.ny ), np.nan)
-            #self.SOLZEN = rad_solar_zenith_angle(GR, self.SOLZEN)
             
             # cos solar zenith angle
             self.MYSUN = np.full( ( GR.nx, GR.ny ), np.nan)
 
             # incoming shortwave at TOA
             self.SWINTOA = np.full( ( GR.nx, GR.ny ), np.nan)
-            #self.SWINTOA = incoming_SW_TOA(GR, self.SWINTOA, self.SOLZEN) 
 
         if self.i_radiation >= 2:
             self.LWFLXUP =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
@@ -104,7 +102,6 @@ class radiation:
 
     def calc_radiation(self, GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC):
 
-        t_start = time.time()
 
         if self.i_radiation == 1:
             self.pseudo_constant_radiation(GR, TAIR)
@@ -120,8 +117,6 @@ class radiation:
         else:
             raise NotImplementedError()
 
-        t_end = time.time()
-        GR.rad_comp_time += t_end - t_start
 
 
 

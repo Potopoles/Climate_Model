@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 cimport numpy as np
-#from cython.parallel import prange 
+from cython.parallel import prange 
 #import time
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
@@ -83,8 +83,6 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
     cdef double COLPAWWIND_is_ks, UWIND_ks
     cdef double COLPAWWIND_js_ks, VWIND_ks
 
-    cdef int chunk = 1
-
 
     if i_wind_tendency:
 
@@ -95,9 +93,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
 
         # HORIZONTAL ADVECTION
         if i_hor_adv:
-            for i   in range(nb,nx +nb):
-            #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs,
-            #           schedule='static', chunksize=chunk):
+            #for i   in range(nb,nx +nb):
+            for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
                 im1 = i - 1
                 ip1 = i + 1
                 for j   in range(nb,ny +nb):
@@ -122,9 +119,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
 
             #######################################################################
 
-            #for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, \
-            #        schedule='static', chunksize=chunk):
-            for i_s in range(nb,nxs+nb):
+            for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+            #for i_s in range(nb,nxs+nb):
                 ism1 = i_s - 1
                 isp1 = i_s + 1
                 for j   in range(nb,ny +nb):
@@ -151,9 +147,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
 
             #######################################################################
 
-            #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, \
-            #        schedule='static', chunksize=chunk):
-            for i   in range(nb,nx +nb):
+            for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+            #for i   in range(nb,nx +nb):
                 im1 = i - 1
                 ip1 = i + 1
                 for js  in range(nb,nys+nb):
@@ -180,9 +175,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
 
             #######################################################################
 
-            #for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, \
-            #        schedule='static', chunksize=chunk):
-            for i_s in range(nb,nxs+nb):
+            for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+            #for i_s in range(nb,nxs+nb):
                 ism1 = i_s - 1
                 isp1 = i_s + 1
                 for js  in range(nb,nys+nb):
@@ -227,9 +221,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
         if i_vert_adv:
 
 
-            #for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, \
-            #        schedule='static', chunksize=chunk):
-            for i_s in range(nb,nxs+nb):
+            for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+            #for i_s in range(nb,nxs+nb):
                 ism1 = i_s - 1
                 isp1 = i_s + 1
                 for j   in range(nb,ny +nb):
@@ -300,9 +293,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
 
             #######################################################################
 
-            #for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, \
-            #        schedule='static', chunksize=chunk):
-            for i   in range(nb,nx +nb):
+            for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+            #for i   in range(nb,nx +nb):
                 im1 = i - 1
                 ip1 = i + 1
                 for js  in range(nb,nys+nb):
@@ -342,9 +334,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
         #######################################################################
         #######################################################################
 
-        #for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, \
-        #       schedule='static', chunksize=chunk):
-        for i_s in range(nb,nxs+nb):
+        for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+        #for i_s in range(nb,nxs+nb):
 
             ism1 = i_s - 1
             isp1 = i_s + 1
@@ -461,9 +452,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
         #######################################################################
         #######################################################################
 
-        #for i in prange(nb,nx+nb, nogil=True, num_threads=c_njobs,\
-        #       schedule='static', chunksize=chunk):
-        for i in range(nb,nx+nb):
+        for i in prange(nb,nx+nb, nogil=True, num_threads=c_njobs, schedule='guided'):
+        #for i in range(nb,nx+nb):
             im1 = i - 1
             ip1 = i + 1
 

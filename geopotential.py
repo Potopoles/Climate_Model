@@ -1,5 +1,4 @@
 import numpy as np
-import time
 from constants import con_g, con_Rd, con_kappa, con_cp
 from namelist import pTop
 from boundaries import exchange_BC
@@ -21,13 +20,6 @@ def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
                     ( PVTFVB[:,:,kp1][GR.iijj] * PAIRVB[:,:,kp1][GR.iijj] - \
                       PVTFVB[:,:,k  ][GR.iijj] * PAIRVB[:,:,k  ][GR.iijj] ) / \
                     ( PAIRVB[:,:,kp1][GR.iijj] - PAIRVB[:,:,k  ][GR.iijj] )
-
-    #var = PVTFVB
-    #print(np.nanmean(var))
-
-
-    PVTF = exchange_BC(GR, PVTF)
-    PVTFVB = exchange_BC(GR, PVTFVB)
 
     return(PVTF, PVTFVB)
 
@@ -62,30 +54,12 @@ def diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, POTT, COLP,
                     (PVTFVB[:,:,0][GR.iijj] - PVTF[:,:,0][GR.iijj])
     PHIVB[:,:,0][GR.iijj] = PHI[:,:,0][GR.iijj] - dphi
 
+    # TODO 5 NECESSARY
+    PVTF = exchange_BC(GR, PVTF)
+    PVTFVB = exchange_BC(GR, PVTFVB)
     PHI = exchange_BC(GR, PHI)
 
     return(PHI, PHIVB, PVTF, PVTFVB)
 
 
 
-#########################################################################################
-#########################################################################################
-#########################################################################################
-#########################################################################################
-#########################################################################################
-
-
-
-
-def diag_geopotential_upwind(GR, PHI, HSURF, POTT, COLP):
-
-    dsig = 1
-    sigma = 0.5
-    PHI[GR.iijj] = HSURF[GR.iijj]*con_g + con_Rd*POTT[GR.iijj]*dsig*COLP[GR.iijj] /\
-                    (COLP[GR.iijj]*sigma + pTop)
-    # TODO DEBUG
-    PHI[GR.iijj] = 1
-
-    PHI = exchange_BC(GR, PHI)
-
-    return(PHI)

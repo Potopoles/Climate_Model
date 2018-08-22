@@ -54,7 +54,6 @@ class microphysics:
             
 
     def calc_microphysics(self, GR, WIND, SOIL, TAIR, PAIR, RHO, PHIVB):
-        t_start = time.time()
 
         ALTVB = PHIVB / con_g
         dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
@@ -85,5 +84,3 @@ class microphysics:
         SOIL.MOIST[SOIL.MOIST < 0] = 0
         SOIL.MOIST[SOIL.MOIST > 20] = 20
 
-        t_end = time.time()
-        GR.mic_comp_time += t_end - t_start
