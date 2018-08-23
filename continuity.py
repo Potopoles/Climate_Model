@@ -1,5 +1,4 @@
 import numpy as np
-import time
 from namelist import  i_colp_tendency, COLP_hor_dif_tau
 from boundaries import exchange_BC
 
@@ -32,6 +31,9 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
                       + VFLX[:,:,k][GR.iijj_jp1] - VFLX[:,:,k][GR.iijj] ) \
                       * GR.dsigma[k]
 
+    # TODO: THIS IS A BUG!! the following line should be separated from the
+    # foregoing loop! (for example using the commented loop) but then the model crashes!
+    #for k in range(0,GR.nz):
         FLXDIV[:,:,k][GR.iijj] = FLXDIV[:,:,k][GR.iijj] / GR.A[GR.iijj]
 
     if i_colp_tendency:

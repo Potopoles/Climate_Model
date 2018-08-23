@@ -1,11 +1,13 @@
 import copy
+import matplotlib.pyplot as plt
 import numpy as np
 import time
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
-
+from continuity_cython import colp_tendency_jacobson_c, vertical_wind_jacobson_c
+#from continuity import vertical_wind_jacobson
+#from continuity_cython import colp_tendency_jacobson_c
 #from wind import wind_tendency_jacobson
 from wind_cython import wind_tendency_jacobson_c
-
 #from temperature import temperature_tendency_jacobson
 from temperature_cython import temperature_tendency_jacobson_c
 #from geopotential import diag_geopotential_jacobson
@@ -32,15 +34,31 @@ def tendencies_jacobson(GR, subgrids,\
     ##############################
     t_start = time.time()
     # PROGNOSE COLP
-    dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
+    #dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
+    #                                                    VWIND, UFLX, VFLX)
+    #dCOLPdt_old = copy.deepcopy(dCOLPdt)
+    dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson_c(GR, COLP, UWIND,\
                                                         VWIND, UFLX, VFLX)
+    dCOLPdt = np.asarray(dCOLPdt)
+    UFLX = np.asarray(UFLX)
+    VFLX = np.asarray(VFLX)
+    FLXDIV = np.asarray(FLXDIV)
 
+    #diff = dCOLPdt_old - dCOLPdt
+    ##plt.contourf(diff[:,:,2].T)
+    #plt.contourf(diff[:,:].T)
+    #plt.colorbar()
+    #plt.show()
+    #quit()
 
     COLP_NEW = copy.deepcopy(COLP)
     COLP_NEW[GR.iijj] = COLP_OLD[GR.iijj] + GR.dt*dCOLPdt
 
     # DIAGNOSE WWIND
-    WWIND = vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
+    #WWIND = vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
+    WWIND = vertical_wind_jacobson_c(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
+    WWIND = np.asarray(WWIND)
+
 
     # TODO 2 NECESSARY
     COLP_NEW = exchange_BC(GR, COLP_NEW)

@@ -1,5 +1,4 @@
 import numpy as np
-import time
 from namelist import  i_colp_tendency, COLP_hor_dif_tau
 from namelist import njobs #TODO delete later
 from boundaries_par import exchange_BC_uvflx

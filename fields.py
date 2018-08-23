@@ -1,7 +1,6 @@
 import numpy as np
-import time
 from namelist import *
-from boundaries import exchange_BC_all, exchange_BC
+from boundaries import exchange_BC
 from IO import load_topo, load_restart_fields, load_profile
 from jacobson import diagnose_fields_jacobson
 from diagnostics import diagnose_secondary_fields
@@ -74,7 +73,10 @@ def initialize_fields(GR, subgrids):
             POTT[:,:,k] = random2D(GR, POTT[:,:,k], POTT_random_pert)
 
         # BOUNDARY CONDITIONS
-        COLP, UWIND, VWIND, POTT = exchange_BC_all(GR, COLP, UWIND, VWIND, POTT)
+        COLP  = exchange_BC(GR, COLP)
+        UWIND  = exchange_BC(GR, UWIND)
+        VWIND  = exchange_BC(GR, VWIND)
+        POTT  = exchange_BC(GR, POTT)
 
 
         # TURBULENCE 

@@ -20,6 +20,21 @@ class Grid:
                                 self.i_out_nth_hour*self.i_out_nth_ts
         else:
 
+            # TIMERS
+            self.total_comp_time = 0
+            self.IO_comp_time = 0
+            self.dyn_comp_time = 0
+            self.wind_comp_time = 0
+            self.temp_comp_time = 0
+            self.trac_comp_time = 0
+            self.cont_comp_time = 0
+            self.diag_comp_time = 0
+            self.step_comp_time = 0
+
+            self.rad_comp_time = 0
+            self.mic_comp_time = 0
+            self.soil_comp_time = 0
+
             # GRID DEFINITION IN DEGREES 
             if not i_subgrid:
                 self.lon0_deg = lon0_deg
@@ -195,19 +210,6 @@ class Grid:
             self.GMT = GMT_initialization
 
 
-            self.total_comp_time = 0
-            self.IO_comp_time = 0
-            self.dyn_comp_time = 0
-            self.wind_comp_time = 0
-            self.temp_comp_time = 0
-            self.trac_comp_time = 0
-            self.cont_comp_time = 0
-            self.diag_comp_time = 0
-            self.step_comp_time = 0
-
-            self.rad_comp_time = 0
-            self.mic_comp_time = 0
-            self.soil_comp_time = 0
 
 
 

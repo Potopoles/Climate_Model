@@ -2,7 +2,6 @@ import copy
 import numpy as np
 cimport numpy as np
 from cython.parallel import prange 
-#import time
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency

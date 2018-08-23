@@ -5,24 +5,24 @@ def exchange_BC(GR, FIELD):
     FIELD = exchange_BC_rigid_y(GR, FIELD)
     return(FIELD)
 
-def exchange_BC_force_y_equal(GR, FIELD):
-    FIELD = exchange_BC_periodic_x(GR, FIELD)
-    FIELD = exchange_BC_rigid_y_force_y_equal(GR, FIELD)
-    return(FIELD)
+#def exchange_BC_force_y_equal(GR, FIELD):
+#    FIELD = exchange_BC_periodic_x(GR, FIELD)
+#    FIELD = exchange_BC_rigid_y_force_y_equal(GR, FIELD)
+#    return(FIELD)
 
-def exchange_BC_all(GR, COLP, UWIND, VWIND, POTT):
-
-    COLP = exchange_BC_periodic_x(GR, COLP)
-    UWIND = exchange_BC_periodic_x(GR, UWIND)
-    VWIND = exchange_BC_periodic_x(GR, VWIND)
-    POTT = exchange_BC_periodic_x(GR, POTT)
-
-    COLP = exchange_BC_rigid_y(GR, COLP)
-    UWIND = exchange_BC_rigid_y(GR, UWIND)
-    VWIND = exchange_BC_rigid_y(GR, VWIND)
-    POTT = exchange_BC_rigid_y(GR, POTT)
-
-    return(COLP, UWIND, VWIND, POTT)
+#def exchange_BC_all(GR, COLP, UWIND, VWIND, POTT):
+#
+#    COLP = exchange_BC_periodic_x(GR, COLP)
+#    UWIND = exchange_BC_periodic_x(GR, UWIND)
+#    VWIND = exchange_BC_periodic_x(GR, VWIND)
+#    POTT = exchange_BC_periodic_x(GR, POTT)
+#
+#    COLP = exchange_BC_rigid_y(GR, COLP)
+#    UWIND = exchange_BC_rigid_y(GR, UWIND)
+#    VWIND = exchange_BC_rigid_y(GR, VWIND)
+#    POTT = exchange_BC_rigid_y(GR, POTT)
+#
+#    return(COLP, UWIND, VWIND, POTT)
 
 
 

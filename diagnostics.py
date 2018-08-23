@@ -1,5 +1,4 @@
 import numpy as np
-import time
 from constants import con_kappa, con_g, con_Rd
 from namelist import pTop
 

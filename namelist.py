@@ -6,7 +6,7 @@ if nb > 1:
     raise NotImplementedError('parallel routines do not support nb > 1')
 nz = 6
 nz = 30
-nz = 15
+nz = 5
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
@@ -17,8 +17,8 @@ lat1_deg = 78
 lon0_deg = 0
 lon1_deg = 360
 
-dlat_deg = 1.5
-dlon_deg = 1.5
+dlat_deg = 2.5
+dlon_deg = 2.5
 #dlat_deg = 10
 #dlon_deg = 60
 
@@ -27,14 +27,16 @@ i_curved_earth = 1
 # SIMULATION
 #output_path = '../output'
 #output_path = '../output_fine'
-#output_path = '../output_cur'
+output_path = '../output_cur'
 i_sim_n_days = 0.5
-i_out_nth_hour = 3
+i_out_nth_hour = 0.1
 #i_sim_n_days = 3*365.0
 #i_sim_n_days = 947
 #i_out_nth_hour = 2*24
 
-njobs = 4
+njobs = 2
+
+i_radiation = 0
 
 # TESTSUITE EQUALITY
 nz = 5
@@ -46,18 +48,21 @@ output_path = '../output_orig'
 output_path = '../output'
 i_sim_n_days = 1.00
 i_out_nth_hour = 2
+i_radiation = 0
 njobs = 2
+i_radiation = 0
 #
-## TESTSUITE PERFORMANCE
-#nz = 20
-#lat0_deg = -80
-#lat1_deg = 80
-#dlat_deg = 2
-#dlon_deg = 2
-#output_path = '../output_fine'
-#i_sim_n_days = 0.05
-#i_out_nth_hour = 12
-#njobs = 4
+## BENCHMARK EXPERIMENT
+nz = 15
+lat0_deg = -78
+lat1_deg = 78
+dlat_deg = 1.5
+dlon_deg = 1.5
+output_path = '../output_cur'
+i_sim_n_days = 0.5
+i_out_nth_hour = 3
+njobs = 4
+i_radiation = 3
 
 
 i_load_from_restart = 0
@@ -99,8 +104,8 @@ POTT_gaussian_pert = 0
 POTT_random_pert = 0.0
 
 # RADIATION
-i_radiation = 3
-i_radiation = 0
+#i_radiation = 3
+#i_radiation = 0
 
 # MICROPHYSICS
 i_microphysics = 1
@@ -115,7 +120,6 @@ i_use_topo = 1
 n_topo_smooth = 8
 #n_topo_smooth = 20
 tau_topo_smooth = 0.1
-
 
 
 
