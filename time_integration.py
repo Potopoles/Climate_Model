@@ -4,7 +4,7 @@ import numpy as np
 from boundaries import exchange_BC
 from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
                     diagnose_fields_jacobson
-from jacobson_cython import proceed_timestep_jacobson_c
+from bin.jacobson_cython import proceed_timestep_jacobson_c
 from diagnostics import interp_COLPA
 
 ######################################################################################

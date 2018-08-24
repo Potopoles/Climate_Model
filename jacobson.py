@@ -2,26 +2,23 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-from continuity import colp_tendency_jacobson, vertical_wind_jacobson
-from continuity_cython import colp_tendency_jacobson_c, vertical_wind_jacobson_c
-#from continuity import vertical_wind_jacobson
-#from continuity_cython import colp_tendency_jacobson_c
-#from wind import wind_tendency_jacobson
-from wind_cython import wind_tendency_jacobson_c
-#from temperature import temperature_tendency_jacobson
-from temperature_cython import temperature_tendency_jacobson_c
-#from geopotential import diag_geopotential_jacobson
-from geopotential_cython import diag_geopotential_jacobson_c
-#from diagnostics import diagnose_POTTVB_jacobson, interp_COLPA
-from diagnostics_cython import diagnose_POTTVB_jacobson_c, interp_COLPA_c
-from boundaries import exchange_BC
-#from moisture import water_vapor_tendency, cloud_water_tendency
-from moisture_cython import water_vapor_tendency_c, cloud_water_tendency_c
 from namelist import pTop, njobs
 from constants import con_Rd
 
-# parallel
-import multiprocessing as mp
+#from continuity import colp_tendency_jacobson, vertical_wind_jacobson
+from bin.continuity_cython import colp_tendency_jacobson_c, vertical_wind_jacobson_c
+#from wind import wind_tendency_jacobson
+from bin.wind_cython import wind_tendency_jacobson_c
+#from temperature import temperature_tendency_jacobson
+from bin.temperature_cython import temperature_tendency_jacobson_c
+#from geopotential import diag_geopotential_jacobson
+from bin.geopotential_cython import diag_geopotential_jacobson_c
+#from diagnostics import diagnose_POTTVB_jacobson, interp_COLPA
+from bin.diagnostics_cython import diagnose_POTTVB_jacobson_c, interp_COLPA_c
+from boundaries import exchange_BC
+#from moisture import water_vapor_tendency, cloud_water_tendency
+from bin.moisture_cython import water_vapor_tendency_c, cloud_water_tendency_c
+
 
 def tendencies_jacobson(GR, subgrids,\
                     COLP_OLD, COLP, POTT, POTTVB, HSURF,
@@ -36,7 +33,6 @@ def tendencies_jacobson(GR, subgrids,\
     # PROGNOSE COLP
     #dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
     #                                                    VWIND, UFLX, VFLX)
-    #dCOLPdt_old = copy.deepcopy(dCOLPdt)
     dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson_c(GR, COLP, UWIND,\
                                                         VWIND, UFLX, VFLX)
     dCOLPdt = np.asarray(dCOLPdt)
@@ -44,6 +40,8 @@ def tendencies_jacobson(GR, subgrids,\
     VFLX = np.asarray(VFLX)
     FLXDIV = np.asarray(FLXDIV)
 
+    #dCOLPdt_old = copy.deepcopy(dCOLPdt)
+    #####
     #diff = dCOLPdt_old - dCOLPdt
     ##plt.contourf(diff[:,:,2].T)
     #plt.contourf(diff[:,:].T)

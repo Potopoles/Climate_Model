@@ -33,15 +33,15 @@ class microphysics:
 
         self.surf_evap_flx = np.full( ( GR.nx, GR.ny ), np.nan)
 
-        if self.i_microphysics >= 1:
-            # specific water vapor content
-            self.QV = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
-            e_satw = 610.94 * np.exp( (17.625 * (TAIR[GR.iijj] - 273.15)) / (TAIR[GR.iijj] - 273.15 + 243.04) )
-            self.QV[GR.iijj] = self.RH_init * (0.622 * e_satw) / PAIR[GR.iijj]
-            self.QV = exchange_BC(GR, self.QV)
-            #self.QV[:,:,range(0,GR.nz)] = 0.003 - 0.003*(np.exp(-0.1*np.arange(0,GR.nz))-0.01)
-            ## specific cloud liquid water content
-            self.QC = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
+        #if self.i_microphysics >= 1:
+        # specific water vapor content
+        self.QV = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
+        e_satw = 610.94 * np.exp( (17.625 * (TAIR[GR.iijj] - 273.15)) / (TAIR[GR.iijj] - 273.15 + 243.04) )
+        self.QV[GR.iijj] = self.RH_init * (0.622 * e_satw) / PAIR[GR.iijj]
+        self.QV = exchange_BC(GR, self.QV)
+        #self.QV[:,:,range(0,GR.nz)] = 0.003 - 0.003*(np.exp(-0.1*np.arange(0,GR.nz))-0.01)
+        ## specific cloud liquid water content
+        self.QC = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
 
 
     def relative_humidity(self, GR, TAIR, QV, PAIR):

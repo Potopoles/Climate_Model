@@ -166,7 +166,8 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
 
     for ks in range(0,GR.nzs):
         # DYNAMIC VARIABLES
-        WWIND_out[-1,ks,:,:] = WWIND_ms[:,:,ks][GR.iijj].T
+        #WWIND_out[-1,ks,:,:] = WWIND_ms[:,:,ks][GR.iijj].T
+        WWIND_out[-1,ks,:,:] = (WWIND[:,:,ks][GR.iijj]*COLP[GR.iijj]).T
 
 
         # RADIATION VARIABLES

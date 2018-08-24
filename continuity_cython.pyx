@@ -70,22 +70,10 @@ cpdef colp_tendency_jacobson_c(GR, \
 
             flux_div_sum = 0.
             for k in range(0,nz):
-                if k == 0:
-                    FLXDIV[i  ,j  ,k] = \
-                            ( + UFLX[ip1,j  ,k  ] - UFLX[i  ,j  ,k  ] \
-                              + VFLX[i  ,jp1,k  ] - VFLX[i  ,j  ,k  ] ) \
-                              * dsigma[k]
-                else:
-                    km1 = k - 1
-                    FLXDIV[i  ,j  ,k] = FLXDIV[i  ,j  ,km1] + \
-                            ( + UFLX[ip1,j  ,k  ] - UFLX[i  ,j  ,k  ] \
-                              + VFLX[i  ,jp1,k  ] - VFLX[i  ,j  ,k  ] ) \
-                              * dsigma[k]
-
-            # TODO: THIS IS A BUG!! the following line should be separated from the
-            # foregoing loop! (for example using the commented loop) but then the model crashes!
-            #for k in range(0,nz):
-                FLXDIV[i  ,j  ,k  ] = FLXDIV[i  ,j  ,k  ] / A[i  ,j  ]
+                FLXDIV[i  ,j  ,k] = \
+                        ( + UFLX[ip1,j  ,k  ] - UFLX[i  ,j  ,k  ] \
+                          + VFLX[i  ,jp1,k  ] - VFLX[i  ,j  ,k  ] ) \
+                          * dsigma[k] / A[i  ,j  ]
 
                 flux_div_sum = flux_div_sum + FLXDIV[i   ,j   ,k]
 

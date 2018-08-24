@@ -20,21 +20,10 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
 
     FLXDIV =  np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb,GR.nz), np.nan)
     for k in range(0,GR.nz):
-        if k == 0:
-            FLXDIV[:,:,k][GR.iijj] = \
-                    ( + UFLX[:,:,k][GR.iijj_ip1] - UFLX[:,:,k][GR.iijj] \
-                      + VFLX[:,:,k][GR.iijj_jp1] - VFLX[:,:,k][GR.iijj] ) \
-                      * GR.dsigma[k]
-        else:
-            FLXDIV[:,:,k][GR.iijj] = FLXDIV[:,:,k-1][GR.iijj] + \
-                    ( + UFLX[:,:,k][GR.iijj_ip1] - UFLX[:,:,k][GR.iijj] \
-                      + VFLX[:,:,k][GR.iijj_jp1] - VFLX[:,:,k][GR.iijj] ) \
-                      * GR.dsigma[k]
-
-    # TODO: THIS IS A BUG!! the following line should be separated from the
-    # foregoing loop! (for example using the commented loop) but then the model crashes!
-    #for k in range(0,GR.nz):
-        FLXDIV[:,:,k][GR.iijj] = FLXDIV[:,:,k][GR.iijj] / GR.A[GR.iijj]
+        FLXDIV[:,:,k][GR.iijj] = \
+                ( + UFLX[:,:,k][GR.iijj_ip1] - UFLX[:,:,k][GR.iijj] \
+                  + VFLX[:,:,k][GR.iijj_jp1] - VFLX[:,:,k][GR.iijj] ) \
+                  * GR.dsigma[k] / GR.A[GR.iijj]
 
     if i_colp_tendency:
         dCOLPdt = - np.sum(FLXDIV[GR.iijj], axis=2)

@@ -6,7 +6,7 @@ pseudo_rad_outRate = 5.0E-7
 rad_nth_hour = 2.5
 rad_nth_hour = 1.9
 
-njobs_rad = 8
+njobs_rad = 4
 
 
 solar_constant_0 = 1365

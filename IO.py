@@ -29,6 +29,7 @@ def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
 
     z_vb_test[0] = ztop_test
     z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)**(2)
+    #z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)
     #print(z_vb_test)
     #print(np.diff(z_vb_test))
     #quit()

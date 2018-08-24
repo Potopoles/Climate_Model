@@ -51,19 +51,41 @@ i_out_nth_hour = 2
 i_radiation = 0
 njobs = 2
 i_radiation = 0
+i_microphysics = 1
+i_turbulence = 0
 #
-## BENCHMARK EXPERIMENT
-nz = 15
+### BENCHMARK EXPERIMENT
+#nz = 15
+#lat0_deg = -78
+#lat1_deg = 78
+#dlat_deg = 1.5
+#dlon_deg = 1.5
+#output_path = '../output_cur'
+#i_sim_n_days = 0.5
+#i_out_nth_hour = 3
+#njobs = 4
+#i_radiation = 3
+#i_microphysics = 1
+#i_turbulence = 0
+#
+## LONGTIME RUN
+nz = 10
 lat0_deg = -78
 lat1_deg = 78
-dlat_deg = 1.5
-dlon_deg = 1.5
+dlat_deg = 3
+dlon_deg = 3
 output_path = '../output_cur'
-i_sim_n_days = 0.5
-i_out_nth_hour = 3
-njobs = 4
+i_sim_n_days = 100.
+i_out_nth_hour = 24
+njobs = 2
 i_radiation = 3
+i_microphysics = 1
+i_turbulence = 0
 
+
+### TODO : CURRENT CHANGES
+#i_out_nth_hour = 2.0
+#i_curved_earth = 0
 
 i_load_from_restart = 0
 i_save_to_restart = 0
@@ -91,7 +113,7 @@ gaussian_dlat = np.pi/15
 #gaussian_dlon = 1000
 #gaussian_dlat = 1000
 u0 = 0
-UWIND_gaussian_pert = 10
+UWIND_gaussian_pert = 0
 UWIND_random_pert = 0
 v0 = 0
 VWIND_gaussian_pert = 0
@@ -108,10 +130,10 @@ POTT_random_pert = 0.0
 #i_radiation = 0
 
 # MICROPHYSICS
-i_microphysics = 1
+#i_microphysics = 1
 
 # TURBULENCE
-i_turbulence = 0
+#i_turbulence = 0
 
 
 

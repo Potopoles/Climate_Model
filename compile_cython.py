@@ -1,27 +1,54 @@
 from distutils.core import setup
+import os
+import glob
 from Cython.Build import cythonize
 from distutils.extension import Extension
 
-string = 'wind_cython'
-string = 'geopotential_cython'
-string = 'diagnostics_cython'
-string = 'temperature_cython'
-string = 'moisture_cython'
-string = 'continuity_cython'
 
-ext_modules = [
-    Extension(
-            string,
-            [string+'.pyx'],
-            extra_compile_args=['-fopenmp'],
-            extra_link_args=['-fopenmp'],)]
+remove_existing = 1
+compile = 1
+binary_dir = 'bin'
+
+all = ['wind_cython',
+        'geopotential_cython',
+        'diagnostics_cython',
+        'temperature_cython',
+        'moisture_cython',
+        'continuity_cython',
+        'jacobson_cython']
+
+all_par = ['wind_cython_par']
+
+strings = all_par
+#strings = all
+#strings = ['wind_cython']
+#strings = ['geopotential_cython']
+#strings = ['diagnostics_cython']
+#strings = ['temperature_cython']
+#strings = ['moisture_cython']
+#strings = ['continuity_cython']
+#strings = ['jacobson_cython']
+
+for string in strings:
+    if remove_existing:
+        for filename in glob.glob(string+'.c*'):
+            os.remove(filename)
 
 
-setup(name='Parallel',
-        ext_modules=cythonize(ext_modules))
 
-#setup(name='Parallel',
-#        ext_modules=cythonize('wind_cython.pyx'))
+    if compile:
+        ext_modules = [
+            Extension(
+                    string,
+                    [string+'.pyx'],
+                    extra_compile_args=['-fopenmp'],
+                    extra_link_args=['-fopenmp'],)]
+
+        setup(name='Parallel',
+                ext_modules=cythonize(ext_modules))
+
+        for filename in glob.glob(string+'.c*'):
+            os.rename(filename,binary_dir + '/' + filename)
 
 
 ## run:

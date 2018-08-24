@@ -13,6 +13,8 @@ from cython.parallel import prange
 
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cpdef proceed_timestep_jacobson_c(GR, \
                                 double[:,:, ::1] UWIND,
                                 double[:,:, ::1] VWIND,
