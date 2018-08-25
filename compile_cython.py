@@ -1,4 +1,10 @@
 from distutils.core import setup
+import numpy
+# BUGFIX for numpy stuff not found error. Run the following, and use the path for:
+# sudo cp -r PATH/numpy /usr/local/include/
+#print(numpy.get_include())
+#quit()
+
 import os
 import glob
 from Cython.Build import cythonize
@@ -20,7 +26,7 @@ all = ['wind_cython',
 all_par = ['wind_cython_par']
 
 strings = all_par
-#strings = all
+strings = all
 #strings = ['wind_cython']
 #strings = ['geopotential_cython']
 #strings = ['diagnostics_cython']
