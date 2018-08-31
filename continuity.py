@@ -3,6 +3,7 @@ from namelist import  i_colp_tendency, COLP_hor_dif_tau
 from boundaries import exchange_BC
 
 
+
 def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
 
 
@@ -25,8 +26,9 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
                   + VFLX[:,:,k][GR.iijj_jp1] - VFLX[:,:,k][GR.iijj] ) \
                   * GR.dsigma[k] / GR.A[GR.iijj]
 
+
     if i_colp_tendency:
-        dCOLPdt = - np.sum(FLXDIV[GR.iijj], axis=2)
+        dCOLPdt = - np.sum(FLXDIV, axis=2)
 
         if COLP_hor_dif_tau > 0:
             num_diff = COLP_hor_dif_tau * \
@@ -35,9 +37,9 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
                            +   COLP[GR.iijj_jm1] \
                            +   COLP[GR.iijj_jp1] \
                            - 2*COLP[GR.iijj    ] )
-            dCOLPdt = dCOLPdt + num_diff
+            dCOLPdt[GR.iijj] = dCOLPdt[GR.iijj] + num_diff
     else:
-        dCOLPdt =  np.zeros( (GR.nx,GR.ny) )
+        dCOLPdt =  np.zeros( (GR.nx+2*GR.nb,GR.ny+2*GR.nb) )
 
 
     return(dCOLPdt, UFLX, VFLX, FLXDIV)
@@ -50,7 +52,7 @@ def vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND):
 
         WWIND[:,:,ks][GR.iijj] = - np.sum(FLXDIV[:,:,:ks][GR.iijj], axis=2) / \
                                     COLP_NEW[GR.iijj] \
-                                 - GR.sigma_vb[ks] * dCOLPdt / \
+                                 - GR.sigma_vb[ks] * dCOLPdt[GR.iijj] / \
                                     COLP_NEW[GR.iijj]
 
 

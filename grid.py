@@ -4,6 +4,8 @@ from constants import con_rE, con_omega
 from boundaries import exchange_BC, exchange_BC_periodic_x
 from IO import load_restart_grid
 
+from numba import cuda
+
 class Grid:
 
     def __init__(self, i_subgrid=0, specs=None):
@@ -210,10 +212,31 @@ class Grid:
             self.GMT = GMT_initialization
 
             # GPU
-            self.blockdim = (tpbh, tpbh, tpbv)
-            self.griddim = ((self.nx+2*self.nb)//self.blockdim[0], \
-                            (self.ny+2*self.nb)//self.blockdim[1], \
-                            self.nz//self.blockdim[2])
+            self.stream = cuda.stream()
+            if tpbh > 1:
+                raise NotImplementedError('tpbh > 1 not yet possible see below (I guess)')
+            self.blockdim      = (tpbh, tpbh, tpbv)
+            self.griddim       = ((self.nx+2*self.nb)//self.blockdim[0], \
+                                 (self.ny+2*self.nb)//self.blockdim[1], \
+                                  self.nz//self.blockdim[2])
+            self.griddim_is    = ((self.nxs+2*self.nb)//self.blockdim[0], \
+                                 (self.ny+2*self.nb)//self.blockdim[1], \
+                                  self.nz//self.blockdim[2])
+            self.griddim_js    = ((self.nx+2*self.nb)//self.blockdim[0], \
+                                 (self.nys+2*self.nb)//self.blockdim[1], \
+                                  self.nz//self.blockdim[2])
+            self.griddim_is_js = ((self.nx+2*self.nb)//self.blockdim[0], \
+                                 (self.nys+2*self.nb)//self.blockdim[1], \
+                                  self.nz//self.blockdim[2])
+
+            zonal   = np.zeros((2,self.ny+2*self.nb ,self.nz), np.float64)
+            zonals  = np.zeros((2,self.nys+2*self.nb,self.nz), np.float64)
+            merid   = np.zeros((self.nx+2*self.nb,2 ,self.nz), np.float64)
+            merids  = np.zeros((self.nxs+2*self.nb,2,self.nz), np.float64)
+            self.zonal  = cuda.to_device(zonal,  self.stream)
+            self.zonals = cuda.to_device(zonals, self.stream)
+            self.merid  = cuda.to_device(merid,  self.stream)
+            self.merids = cuda.to_device(merids, self.stream)
 
 
 

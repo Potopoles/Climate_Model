@@ -5,21 +5,28 @@ import time
 from namelist import pTop, njobs
 from constants import con_Rd
 
-#from continuity import colp_tendency_jacobson, vertical_wind_jacobson
+from continuity import colp_tendency_jacobson, vertical_wind_jacobson
 from bin.continuity_cython import colp_tendency_jacobson_c, vertical_wind_jacobson_c
+from continuity_cuda import colp_tendency_jacobson_gpu, vertical_wind_jacobson
+
 #from wind import wind_tendency_jacobson
 from bin.wind_cython import wind_tendency_jacobson_c
+
 from temperature import temperature_tendency_jacobson
 from bin.temperature_cython import temperature_tendency_jacobson_c
 from temperature_cuda import temperature_tendency_jacobson_gpu
+
 #from geopotential import diag_geopotential_jacobson
 from bin.geopotential_cython import diag_geopotential_jacobson_c
+
 #from diagnostics import diagnose_POTTVB_jacobson, interp_COLPA
 from bin.diagnostics_cython import diagnose_POTTVB_jacobson_c, interp_COLPA_c
+
 #from moisture import water_vapor_tendency, cloud_water_tendency
 from bin.moisture_cython import water_vapor_tendency_c, cloud_water_tendency_c
+
 from boundaries import exchange_BC
-from boundaries_gpu import exchange_BC_gpu
+from boundaries_cuda import exchange_BC_gpu
 
 from numba import cuda
 import numba
@@ -34,6 +41,16 @@ def tendencies_jacobson(GR, subgrids,\
 
 
     ##############################
+    #UFLX[:,0,:] = 300
+    #UFLX[:,GR.ny+1,:] = 300
+    #UFLX[0,:,:] = 300
+    #UFLX[GR.nxs+1,:,:] = 300
+    #UFLX_gpu = copy.deepcopy(UFLX)
+    #UFLX_cpu = copy.deepcopy(UFLX)
+    #from fields import gaussian2D
+    #for k in range(1,GR.nzs-1):
+    #    WWIND[:,:,k] = gaussian2D(GR, WWIND[:,:,k], 1E-4, np.pi, 0,  np.pi/3, np.pi/4)
+
     t_start = time.time()
     # PROGNOSE COLP
     #dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND,\
@@ -46,8 +63,72 @@ def tendencies_jacobson(GR, subgrids,\
     FLXDIV = np.asarray(FLXDIV)
 
 
+    UFLX_cpu = copy.deepcopy(UFLX)
+    VFLX_cpu = copy.deepcopy(VFLX)
+    FLXDIV_cpu = copy.deepcopy(FLXDIV)
+    dCOLPdt_cpu = copy.deepcopy(dCOLPdt)
+    UFLX[GR.iisjj] = 0.
+    VFLX[GR.iijjs] = 0.
+
+    dCOLPdt = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb), np.nan)
+    FLXDIV  = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz), np.nan)
+    zonal   = np.zeros((2,GR.ny +2*GR.nb,GR.nz),      np.float64)
+    merid   = np.zeros((GR.nx +2*GR.nb,2,GR.nz),      np.float64)
+
+    stream = cuda.stream()
+    #dCOLPdtd      = cuda.to_device(dCOLPdt, stream)
+    #FLXDIVd       = cuda.to_device(FLXDIV, stream)
+    #zonald        = cuda.to_device(zonal, stream)
+    #meridd        = cuda.to_device(merid, stream)
+    #UFLXd         = cuda.to_device(UFLX, stream)
+    #VFLXd         = cuda.to_device(VFLX, stream)
+    #UWINDd        = cuda.to_device(UWIND, stream)
+    #VWINDd        = cuda.to_device(VWIND, stream)
+    #COLPd         = cuda.to_device(COLP, stream)
+    dxjsd         = cuda.to_device(GR.dxjs, stream)
+    #print(dyd.shape)
+    #quit()
+
+    #dCOLPdtd, UFLXd, VFLXd, FLXDIVd = colp_tendency_jacobson_gpu(GR, COLPd, UWINDd,\
+    #                                                    VWINDd, UFLXd, VFLXd)
+    dCOLPdt, UFLX, VFLX, FLXDIV = \
+                 colp_tendency_jacobson_gpu(GR, GR.griddim, GR.blockdim, stream,\
+                                            dCOLPdt, UFLX, VFLX, FLXDIV,\
+                                            COLP, UWIND, VWIND, \
+                                            GR.dy, dxjsd)
+    stream.synchronize()
+    UFLX_gpu = copy.deepcopy(UFLX)
+    VFLX_gpu = copy.deepcopy(VFLX)
+    FLXDIV_gpu = copy.deepcopy(FLXDIV)
+    dCOLPdt_gpu = copy.deepcopy(dCOLPdt)
+
+    var = dCOLPdt_gpu
+    var_orig = dCOLPdt_cpu
+    print('###################')
+    nan_here = np.isnan(var)
+    nan_orig = np.isnan(var_orig)
+    diff = var - var_orig
+    nan_diff = nan_here != nan_orig 
+    print('values ' + str(np.nansum(np.abs(diff))))
+    print('  nans ' + str(np.sum(nan_diff)))
+    print('###################')
+
+    quit()
+    #plt.contourf(var_orig[:,:,1].T)
+    #plt.contourf(var[:,:,1].T)
+    plt.contourf(diff[:,:,1].T)
+    plt.colorbar()
+    plt.show()
+    quit()
+
+
+
+
+
+
+
     COLP_NEW = copy.deepcopy(COLP)
-    COLP_NEW[GR.iijj] = COLP_OLD[GR.iijj] + GR.dt*dCOLPdt
+    COLP_NEW[GR.iijj] = COLP_OLD[GR.iijj] + GR.dt*dCOLPdt[GR.iijj]
 
     # DIAGNOSE WWIND
     #WWIND = vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
@@ -83,16 +164,6 @@ def tendencies_jacobson(GR, subgrids,\
 
 
     ##############################
-    #POTT[:,0,:] = 300
-    #POTT[:,GR.ny+1,:] = 300
-    #POTT[0,:,:] = 300
-    #POTT[GR.nx+1,:,:] = 300
-    #POTT_gpu = copy.deepcopy(POTT)
-    #POTT_cpu = copy.deepcopy(POTT)
-    #from fields import gaussian2D
-    #for k in range(1,GR.nzs-1):
-    #    WWIND[:,:,k] = gaussian2D(GR, WWIND[:,:,k], 1E-4, np.pi, 0,  np.pi/3, np.pi/4)
-
     t_start = time.time()
     # PROGNOSE POTT
     #dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
@@ -106,17 +177,6 @@ def tendencies_jacobson(GR, subgrids,\
     GR.temp_comp_time += t_end - t_start
     #cpu_time = t_end - t_start
 
-    #dPOTTdt_cpu = copy.deepcopy(dPOTTdt)
-    #for k in range(0,GR.nz):
-    #    POTT_cpu[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] + GR.dt*dPOTTdt[:,:,k]/COLP[GR.iijj]
-    #t_start = time.time()
-    #POTT_cpu = exchange_BC(GR, POTT_cpu)
-    #t_end = time.time()
-    #cpu_time += t_end - t_start
-    #print('cpu ' + str(cpu_time))
-    ##print(POTT)
-    ##quit()
-    #
     dPOTTdt = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
     zonal   = np.zeros((2,GR.ny +2*GR.nb,GR.nz),      np.float64)
     merid   = np.zeros((GR.nx +2*GR.nb,2,GR.nz),      np.float64)
@@ -164,25 +224,6 @@ def tendencies_jacobson(GR, subgrids,\
 
     #POTT_gpud.to_host(stream)
 
-    #var = POTT_gpu
-    #var_orig = POTT_cpu
-    ##var = dPOTTdt_gpu[GR.iijj]
-    ##var_orig = dPOTTdt_cpu
-    #print('###################')
-    #nan_here = np.isnan(var)
-    #nan_orig = np.isnan(var_orig)
-    #diff = var - var_orig
-    #print('values ' + str(np.nansum(np.abs(diff))))
-    #print('  nans ' + str(np.sum(nan_here != nan_orig)))
-    #print('###################')
-
-    ##quit()
-    ##plt.contourf(var_orig[:,:,1].T)
-    ##plt.contourf(var[:,:,1].T)
-    #plt.contourf(diff[:,:,1].T)
-    #plt.colorbar()
-    #plt.show()
-    #quit()
 
     ##############################
 
@@ -234,9 +275,17 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND,
     # TODO 4 NECESSARY
     UWIND = exchange_BC(GR, UWIND)
     VWIND = exchange_BC(GR, VWIND)
-    POTT = exchange_BC(GR, POTT)
+    #POTT = exchange_BC(GR, POTT)
     QV = exchange_BC(GR, QV)
     QC = exchange_BC(GR, QC)
+
+    zonal   = np.zeros((2,GR.ny +2*GR.nb,GR.nz),      np.float64)
+    merid   = np.zeros((GR.nx +2*GR.nb,2,GR.nz),      np.float64)
+    stream = cuda.stream()
+    zonald        = cuda.to_device(zonal, stream)
+    meridd        = cuda.to_device(merid, stream)
+    POTT = exchange_BC_gpu(POTT, GR.zonal, GR.merid, griddim, blockdim, stream)
+    POTT.to_host(stream)
 
     return(UWIND, VWIND, COLP, POTT, QV, QC)
 

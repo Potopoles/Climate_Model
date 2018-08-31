@@ -34,8 +34,8 @@ cpdef colp_tendency_jacobson_c(GR, \
     cdef double[     ::1] dsigma  = GR.dsigma
     cdef double[:,   ::1] dxjs    = GR.dxjs
     cdef double[:,   ::1] A       = GR.A
-    cdef double[:,   ::1] dCOLPdt = np.zeros( (nx ,ny) )
-    cdef double[:,:, ::1] FLXDIV  = np.zeros( (nx +2*nb,ny +2*nb,nz) )
+    cdef double[:,   ::1] dCOLPdt = np.full( (nx +2*nb,ny +2*nb   ), np.nan )
+    cdef double[:,:, ::1] FLXDIV  = np.full( (nx +2*nb,ny +2*nb,nz), np.nan )
 
 
     for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='guided'):
@@ -63,10 +63,10 @@ cpdef colp_tendency_jacobson_c(GR, \
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):
         ip1 = i + 1
-        imb = i - nb
+        #imb = i - nb
         for j   in range(nb,ny +nb):
             jp1 = j + 1
-            jmb = j - nb
+            #jmb = j - nb
 
             flux_div_sum = 0.
             for k in range(0,nz):
@@ -77,7 +77,8 @@ cpdef colp_tendency_jacobson_c(GR, \
 
                 flux_div_sum = flux_div_sum + FLXDIV[i   ,j   ,k]
 
-            dCOLPdt[imb,jmb] = - flux_div_sum
+            #dCOLPdt[imb,jmb] = - flux_div_sum
+            dCOLPdt[i  ,j  ] = - flux_div_sum
 
 
 
@@ -141,8 +142,10 @@ cpdef vertical_wind_jacobson_c(GR, \
 
                 flux_div_sum = flux_div_sum + FLXDIV[i   ,j   ,ks-1]
 
+                #WWIND[i  ,j  ,ks ] = - flux_div_sum / COLP_NEW[i  ,j  ] \
+                #                     - sigma_vb[ks] * dCOLPdt[i-nb,j-nb] / COLP_NEW[i  ,j  ]
                 WWIND[i  ,j  ,ks ] = - flux_div_sum / COLP_NEW[i  ,j  ] \
-                                     - sigma_vb[ks] * dCOLPdt[i-nb,j-nb] / COLP_NEW[i  ,j  ]
+                                     - sigma_vb[ks] * dCOLPdt[i,j] / COLP_NEW[i  ,j  ]
 
     return(WWIND)
 

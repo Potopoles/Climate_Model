@@ -2,8 +2,8 @@ import numpy as np
 import time
 from namelist import POTT_hor_dif_tau, i_temperature_tendency, \
                     i_radiation, i_microphysics, wp
-from numba import cuda, jit
 
+from numba import cuda, jit
 if wp == 'float64':
     from numba import float64
 
