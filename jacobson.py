@@ -9,15 +9,20 @@ from constants import con_Rd
 from bin.continuity_cython import colp_tendency_jacobson_c, vertical_wind_jacobson_c
 #from wind import wind_tendency_jacobson
 from bin.wind_cython import wind_tendency_jacobson_c
-#from temperature import temperature_tendency_jacobson
-from bin.temperature_cython import temperature_tendency_jacobson_c
+from temperature import temperature_tendency_jacobson
+#from bin.temperature_cython import temperature_tendency_jacobson_c
+from temperature_cuda import temperature_tendency_jacobson_gpu
 #from geopotential import diag_geopotential_jacobson
 from bin.geopotential_cython import diag_geopotential_jacobson_c
 #from diagnostics import diagnose_POTTVB_jacobson, interp_COLPA
 from bin.diagnostics_cython import diagnose_POTTVB_jacobson_c, interp_COLPA_c
-from boundaries import exchange_BC
 #from moisture import water_vapor_tendency, cloud_water_tendency
 from bin.moisture_cython import water_vapor_tendency_c, cloud_water_tendency_c
+from boundaries import exchange_BC
+from boundaries_gpu import exchange_BC_gpu
+
+from numba import cuda
+import numba
 
 
 def tendencies_jacobson(GR, subgrids,\
@@ -40,14 +45,6 @@ def tendencies_jacobson(GR, subgrids,\
     VFLX = np.asarray(VFLX)
     FLXDIV = np.asarray(FLXDIV)
 
-    #dCOLPdt_old = copy.deepcopy(dCOLPdt)
-    #####
-    #diff = dCOLPdt_old - dCOLPdt
-    ##plt.contourf(diff[:,:,2].T)
-    #plt.contourf(diff[:,:].T)
-    #plt.colorbar()
-    #plt.show()
-    #quit()
 
     COLP_NEW = copy.deepcopy(COLP)
     COLP_NEW[GR.iijj] = COLP_OLD[GR.iijj] + GR.dt*dCOLPdt
@@ -86,17 +83,94 @@ def tendencies_jacobson(GR, subgrids,\
 
 
     ##############################
+    POTT[:,0,:] = 300
+    POTT[:,GR.ny+1,:] = 300
+    POTT[0,:,:] = 300
+    POTT[GR.nx+1,:,:] = 300
+    POTT_gpu = copy.deepcopy(POTT)
+    POTT_cpu = copy.deepcopy(POTT)
+
     t_start = time.time()
     # PROGNOSE POTT
-    #dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
-    #                                        UFLX, VFLX, WWIND, \
-    #                                        dPOTTdt_RAD, dPOTTdt_MIC)
-    dPOTTdt = temperature_tendency_jacobson_c(GR, njobs, POTT, POTTVB, COLP, COLP_NEW,\
+    dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
                                             UFLX, VFLX, WWIND, \
                                             dPOTTdt_RAD, dPOTTdt_MIC)
-    dPOTTdt = np.asarray(dPOTTdt)
+    #dPOTTdt = temperature_tendency_jacobson_c(GR, njobs, POTT, POTTVB, COLP, COLP_NEW,\
+    #                                        UFLX, VFLX, WWIND, \
+    #                                        dPOTTdt_RAD, dPOTTdt_MIC)
+    #dPOTTdt = np.asarray(dPOTTdt)
     t_end = time.time()
+    cpu_time = t_end - t_start
     GR.temp_comp_time += t_end - t_start
+
+    dPOTTdt_cpu = copy.deepcopy(dPOTTdt)
+    for k in range(0,GR.nz):
+        POTT_cpu[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] + GR.dt*dPOTTdt[:,:,k]/COLP[GR.iijj]
+    t_start = time.time()
+    POTT_cpu = exchange_BC(GR, POTT_cpu)
+    t_end = time.time()
+    cpu_time += t_end - t_start
+    print('cpu ' + str(cpu_time))
+    #print(POTT)
+    #quit()
+    
+    dPOTTdt = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+    zonal   = np.zeros((2,GR.ny +2*GR.nb,GR.nz),      np.float64)
+    merid   = np.zeros((GR.nx +2*GR.nb,2,GR.nz),      np.float64)
+
+    stream = cuda.stream()
+    dPOTTdtd    = cuda.to_device(dPOTTdt, stream)
+    zonald      = cuda.to_device(zonal, stream)
+    meridd      = cuda.to_device(merid, stream)
+    UFLXd       = cuda.to_device(UFLX, stream)
+    VFLXd       = cuda.to_device(VFLX, stream)
+    POTTd       = cuda.to_device(POTT, stream)
+    Ad          = cuda.to_device(GR.A, stream)
+
+    t_start = time.time()
+    temperature_tendency_jacobson_gpu[GR.griddim, GR.blockdim, stream] \
+                                        (dPOTTdtd, POTTd, UFLXd, VFLXd, 
+                                        Ad)
+    stream.synchronize()
+    t_end = time.time()
+    time_gpu = t_end - t_start
+
+    dPOTTdtd.to_host(stream)
+    dPOTTdt_gpu = copy.deepcopy(dPOTTdt)
+
+    for k in range(0,GR.nz):
+        POTT_gpu[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] + GR.dt*dPOTTdt[:,:,k][GR.iijj]/COLP[GR.iijj]
+
+    POTT_gpud       = cuda.to_device(POTT_gpu, stream)
+
+    t_start = time.time()
+    POTT_gpud = exchange_BC_gpu(GR, POTT_gpud, zonald, meridd, stream)
+    t_end = time.time()
+    cpu_time += t_end - t_start
+    print('gpu ' + str(time_gpu))
+
+    POTT_gpud.to_host(stream)
+
+    var = POTT_gpu
+    var_orig = POTT_cpu
+    #var = dPOTTdt_gpu[GR.iijj]
+    #var_orig = dPOTTdt_cpu
+    print('###################')
+    nan_here = np.isnan(var)
+    nan_orig = np.isnan(var_orig)
+    diff = var - var_orig
+    print('values ' + str(np.nansum(np.abs(diff))))
+    print('  nans ' + str(np.sum(nan_here != nan_orig)))
+    print('###################')
+
+    quit()
+    #plt.contourf(var_orig[:,:,1].T)
+    #plt.contourf(var[:,:,1].T)
+    plt.contourf(diff[:,:,1].T)
+    plt.colorbar()
+    plt.show()
+    quit()
+
     ##############################
 
 

@@ -4,10 +4,9 @@ from namelist import POTT_hor_dif_tau, i_temperature_tendency, \
                     i_radiation, i_microphysics
 
 
-i_vert_adv  = 1
+i_vert_adv  = 0
 i_hor_adv   = 1
-i_num_dif   = 1
-i_radiation = 1
+i_num_dif   = 0
 
 
 def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, \

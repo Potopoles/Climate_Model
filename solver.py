@@ -13,6 +13,10 @@ from namelist import i_time_stepping, \
 from diagnostics_cython import diagnose_secondary_fields_c
 from IO_helper_functions import print_ts_info, print_computation_time_info
 if i_time_stepping == 'MATSUNO':
+    #if use_gpu:
+    #    from time_integration_cuda import matsuno as time_stepper
+    #    from gpu_helper import copy_fields_to_device
+    #else:
     from time_integration import matsuno as time_stepper
 elif i_time_stepping == 'RK4':
     from OLD_time_integration import RK4 as time_stepper

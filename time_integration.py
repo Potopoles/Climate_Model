@@ -62,7 +62,6 @@ def matsuno(GR, subgrids,
     GR.diag_comp_time += t_end - t_start
 
     #import pickle
-    #print('did it')
     #out = {}
     #out['COLP'] = COLP
     #out['WWIND'] = WWIND

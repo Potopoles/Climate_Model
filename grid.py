@@ -209,6 +209,12 @@ class Grid:
             self.sim_time_sec = 0
             self.GMT = GMT_initialization
 
+            # GPU
+            self.blockdim = (tpbh, tpbh, tpbv)
+            self.griddim = ((self.nx+2*self.nb)//self.blockdim[0], \
+                            (self.ny+2*self.nb)//self.blockdim[1], \
+                            self.nz//self.blockdim[2])
+
 
 
 
