@@ -40,7 +40,7 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
 
     cdef double c_POTT_hor_dif_tau = POTT_hor_dif_tau
 
-    cdef double[:,:, ::1] dPOTTdt = np.zeros( (nx ,ny ,nz) )
+    cdef double[:,:, ::1] dPOTTdt = np.zeros( (nx+2*nb,ny+2*nb,nz) )
 
     if i_temperature_tendency:
         for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
@@ -71,7 +71,7 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
                                       POTT[i  ,jp1,k  ])/2. \
                                  ) / A[i  ,j  ]
 
-                        dPOTTdt[inb,jnb,k] = dPOTTdt[inb,jnb,k] + hor_adv
+                        dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + hor_adv
 
 
                     # VERTICAL ADVECTION
@@ -90,7 +90,7 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
                                     - WWIND[i  ,j  ,kp1] * POTTVB[i  ,j  ,kp1] \
                                                            ) / dsigma[k]
 
-                        dPOTTdt[inb,jnb,k] = dPOTTdt[inb,jnb,k] + vert_adv
+                        dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + vert_adv
 
 
                     # NUMERICAL DIFUSION 
@@ -102,15 +102,15 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
                                       + COLP[i  ,jp1] * POTT[i  ,jp1,k  ] \
                                     - 4.*COLP[i  ,j  ] * POTT[i  ,j  ,k  ] )
 
-                        dPOTTdt[inb,jnb,k] = dPOTTdt[inb,jnb,k] + num_diff
+                        dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + num_diff
 
                     # RADIATION 
                     if c_i_radiation:
-                        dPOTTdt[inb,jnb,k] = dPOTTdt[inb,jnb,k] + \
+                        dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + \
                                             dPOTTdt_RAD[inb,jnb,k  ]*COLP[i  ,j  ]
                     # MICROPHYSICS 
                     if c_i_microphysics:
-                        dPOTTdt[inb,jnb,k] = dPOTTdt[inb,jnb,k] + \
+                        dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + \
                                             dPOTTdt_MIC[inb,jnb,k  ]*COLP[i  ,j  ]
 
 

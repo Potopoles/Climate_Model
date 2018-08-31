@@ -10,7 +10,7 @@ from bin.continuity_cython import colp_tendency_jacobson_c, vertical_wind_jacobs
 #from wind import wind_tendency_jacobson
 from bin.wind_cython import wind_tendency_jacobson_c
 from temperature import temperature_tendency_jacobson
-#from bin.temperature_cython import temperature_tendency_jacobson_c
+from bin.temperature_cython import temperature_tendency_jacobson_c
 from temperature_cuda import temperature_tendency_jacobson_gpu
 #from geopotential import diag_geopotential_jacobson
 from bin.geopotential_cython import diag_geopotential_jacobson_c
@@ -83,93 +83,106 @@ def tendencies_jacobson(GR, subgrids,\
 
 
     ##############################
-    POTT[:,0,:] = 300
-    POTT[:,GR.ny+1,:] = 300
-    POTT[0,:,:] = 300
-    POTT[GR.nx+1,:,:] = 300
-    POTT_gpu = copy.deepcopy(POTT)
-    POTT_cpu = copy.deepcopy(POTT)
+    #POTT[:,0,:] = 300
+    #POTT[:,GR.ny+1,:] = 300
+    #POTT[0,:,:] = 300
+    #POTT[GR.nx+1,:,:] = 300
+    #POTT_gpu = copy.deepcopy(POTT)
+    #POTT_cpu = copy.deepcopy(POTT)
+    #from fields import gaussian2D
+    #for k in range(1,GR.nzs-1):
+    #    WWIND[:,:,k] = gaussian2D(GR, WWIND[:,:,k], 1E-4, np.pi, 0,  np.pi/3, np.pi/4)
 
     t_start = time.time()
     # PROGNOSE POTT
-    dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
-                                            UFLX, VFLX, WWIND, \
-                                            dPOTTdt_RAD, dPOTTdt_MIC)
+    #dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
+    #                                        UFLX, VFLX, WWIND, \
+    #                                        dPOTTdt_RAD, dPOTTdt_MIC)
     #dPOTTdt = temperature_tendency_jacobson_c(GR, njobs, POTT, POTTVB, COLP, COLP_NEW,\
     #                                        UFLX, VFLX, WWIND, \
     #                                        dPOTTdt_RAD, dPOTTdt_MIC)
     #dPOTTdt = np.asarray(dPOTTdt)
     t_end = time.time()
-    cpu_time = t_end - t_start
     GR.temp_comp_time += t_end - t_start
+    #cpu_time = t_end - t_start
 
-    dPOTTdt_cpu = copy.deepcopy(dPOTTdt)
-    for k in range(0,GR.nz):
-        POTT_cpu[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] + GR.dt*dPOTTdt[:,:,k]/COLP[GR.iijj]
-    t_start = time.time()
-    POTT_cpu = exchange_BC(GR, POTT_cpu)
-    t_end = time.time()
-    cpu_time += t_end - t_start
-    print('cpu ' + str(cpu_time))
-    #print(POTT)
-    #quit()
-    
+    #dPOTTdt_cpu = copy.deepcopy(dPOTTdt)
+    #for k in range(0,GR.nz):
+    #    POTT_cpu[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] + GR.dt*dPOTTdt[:,:,k]/COLP[GR.iijj]
+    #t_start = time.time()
+    #POTT_cpu = exchange_BC(GR, POTT_cpu)
+    #t_end = time.time()
+    #cpu_time += t_end - t_start
+    #print('cpu ' + str(cpu_time))
+    ##print(POTT)
+    ##quit()
+    #
     dPOTTdt = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
     zonal   = np.zeros((2,GR.ny +2*GR.nb,GR.nz),      np.float64)
     merid   = np.zeros((GR.nx +2*GR.nb,2,GR.nz),      np.float64)
 
     stream = cuda.stream()
-    dPOTTdtd    = cuda.to_device(dPOTTdt, stream)
-    zonald      = cuda.to_device(zonal, stream)
-    meridd      = cuda.to_device(merid, stream)
-    UFLXd       = cuda.to_device(UFLX, stream)
-    VFLXd       = cuda.to_device(VFLX, stream)
-    POTTd       = cuda.to_device(POTT, stream)
-    Ad          = cuda.to_device(GR.A, stream)
+    dPOTTdtd      = cuda.to_device(dPOTTdt, stream)
+    dPOTTdt_RADd  = cuda.to_device(dPOTTdt_RAD, stream)
+    dPOTTdt_MICd  = cuda.to_device(dPOTTdt_MIC, stream)
+    zonald        = cuda.to_device(zonal, stream)
+    meridd        = cuda.to_device(merid, stream)
+    UFLXd         = cuda.to_device(UFLX, stream)
+    VFLXd         = cuda.to_device(VFLX, stream)
+    POTTd         = cuda.to_device(POTT, stream)
+    POTTVBd       = cuda.to_device(POTTVB, stream)
+    COLPd         = cuda.to_device(COLP, stream)
+    COLP_NEWd     = cuda.to_device(COLP_NEW, stream)
+    WWINDd        = cuda.to_device(WWIND, stream)
+    Ad            = cuda.to_device(GR.A, stream)
+    dsigmad       = cuda.to_device(GR.dsigma, stream)
 
     t_start = time.time()
     temperature_tendency_jacobson_gpu[GR.griddim, GR.blockdim, stream] \
-                                        (dPOTTdtd, POTTd, UFLXd, VFLXd, 
-                                        Ad)
+                                        (dPOTTdtd, \
+                                        POTTd, POTTVBd, COLPd, COLP_NEWd, \
+                                        UFLXd, VFLXd, WWINDd, \
+                                        dPOTTdt_RADd, dPOTTdt_MICd, \
+                                        Ad, dsigmad)
     stream.synchronize()
     t_end = time.time()
     time_gpu = t_end - t_start
 
     dPOTTdtd.to_host(stream)
-    dPOTTdt_gpu = copy.deepcopy(dPOTTdt)
+    #dPOTTdt_gpu = copy.deepcopy(dPOTTdt)
 
-    for k in range(0,GR.nz):
-        POTT_gpu[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] + GR.dt*dPOTTdt[:,:,k][GR.iijj]/COLP[GR.iijj]
+    #for k in range(0,GR.nz):
+    #    POTT_gpu[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] + GR.dt*dPOTTdt[:,:,k][GR.iijj]/COLP[GR.iijj]
 
-    POTT_gpud       = cuda.to_device(POTT_gpu, stream)
+    #POTT_gpud       = cuda.to_device(POTT_gpu, stream)
 
-    t_start = time.time()
-    POTT_gpud = exchange_BC_gpu(GR, POTT_gpud, zonald, meridd, stream)
-    t_end = time.time()
-    cpu_time += t_end - t_start
-    print('gpu ' + str(time_gpu))
+    #t_start = time.time()
+    #POTT_gpud = exchange_BC_gpu(GR, POTT_gpud, zonald, meridd, stream)
+    #t_end = time.time()
+    #cpu_time += t_end - t_start
+    #print('gpu ' + str(time_gpu))
 
-    POTT_gpud.to_host(stream)
+    #POTT_gpud.to_host(stream)
 
-    var = POTT_gpu
-    var_orig = POTT_cpu
-    #var = dPOTTdt_gpu[GR.iijj]
-    #var_orig = dPOTTdt_cpu
-    print('###################')
-    nan_here = np.isnan(var)
-    nan_orig = np.isnan(var_orig)
-    diff = var - var_orig
-    print('values ' + str(np.nansum(np.abs(diff))))
-    print('  nans ' + str(np.sum(nan_here != nan_orig)))
-    print('###################')
+    #var = POTT_gpu
+    #var_orig = POTT_cpu
+    ##var = dPOTTdt_gpu[GR.iijj]
+    ##var_orig = dPOTTdt_cpu
+    #print('###################')
+    #nan_here = np.isnan(var)
+    #nan_orig = np.isnan(var_orig)
+    #diff = var - var_orig
+    #print('values ' + str(np.nansum(np.abs(diff))))
+    #print('  nans ' + str(np.sum(nan_here != nan_orig)))
+    #print('###################')
 
-    quit()
-    #plt.contourf(var_orig[:,:,1].T)
-    #plt.contourf(var[:,:,1].T)
-    plt.contourf(diff[:,:,1].T)
-    plt.colorbar()
-    plt.show()
-    quit()
+    ##quit()
+    ##plt.contourf(var_orig[:,:,1].T)
+    ##plt.contourf(var[:,:,1].T)
+    #plt.contourf(diff[:,:,1].T)
+    #plt.colorbar()
+    #plt.show()
+    #quit()
 
     ##############################
 
@@ -210,7 +223,7 @@ def proceed_timestep_jacobson(GR, UWIND, VWIND,
         VWIND[:,:,k][GR.iijjs] = VWIND[:,:,k][GR.iijjs] * COLPA_js_OLD/COLPA_js_NEW \
                             + GR.dt*dVFLXdt[:,:,k]/COLPA_js_NEW
         POTT[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
-                            + GR.dt*dPOTTdt[:,:,k]/COLP[GR.iijj]
+                            + GR.dt*dPOTTdt[:,:,k][GR.iijj]/COLP[GR.iijj]
         QV[:,:,k][GR.iijj] = QV[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
                             + GR.dt*dQVdt[:,:,k]/COLP[GR.iijj]
         QC[:,:,k][GR.iijj] = QC[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \

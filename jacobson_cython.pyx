@@ -8,11 +8,6 @@ import cython
 from cython.parallel import prange 
 
 
-
-
-
-
-
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef proceed_timestep_jacobson_c(GR, \
@@ -79,7 +74,7 @@ cpdef proceed_timestep_jacobson_c(GR, \
             for k in range(0,nz):
                 POTT[i  ,j  ,k]  =  POTT[i  ,j  ,k] * \
                                     COLP_OLD    [i  ,j  ]/COLP        [i  ,j  ] \
-                                        + dt*dPOTTdt[imb,jmb,k]/COLP        [i  ,j  ]
+                                        + dt*dPOTTdt[i  ,j  ,k]/COLP        [i  ,j  ]
                 QV[i  ,j  ,k]    =    QV[i  ,j  ,k] * \
                                     COLP_OLD    [i  ,j  ]/COLP        [i  ,j  ] \
                                         + dt*dQVdt  [imb,jmb,k]/COLP        [i  ,j  ]

@@ -5,6 +5,7 @@ from boundaries import exchange_BC
 from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
                     diagnose_fields_jacobson
 from bin.jacobson_cython import proceed_timestep_jacobson_c
+#from jacobson import proceed_timestep_jacobson
 from diagnostics import interp_COLPA
 
 ######################################################################################
