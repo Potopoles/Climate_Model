@@ -157,11 +157,16 @@ def tendencies_jacobson(GR, subgrids,\
     #    WWIND[:,:,k] = gaussian2D(GR, WWIND[:,:,k], 1E-4, np.pi, 0,  np.pi/3, np.pi/4)
     t_start = time.time()
     # PROGNOSE WIND
-    dUFLXdt, dVFLXdt = wind_tendency_jacobson(GR, UWIND, VWIND, WWIND,
+    t0 = time.time()
+    dUFLXdt, dVFLXdt, \
+    BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX = \
+    wind_tendency_jacobson(GR, UWIND, VWIND, WWIND,
                                         UFLX, dUFLXdt, VFLX, dVFLXdt,
                                         BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
                                         COLP, COLP_NEW, HSURF, PHI, POTT,
                                         PVTF, PVTFVB)
+    t1 = time.time()
+    print('orig ' + str(t1 - t0))
     #dUFLXdt, dVFLXdt = wind_tendency_jacobson_c(GR, njobs, UWIND, VWIND, WWIND,
     #                                        UFLX, dUFLXdt, VFLX, dVFLXdt,
     #                                        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
@@ -173,6 +178,7 @@ def tendencies_jacobson(GR, subgrids,\
 
     dUFLXdt_cpu = copy.deepcopy(dUFLXdt)
     dVFLXdt_cpu = copy.deepcopy(dVFLXdt)
+    TFLX_cpu = copy.deepcopy(TFLX)
     #FLXDIV_cpu = copy.deepcopy(FLXDIV)
     #dCOLPdt_cpu = copy.deepcopy(dCOLPdt)
     #UFLX[GR.iisjj] = 0.
@@ -180,38 +186,53 @@ def tendencies_jacobson(GR, subgrids,\
 
 
 
-    dUFLXdt, dVFLXdt = wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND,
+    t0 = time.time()
+    dUFLXdtd, dVFLXdtd, \
+    BFLXd, CFLXd, DFLXd, EFLXd, RFLXd, QFLXd, SFLXd, TFLXd = \
+    wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND,
                                     UFLX, dUFLXdt, VFLX, dVFLXdt,
                                     BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
                                     COLP, COLP_NEW, HSURF, PHI, POTT,
                                     PVTF, PVTFVB,
                                     stream)
+    t1 = time.time()
+    print('gpu  ' + str(t1 - t0))
 
 
-    ##stream.synchronize()
-    ##UFLX_gpu = copy.deepcopy(UFLX)
-    ##VFLX_gpu = copy.deepcopy(VFLX)
-    ##FLXDIV_gpu = copy.deepcopy(FLXDIV)
-    ##dCOLPdt_gpu = copy.deepcopy(dCOLPdt)
+    dUFLXdtd.to_host(stream)
+    dVFLXdtd.to_host(stream)
+    BFLXd.to_host(stream)
+    CFLXd.to_host(stream)
+    DFLXd.to_host(stream)
+    EFLXd.to_host(stream)
+    RFLXd.to_host(stream)
+    QFLXd.to_host(stream)
+    SFLXd.to_host(stream)
+    TFLXd.to_host(stream)
+    stream.synchronize()
+    dUFLXdt_gpu = copy.deepcopy(dUFLXdt)
+    dVFLXdt_gpu = copy.deepcopy(dVFLXdt)
 
-    ##var = dCOLPdt_gpu
-    ##var_orig = dCOLPdt_cpu
-    ##print('###################')
-    ##nan_here = np.isnan(var)
-    ##nan_orig = np.isnan(var_orig)
-    ##diff = var - var_orig
-    ##nan_diff = nan_here != nan_orig 
-    ##print('values ' + str(np.nansum(np.abs(diff))))
-    ##print('  nans ' + str(np.sum(nan_diff)))
-    ##print('###################')
+    var = dVFLXdt_gpu
+    var_orig = dVFLXdt_cpu
+    #var = dUFLXdt_gpu
+    #var_orig = dUFLXdt_cpu
+    print('###################')
+    nan_here = np.isnan(var)
+    nan_orig = np.isnan(var_orig)
+    diff = var - var_orig
+    nan_diff = nan_here != nan_orig 
+    print('values ' + str(np.nansum(np.abs(diff))))
+    print('  nans ' + str(np.sum(nan_diff)))
+    print('###################')
 
-    ###quit()
-    ###plt.contourf(var_orig[:,:,1].T)
-    ###plt.contourf(var[:,:,1].T)
-    ##plt.contourf(diff[:,:].T)
-    ##plt.colorbar()
-    ##plt.show()
-    ##quit()
+    quit()
+    plt.contourf(var_orig[:,:,1].T)
+    #plt.contourf(var[:,:,1].T)
+    #plt.contourf(diff[:,:].T)
+    plt.colorbar()
+    plt.show()
+    quit()
 
 
 
