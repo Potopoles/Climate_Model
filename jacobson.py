@@ -165,8 +165,6 @@ def tendencies_jacobson(GR, subgrids,\
                                         BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
                                         COLP, COLP_NEW, HSURF, PHI, POTT,
                                         PVTF, PVTFVB)
-    t1 = time.time()
-    print('orig ' + str(t1 - t0))
     #dUFLXdt, dVFLXdt = wind_tendency_jacobson_c(GR, njobs, UWIND, VWIND, WWIND,
     #                                        UFLX, dUFLXdt, VFLX, dVFLXdt,
     #                                        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
@@ -174,6 +172,8 @@ def tendencies_jacobson(GR, subgrids,\
     #                                        POTT, PVTF, PVTFVB)
     #dUFLXdt = np.asarray(dUFLXdt)
     #dVFLXdt = np.asarray(dVFLXdt)
+    t1 = time.time()
+    print('orig ' + str(t1 - t0))
 
 
     dUFLXdt_cpu = copy.deepcopy(dUFLXdt)
@@ -227,9 +227,9 @@ def tendencies_jacobson(GR, subgrids,\
     print('###################')
 
     quit()
-    plt.contourf(var_orig[:,:,1].T)
+    #plt.contourf(var_orig[:,:,1].T)
     #plt.contourf(var[:,:,1].T)
-    #plt.contourf(diff[:,:].T)
+    plt.contourf(diff[:,:,1].T)
     plt.colorbar()
     plt.show()
     quit()

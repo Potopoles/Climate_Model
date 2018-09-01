@@ -6,8 +6,8 @@ from namelist import WIND_hor_dif_tau, i_wind_tendency
 
 i_hor_adv  = 1
 i_vert_adv = 0
-i_coriolis = 0
-i_pre_grad = 0
+i_coriolis = 1
+i_pre_grad = 1
 i_num_dif  = 0
 
 
