@@ -4,8 +4,8 @@ from boundaries import exchange_BC
 
 
 
-def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
-
+def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, \
+                            dCOLPdt, UFLX, VFLX, FLXDIV):
 
     for k in range(0,GR.nz):
         UFLX[:,:,k][GR.iisjj] = \
@@ -19,7 +19,6 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
     UFLX = exchange_BC(GR, UFLX)
     VFLX = exchange_BC(GR, VFLX)
 
-    FLXDIV =  np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb,GR.nz), np.nan)
     for k in range(0,GR.nz):
         FLXDIV[:,:,k][GR.iijj] = \
                 ( + UFLX[:,:,k][GR.iijj_ip1] - UFLX[:,:,k][GR.iijj] \
@@ -28,7 +27,7 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
 
 
     if i_colp_tendency:
-        dCOLPdt = - np.sum(FLXDIV, axis=2)
+        dCOLPdt[GR.iijj] = - np.sum(FLXDIV[GR.iijj], axis=2)
 
         if COLP_hor_dif_tau > 0:
             num_diff = COLP_hor_dif_tau * \
@@ -38,8 +37,6 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, UFLX, VFLX):
                            +   COLP[GR.iijj_jp1] \
                            - 2*COLP[GR.iijj    ] )
             dCOLPdt[GR.iijj] = dCOLPdt[GR.iijj] + num_diff
-    else:
-        dCOLPdt =  np.zeros( (GR.nx+2*GR.nb,GR.ny+2*GR.nb) )
 
 
     return(dCOLPdt, UFLX, VFLX, FLXDIV)
@@ -54,8 +51,6 @@ def vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND):
                                     COLP_NEW[GR.iijj] \
                                  - GR.sigma_vb[ks] * dCOLPdt[GR.iijj] / \
                                     COLP_NEW[GR.iijj]
-
-
 
     return(WWIND)
 

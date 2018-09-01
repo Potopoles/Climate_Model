@@ -34,11 +34,11 @@ def temperature_tendency_jacobson_gpu(dPOTTdt, \
         if i > 0 and i < nx+1 and j > 0 and j < ny+1:
             # HORIZONTAL ADVECTION
             if i_hor_adv:
-                dPOTTdt[i,j,k] = (+ UFLX[i  ,j  ,k] * (POTT[i-1,j  ,k] + POTT[i  ,j  ,k])/2. \
-                                  - UFLX[i+1,j  ,k] * (POTT[i  ,j  ,k] + POTT[i+1,j  ,k])/2. \
-                                  + VFLX[i  ,j  ,k] * (POTT[i  ,j-1,k] + POTT[i  ,j  ,k])/2. \
-                                  - VFLX[i  ,j+1,k] * (POTT[i  ,j  ,k] + POTT[i  ,j+1,k])/2. ) \
-                                 / A[i  ,j  ]
+                dPOTTdt[i,j,k] = (+ UFLX[i  ,j  ,k] * (POTT[i-1,j  ,k] + POTT[i  ,j  ,k])/2.\
+                                  - UFLX[i+1,j  ,k] * (POTT[i  ,j  ,k] + POTT[i+1,j  ,k])/2.\
+                                  + VFLX[i  ,j  ,k] * (POTT[i  ,j-1,k] + POTT[i  ,j  ,k])/2.\
+                                  - VFLX[i  ,j+1,k] * (POTT[i  ,j  ,k] + POTT[i  ,j+1,k])/2.)\
+                                  / A[i  ,j  ]
 
             # VERTICAL ADVECTION
             if i_vert_adv:

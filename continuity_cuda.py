@@ -1,10 +1,7 @@
 import numpy as np
-from namelist import  i_colp_tendency, COLP_hor_dif_tau, wp
+from namelist import  i_colp_tendency, COLP_hor_dif_tau, wp, tpbv, tpbvs
 from boundaries_cuda import exchange_BC_gpu
 import time
-
-# TODO remove
-from boundaries import exchange_BC
 
 from numba import cuda, jit
 if wp == 'float64':
@@ -21,6 +18,8 @@ def calc_UFLX(UFLX, COLP, UWIND, dy):
                 (COLP[i_s-1,j  ] + COLP[i_s  ,j  ])/2. *\
                 UWIND[i_s  ,j  ,k] * dy
 
+    cuda.syncthreads()
+
 
 @jit([wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:,:], '+wp+'[:,:  ]'], target='gpu')
 def calc_VFLX(VFLX, COLP, VWIND, dxjs):
@@ -32,6 +31,8 @@ def calc_VFLX(VFLX, COLP, VWIND, dxjs):
         VFLX[i  ,js  ,k] = \
                 (COLP[i  ,js-1] + COLP[i  ,js  ])/2. *\
                 VWIND[i  ,js  ,k] * dxjs[i  ,js  ]
+
+    cuda.syncthreads()
 
 
 @jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+\
@@ -47,92 +48,93 @@ def calc_FLXDIV(FLXDIV, UFLX, VFLX, dsigma, A):
                   + VFLX[i  ,j+1,k] - VFLX[i  ,j  ,k] ) \
                   * dsigma[k] / A[i  ,j  ]
 
+    cuda.syncthreads()
+
+
+@cuda.jit(device=True, inline=True)
+def get_sum(a, b):
+    return a + b
+
 
 @jit([wp+'[:,:  ], '+wp+'[:,:,:]'], target='gpu')
 def calc_dCOLPdt(dCOLPdt, FLXDIV):
-    nx = dCOLPdt.shape[0] - 2
-    ny = dCOLPdt.shape[1] - 2
 
     if i_colp_tendency:
+        nx = dCOLPdt.shape[0] - 2
+        ny = dCOLPdt.shape[1] - 2
+
+        tz = cuda.threadIdx.z
+
+        vert_sum = cuda.shared.array(tpbv, dtype=float64)
         i, j, k = cuda.grid(3)
-        if i > 0 and i < nx+1 and j > 0 and j < ny+1:
-            TODO
-            #dCOLPdt = - np.sum(FLXDIV, axis=2)
+        vert_sum[tz] = FLXDIV[i,j,k]
 
-            if COLP_hor_dif_tau > 0:
-                raise NotImplementedError('no pressure difusion in gpu implemented')
+        cuda.syncthreads()
+
+        # sum-reduce vert_sum vertically
+        t = tpbv // 2
+        while t > 0:
+            if tz < t:
+                vert_sum[tz] = get_sum(vert_sum[tz], vert_sum[tz+t])
+            t //= 2
+            cuda.syncthreads()
+
+        if tz == 0:
+            dCOLPdt[i,j] = - vert_sum[0]
+
+        if COLP_hor_dif_tau > 0:
+            raise NotImplementedError('no pressure difusion in gpu implemented')
     else:
-        dCOLPdt[i,j,k] = 0.
+        dCOLPdt[i,j] = 0.
 
-    #if i_colp_tendency:
-    #    dCOLPdt = - np.sum(FLXDIV, axis=2)
-
-    #    if COLP_hor_dif_tau > 0:
-    #        raise NotImplementedError('no pressure difusion in gpu implemented')
-    #else:
-    #    dCOLPdt =  np.zeros( (GR.nx+2*GR.nb,GR.ny+2*GR.nb) )
+    cuda.syncthreads()
 
 
-#@jit() #TODO test whether performance changes with jit
 def colp_tendency_jacobson_gpu(GR, griddim, blockdim, stream,
                                 dCOLPdt, UFLX, VFLX, FLXDIV, \
                                 COLP, UWIND, VWIND, \
-                                dy, dxjs):
+                                dy, dxjs, A, dsigma):
     
-    # TODO REMOVE GR
-
-    #nxs = UFLX.shape[0] - 2
-    #ny  = UFLX.shape[1] - 2
-    #nz  = UFLX.shape[2]
-
-
-    COLPd         = cuda.to_device(COLP, stream)
-    dCOLPdtd      = cuda.to_device(dCOLPdt, stream)
-    UFLXd         = cuda.to_device(UFLX, stream)
-    VFLXd         = cuda.to_device(VFLX, stream)
-    FLXDIVd       = cuda.to_device(FLXDIV, stream)
-    UWINDd        = cuda.to_device(UWIND, stream)
-    VWINDd        = cuda.to_device(VWIND, stream)
-    dxjsd         = cuda.to_device(GR.dxjs, stream)
-    Ad            = cuda.to_device(GR.A, stream)
-    dsigmad       = cuda.to_device(GR.dsigma, stream)
-
-    calc_UFLX[GR.griddim_is, blockdim, stream](UFLXd, COLPd, UWINDd, dy)
-    calc_VFLX[GR.griddim_js, blockdim, stream](VFLXd, COLPd, VWINDd, dxjsd)
-    stream.synchronize()
+    calc_UFLX[GR.griddim_is, blockdim, stream](UFLX, COLP, UWIND, dy)
+    calc_VFLX[GR.griddim_js, blockdim, stream](VFLX, COLP, VWIND, dxjs)
     
     # TODO 1 NECESSARY
-    UFLXd = exchange_BC_gpu(UFLXd, GR.zonal , GR.merids, GR.griddim_is, blockdim, stream, \
+    UFLX = exchange_BC_gpu(UFLX, GR.zonal , GR.merids, GR.griddim_is, blockdim, stream, \
                             stagx=True)
-    VFLXd = exchange_BC_gpu(VFLXd, GR.zonals, GR.merid , GR.griddim_js, blockdim, stream, \
+    VFLX = exchange_BC_gpu(VFLX, GR.zonals, GR.merid , GR.griddim_js, blockdim, stream, \
                             stagy=True)
-    stream.synchronize()
 
-    calc_FLXDIV[GR.griddim, blockdim, stream](FLXDIVd, UFLXd, VFLXd, dsigmad, Ad)
-    calc_dCOLPdt[GR.griddim, blockdim, stream](dCOLPdtd, FLXDIVd)
-
-    UFLXd.to_host(stream)
-    VFLXd.to_host(stream)
-    FLXDIVd.to_host(stream)
-    dCOLPdtd.to_host(stream)
-
-
+    calc_FLXDIV[GR.griddim, blockdim, stream](FLXDIV, UFLX, VFLX, dsigma, A)
+    calc_dCOLPdt[GR.griddim, blockdim, stream](dCOLPdt, FLXDIV)
 
     return(dCOLPdt, UFLX, VFLX, FLXDIV)
 
 
-def vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND):
+@jit([wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:]'], target='gpu')
+def vertical_wind_jacobson_gpu(WWIND, dCOLPdt, FLXDIV, COLP_NEW, sigma_vb):
 
+    nx  = FLXDIV.shape[0] - 2
+    ny  = FLXDIV.shape[1] - 2
+    nzs = FLXDIV.shape[2]
 
-    for ks in range(1,GR.nzs-1):
+    vert_sum = cuda.shared.array(tpbvs, dtype=float64)
 
-        WWIND[:,:,ks][GR.iijj] = - np.sum(FLXDIV[:,:,:ks][GR.iijj], axis=2) / \
-                                    COLP_NEW[GR.iijj] \
-                                 - GR.sigma_vb[ks] * dCOLPdt[GR.iijj] / \
-                                    COLP_NEW[GR.iijj]
+    i, j, ks = cuda.grid(3)
+    vert_sum[ks] = FLXDIV[i,j,ks]
 
+    if i > 0 and i < nx+1 and j > 0 and j < ny+1 and ks > 0 and ks < nzs:
+        # cumulative-sum-reduce vert_sum vertically
+        k = 0
+        while k < nzs-1:
+            if k == ks-1:
+                vert_sum[ks] = get_sum(vert_sum[ks], vert_sum[ks-1])
+                fluxdivsum = vert_sum[k]
+            k = k + 1
+            cuda.syncthreads()
 
+        WWIND[i,j,ks] = - fluxdivsum / COLP_NEW[i,j] \
+                        - sigma_vb[ks] * dCOLPdt[i,j] / COLP_NEW[i,j]
 
-    return(WWIND)
+    cuda.syncthreads()
 
 

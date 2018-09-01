@@ -13,44 +13,51 @@ from diagnostics import interp_COLPA
 ######################################################################################
 
 def matsuno(GR, subgrids,
-            COLP, PHI, PHIVB, POTT, POTTVB,
-            UWIND, VWIND, WWIND,
-            UFLX, VFLX,
+            COLP_OLD, COLP, COLP_NEW, dCOLPdt, PHI, PHIVB, \
+            POTT_OLD, POTT, dPOTTdt, POTTVB,
+            UWIND_OLD, UWIND, VWIND_OLD, VWIND, WWIND,
+            UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
+            BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
             HSURF, PVTF, PVTFVB,
             dPOTTdt_RAD, dPOTTdt_MIC,
-            QV, QC, dQVdt_MIC, dQCdt_MIC):
+            QV_OLD, QV, QC_OLD, QC, dQVdt_MIC, dQCdt_MIC):
 
-    
     ########## ESTIMATE
-    UWIND_OLD = copy.deepcopy(UWIND)
-    VWIND_OLD = copy.deepcopy(VWIND)
-    COLP_OLD = copy.deepcopy(COLP)
-    POTT_OLD = copy.deepcopy(POTT)
-    QV_OLD = copy.deepcopy(QV)
-    QC_OLD = copy.deepcopy(QC)
+    UWIND_OLD[:] = UWIND[:]
+    VWIND_OLD[:] = VWIND[:]
+    POTT_OLD[:]  = POTT[:]
+    QV_OLD[:]    = QV[:]
+    QC_OLD[:]    = QC[:]
+    COLP_OLD[:]  = COLP[:]
 
     COLP_NEW, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND,\
     dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-                                        COLP, COLP, POTT, POTTVB, HSURF,
+                                        COLP_OLD, COLP, COLP_NEW, dCOLPdt,
+                                        POTT, dPOTTdt, POTTVB, HSURF,
                                         UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                        UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
+                                        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
+                                        PHI, PVTF, PVTFVB,
                                         dPOTTdt_RAD, dPOTTdt_MIC,
                                         QV, QC, dQVdt_MIC, dQCdt_MIC)
+    COLP[:] = COLP_NEW[:]
 
     t_start = time.time()
-    #UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND, VWIND,
-    #                                    COLP, COLP_NEW, POTT, QV, QC,
-    #                                    dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-    UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson_c(GR, UWIND, VWIND,
-                                        COLP, COLP_NEW, POTT, QV, QC,
-                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-    UWIND = np.asarray(UWIND)
-    VWIND = np.asarray(VWIND)
-    COLP = np.asarray(COLP)
-    POTT = np.asarray(POTT)
-    QV = np.asarray(QV)
-    QC = np.asarray(QC)
+    UWIND, VWIND, COLP, POTT, QV, QC \
+                    = proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND, 
+                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
+                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    #UWIND, VWIND, COLP, POTT, QV, QC \
+    #                 = proceed_timestep_jacobson_c(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
+    #                        COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
+    #                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    #UWIND = np.asarray(UWIND)
+    #VWIND = np.asarray(VWIND)
+    #COLP = np.asarray(COLP)
+    #POTT = np.asarray(POTT)
+    #QV = np.asarray(QV)
+    #QC = np.asarray(QC)
     t_end = time.time()
     GR.step_comp_time += t_end - t_start
 
@@ -79,28 +86,34 @@ def matsuno(GR, subgrids,
 
 
     ########## FINAL
-    COLP, dUFLXdt, dVFLXdt, \
+    COLP_NEW, dUFLXdt, dVFLXdt, \
     dPOTTdt, WWIND, \
     dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-                                        COLP_OLD, COLP, POTT, POTTVB, HSURF,
+                                        COLP_OLD, COLP, COLP_NEW, dCOLPdt,
+                                        POTT, dPOTTdt, POTTVB, HSURF,
                                         UWIND, VWIND, WWIND,
-                                        UFLX, VFLX, PHI, PVTF, PVTFVB,
+                                        UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
+                                        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
+                                        PHI, PVTF, PVTFVB,
                                         dPOTTdt_RAD, dPOTTdt_MIC,
                                         QV, QC, dQVdt_MIC, dQCdt_MIC)
+    COLP[:] = COLP_NEW[:]
 
     t_start = time.time()
-    #UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson(GR, UWIND_OLD, VWIND_OLD,
-    #                                        COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
-    #                                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-    UWIND, VWIND, COLP, POTT, QV, QC = proceed_timestep_jacobson_c(GR, UWIND_OLD, VWIND_OLD,
-                                            COLP_OLD, COLP, POTT_OLD, QV_OLD, QC_OLD,
-                                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-    UWIND = np.asarray(UWIND)
-    VWIND = np.asarray(VWIND)
-    COLP = np.asarray(COLP)
-    POTT = np.asarray(POTT)
-    QV = np.asarray(QV)
-    QC = np.asarray(QC)
+    UWIND, VWIND, COLP, POTT, QV, QC \
+                     = proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
+                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
+                           dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    #UWIND, VWIND, COLP, POTT, QV, QC \
+    #                 = proceed_timestep_jacobson_c(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
+    #                        COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
+    #                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+    #UWIND = np.asarray(UWIND)
+    #VWIND = np.asarray(VWIND)
+    #COLP = np.asarray(COLP)
+    #POTT = np.asarray(POTT)
+    #QV = np.asarray(QV)
+    #QC = np.asarray(QC)
     t_end = time.time()
     GR.step_comp_time += t_end - t_start
 

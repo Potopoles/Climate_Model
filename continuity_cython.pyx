@@ -13,8 +13,10 @@ cpdef colp_tendency_jacobson_c(GR, \
                                 double[:,   ::1] COLP,
                                 double[:,:, ::1] UWIND,
                                 double[:,:, ::1] VWIND,
+                                double[:,   ::1] dCOLPdt,
                                 double[:,:, ::1] UFLX,
-                                double[:,:, ::1] VFLX):
+                                double[:,:, ::1] VFLX,
+                                double[:,:, ::1] FLXDIV):
 
     cdef int c_njobs = njobs
 
@@ -24,7 +26,7 @@ cpdef colp_tendency_jacobson_c(GR, \
     cdef int ny  = GR.ny
     cdef int nys = GR.nys
     cdef int nz  = GR.nz
-    cdef int i, im1, imb, ip1, i_s, ism1, j, jm1, jmb, jp1, js, jsm1, k, km1
+    cdef int i, im1, ip1, i_s, ism1, j, jm1, jp1, js, jsm1, k, km1
 
     cdef double dy = GR.dy
     cdef double num_dif
@@ -34,8 +36,6 @@ cpdef colp_tendency_jacobson_c(GR, \
     cdef double[     ::1] dsigma  = GR.dsigma
     cdef double[:,   ::1] dxjs    = GR.dxjs
     cdef double[:,   ::1] A       = GR.A
-    cdef double[:,   ::1] dCOLPdt = np.full( (nx +2*nb,ny +2*nb   ), np.nan )
-    cdef double[:,:, ::1] FLXDIV  = np.full( (nx +2*nb,ny +2*nb,nz), np.nan )
 
 
     for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='guided'):
@@ -63,10 +63,8 @@ cpdef colp_tendency_jacobson_c(GR, \
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):
         ip1 = i + 1
-        #imb = i - nb
         for j   in range(nb,ny +nb):
             jp1 = j + 1
-            #jmb = j - nb
 
             flux_div_sum = 0.
             for k in range(0,nz):
@@ -77,7 +75,6 @@ cpdef colp_tendency_jacobson_c(GR, \
 
                 flux_div_sum = flux_div_sum + FLXDIV[i   ,j   ,k]
 
-            #dCOLPdt[imb,jmb] = - flux_div_sum
             dCOLPdt[i  ,j  ] = - flux_div_sum
 
 
@@ -100,12 +97,6 @@ cpdef colp_tendency_jacobson_c(GR, \
     #                       - 4.*COLP[i  ,j  ] )
 
     #            dCOLPdt[i  ,j  ] = dCOLPdt[i  ,j  ] + num_dif
-
-
-    # even if colp_tendency ist not calculated we need FLXDIV to be calculated
-    if not i_colp_tendency:
-        dCOLPdt[:] = 0.
-
 
     return(dCOLPdt, UFLX, VFLX, FLXDIV)
 

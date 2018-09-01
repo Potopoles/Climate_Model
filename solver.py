@@ -25,9 +25,11 @@ elif i_time_stepping == 'RK4':
 GR = Grid()
 GR, subgrids = create_subgrids(GR, njobs)
 
-COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
-UFLX, VFLX, \
-HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
+COLP_OLD, COLP, COLP_NEW, dCOLPdt, PAIR, PHI, PHIVB, \
+UWIND_OLD, UWIND, VWIND_OLD, VWIND, WIND, WWIND,\
+UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,\
+BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, \
+HSURF, POTT_OLD, POTT, dPOTTdt, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
 RAD, SOIL, MIC, TURB = initialize_fields(GR, subgrids)
 constant_fields_to_NC(GR, HSURF, RAD, SOIL)
 
@@ -82,17 +84,21 @@ while GR.ts < GR.nts:
     #########
 
     ######## DYNAMICS
+    #UWIND_OLD =  np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
     t_start = time.time()
     COLP, PHI, PHIVB, POTT, POTTVB, \
     UWIND, VWIND, WWIND,\
     UFLX, VFLX, QV, QC \
                 = time_stepper(GR, subgrids,
-                        COLP, PHI, PHIVB, POTT, POTTVB,
-                        UWIND, VWIND, WWIND,
-                        UFLX, VFLX,
+                        COLP_OLD, COLP, COLP_NEW, dCOLPdt, PHI, PHIVB,
+                        POTT_OLD, POTT, dPOTTdt, POTTVB,
+                        UWIND_OLD, UWIND, VWIND_OLD, VWIND, WWIND,
+                        UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
+                        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
                         HSURF, PVTF, PVTFVB, 
                         RAD.dPOTTdt_RAD, MIC.dPOTTdt_MIC,
-                        MIC.QV, MIC.QC, MIC.dQVdt_MIC, MIC.dQCdt_MIC)
+                        MIC.QV_OLD, MIC.QV, MIC.QC_OLD, MIC.QC,
+                        MIC.dQVdt_MIC, MIC.dQCdt_MIC)
     t_end = time.time()
     GR.dyn_comp_time += t_end - t_start
     ########

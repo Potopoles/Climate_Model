@@ -11,12 +11,17 @@ from cython.parallel import prange
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef proceed_timestep_jacobson_c(GR, \
+                                double[:,:, ::1] UWIND_OLD,
                                 double[:,:, ::1] UWIND,
+                                double[:,:, ::1] VWIND_OLD,
                                 double[:,:, ::1] VWIND,
                                 double[:,   ::1] COLP_OLD,
                                 double[:,   ::1] COLP,
+                                double[:,:, ::1] POTT_OLD,
                                 double[:,:, ::1] POTT,
+                                double[:,:, ::1] QV_OLD,
                                 double[:,:, ::1] QV,
+                                double[:,:, ::1] QC_OLD,
                                 double[:,:, ::1] QC,
                                 double[:,:, ::1] dUFLXdt,
                                 double[:,:, ::1] dVFLXdt,
@@ -52,7 +57,7 @@ cpdef proceed_timestep_jacobson_c(GR, \
         for j   in range(nb,ny +nb):
             jmb = j - nb
             for k in range(0,nz):
-                UWIND[i_s,j  ,k] = UWIND[i_s,j  ,k] * \
+                UWIND[i_s,j  ,k] = UWIND_OLD[i_s,j  ,k] * \
                                     COLPA_is_OLD[ismb,jmb]/COLPA_is_NEW[ismb,jmb] \
                                         + dt*dUFLXdt[ismb,jmb,k]/COLPA_is_NEW[ismb,jmb]
 
@@ -62,7 +67,7 @@ cpdef proceed_timestep_jacobson_c(GR, \
         for js  in range(nb,nys+nb):
             jsmb = js - nb
             for k in range(0,nz):
-                VWIND[i  ,js ,k] = VWIND[i  ,js ,k] * \
+                VWIND[i  ,js ,k] = VWIND_OLD[i  ,js ,k] * \
                                     COLPA_js_OLD[imb,jsmb]/COLPA_js_NEW[imb,jsmb] \
                                         + dt*dVFLXdt[imb,jsmb,k]/COLPA_js_NEW[imb,jsmb]
 
@@ -72,13 +77,13 @@ cpdef proceed_timestep_jacobson_c(GR, \
         for j   in range(nb,ny +nb):
             jmb = j - nb
             for k in range(0,nz):
-                POTT[i  ,j  ,k]  =  POTT[i  ,j  ,k] * \
+                POTT[i  ,j  ,k]  =  POTT_OLD[i  ,j  ,k] * \
                                     COLP_OLD    [i  ,j  ]/COLP        [i  ,j  ] \
                                         + dt*dPOTTdt[i  ,j  ,k]/COLP        [i  ,j  ]
-                QV[i  ,j  ,k]    =    QV[i  ,j  ,k] * \
+                QV[i  ,j  ,k]    =    QV_OLD[i  ,j  ,k] * \
                                     COLP_OLD    [i  ,j  ]/COLP        [i  ,j  ] \
                                         + dt*dQVdt  [imb,jmb,k]/COLP        [i  ,j  ]
-                QC[i  ,j  ,k]    =    QC[i  ,j  ,k] * \
+                QC[i  ,j  ,k]    =    QC_OLD[i  ,j  ,k] * \
                                     COLP_OLD    [i  ,j  ]/COLP        [i  ,j  ] \
                                         + dt*dQCdt  [imb,jmb,k]/COLP        [i  ,j  ]
 

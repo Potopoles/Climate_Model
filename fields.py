@@ -19,26 +19,46 @@ def initialize_fields(GR, subgrids):
     else:
         # CREATE ARRAYS
         # scalars
+        COLP_OLD =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
         COLP =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        COLP_NEW =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        dCOLPdt = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb), np.nan)
         PSURF =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
         PAIR =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         PHI =    np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         PHIVB =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
+        POTT_OLD =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         POTT =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        dPOTTdt = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         TAIR =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         TAIRVB = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
         RHO  =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz   ), np.nan)
         POTTVB = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
         POTTVB[:] = 0
         # wind velocities
-        UWIND =  np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        VWIND =  np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
+        UWIND_OLD =  np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        UWIND     =  np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        VWIND_OLD =  np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
+        VWIND     =  np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
         WIND =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         WWIND =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
         WWIND[:] = 0
         # mass fluxes at v elocity points
         UFLX =   np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        dUFLXdt = np.zeros( (GR.nxs+2*GR.nb,GR.ny +2*GR.nb,GR.nz) )
         VFLX =   np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
+        dVFLXdt = np.zeros( (GR.nx +2*GR.nb,GR.nys+2*GR.nb,GR.nz) )
+        FLXDIV  = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz), np.nan)
+
+        BFLX = np.full( (GR.nx +2*GR.nb,GR.ny +2*GR.nb, GR.nz  ), np.nan )
+        CFLX = np.full( (GR.nxs+2*GR.nb,GR.nys+2*GR.nb, GR.nz  ), np.nan )
+        DFLX = np.full( (GR.nx +2*GR.nb,GR.nys+2*GR.nb, GR.nz  ), np.nan )
+        EFLX = np.full( (GR.nx +2*GR.nb,GR.nys+2*GR.nb, GR.nz  ), np.nan )
+        RFLX = np.full( (GR.nx +2*GR.nb,GR.ny +2*GR.nb, GR.nz  ), np.nan )
+        QFLX = np.full( (GR.nxs+2*GR.nb,GR.nys+2*GR.nb, GR.nz  ), np.nan )
+        SFLX = np.full( (GR.nxs+2*GR.nb,GR.ny +2*GR.nb, GR.nz  ), np.nan )
+        TFLX = np.full( (GR.nxs+2*GR.nb,GR.ny +2*GR.nb, GR.nz  ), np.nan )
+
         # vertical profile
         PVTF   = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan)
         PVTFVB = np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs), np.nan)
@@ -53,7 +73,6 @@ def initialize_fields(GR, subgrids):
         GR, COLP, PSURF, POTT, TAIR \
                 = load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, \
                                 PVTFVB, POTT, TAIR)
-        #quit()
         COLP = gaussian2D(GR, COLP, COLP_gaussian_pert, np.pi*3/4, 0, \
                             gaussian_dlon, gaussian_dlat)
         COLP = random2D(GR, COLP, COLP_random_pert)
@@ -103,9 +122,11 @@ def initialize_fields(GR, subgrids):
 
 
 
-    return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
-            UFLX, VFLX, 
-            HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB,
+    return(COLP_OLD, COLP, COLP_NEW, dCOLPdt, PAIR, PHI, PHIVB, \
+            UWIND_OLD, UWIND, VWIND_OLD, VWIND, WIND, WWIND,
+            UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
+            BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
+            HSURF, POTT_OLD, POTT, dPOTTdt, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB,
             RAD, SOIL, MIC, TURB)
 
 

@@ -1,6 +1,4 @@
-import copy
 import numpy as np
-#import time
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency
@@ -12,15 +10,13 @@ i_pre_grad = 1
 i_num_dif  = 1
 
 
-#def wind_tendency_jacobson_par(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
-#                                COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
-def wind_tendency_jacobson_par(job_ind, output, GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
-                                COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
 
-    #t_start = time.time()
+def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVFLXdt,
+                            BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
+                            COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
 
-    dUFLXdt = np.zeros( (GR.nxs,GR.ny ,GR.nz) )
-    dVFLXdt = np.zeros( (GR.nx ,GR.nys,GR.nz) )
+    dUFLXdt[:] = 0.
+    dVFLXdt[:] = 0.
 
     if i_wind_tendency:
 
@@ -37,108 +33,38 @@ def wind_tendency_jacobson_par(job_ind, output, GR, UWIND, VWIND, WWIND, UFLX, V
 
             # HORIZONTAL ADVECTION
             if i_hor_adv:
-                horAdv_UWIND = horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX, k)
-                horAdv_VWIND = horizontal_advection_VWIND(GR, VWIND, UFLX, VFLX, k)
-                dUFLXdt[:,:,k] += horAdv_UWIND
-                dVFLXdt[:,:,k] += horAdv_VWIND
+                horAdv_UWIND = horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX,
+                                                        BFLX, CFLX, DFLX, EFLX, k)
+                horAdv_VWIND = horizontal_advection_VWIND(GR, VWIND, UFLX, VFLX,
+                                                        RFLX, QFLX, SFLX, TFLX, k)
+                dUFLXdt[:,:,k][GR.iisjj] += horAdv_UWIND
+                dVFLXdt[:,:,k][GR.iijjs] += horAdv_VWIND
 
             if i_vert_adv:
                 # VERTICAL ADVECTION
                 vertAdv_UWIND, vertAdv_VWIND = vertical_advection(GR, WWIND_UWIND, 
                                                                     WWIND_VWIND, k)
-                dUFLXdt[:,:,k] += vertAdv_UWIND
-                dVFLXdt[:,:,k] += vertAdv_VWIND
+                dUFLXdt[:,:,k][GR.iisjj] += vertAdv_UWIND
+                dVFLXdt[:,:,k][GR.iijjs] += vertAdv_VWIND
 
             if i_coriolis:
                 # CORIOLIS AND SPHERICAL GRID CONVERSION
                 coriolis_UWIND, coriolis_VWIND = coriolis_term(GR, UWIND, VWIND, COLP, k)
-                dUFLXdt[:,:,k] += coriolis_UWIND
-                dVFLXdt[:,:,k] += coriolis_VWIND
+                dUFLXdt[:,:,k][GR.iisjj] += coriolis_UWIND
+                dVFLXdt[:,:,k][GR.iijjs] += coriolis_VWIND
 
             if i_pre_grad:
                 # PRESSURE GRADIENT
                 preGrad_UWIND, preGrad_VWIND = pressure_gradient_term(GR, COLP, PHI, POTT,
                                                                     PVTF, PVTFVB, k)
-                dUFLXdt[:,:,k] += preGrad_UWIND
-                dVFLXdt[:,:,k] += preGrad_VWIND
+                dUFLXdt[:,:,k][GR.iisjj] += preGrad_UWIND
+                dVFLXdt[:,:,k][GR.iijjs] += preGrad_VWIND
 
             if i_num_dif and (WIND_hor_dif_tau > 0):
                 # HORIZONTAL DIFFUSION
                 diff_UWIND, diff_VWIND = horizontal_diffusion(GR, UFLX, VFLX, k)
-                dUFLXdt[:,:,k] += diff_UWIND
-                dVFLXdt[:,:,k] += diff_VWIND
-
-
-    #t_end = time.time()
-    #GR.wind_comp_time += t_end - t_start
-
-    #print('yolo')
-    #print(dUFLXdt)
-
-    out = {}
-    out['dUFLXdt'] = dUFLXdt
-    out['dVFLXdt'] = dVFLXdt
-    output.put( (job_ind, out) )
-
-    #return(dUFLXdt, dVFLXdt)
-
-
-
-
-
-
-
-def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, VFLX, 
-                                COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
-
-    dUFLXdt = np.zeros( (GR.nxs,GR.ny ,GR.nz) )
-    dVFLXdt = np.zeros( (GR.nx ,GR.nys,GR.nz) )
-
-    if i_wind_tendency:
-
-        if i_vert_adv:
-            WWIND_UWIND = np.zeros( (GR.nxs,GR.ny ,GR.nzs) )
-            WWIND_VWIND = np.zeros( (GR.nx ,GR.nys,GR.nzs) )
-            for ks in range(1,GR.nzs-1):
-                WWIND_UWIND[:,:,ks] = vertical_interp_UWIND(GR, COLP_NEW, UWIND,
-                                                        WWIND, WWIND_UWIND, ks)
-                WWIND_VWIND[:,:,ks] = vertical_interp_VWIND(GR, COLP_NEW, VWIND,
-                                                    WWIND, WWIND_VWIND, ks)
-
-        for k in range(0,GR.nz):
-
-            # HORIZONTAL ADVECTION
-            if i_hor_adv:
-                horAdv_UWIND = horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX, k)
-                horAdv_VWIND = horizontal_advection_VWIND(GR, VWIND, UFLX, VFLX, k)
-                dUFLXdt[:,:,k] += horAdv_UWIND
-                dVFLXdt[:,:,k] += horAdv_VWIND
-
-            if i_vert_adv:
-                # VERTICAL ADVECTION
-                vertAdv_UWIND, vertAdv_VWIND = vertical_advection(GR, WWIND_UWIND, 
-                                                                    WWIND_VWIND, k)
-                dUFLXdt[:,:,k] += vertAdv_UWIND
-                dVFLXdt[:,:,k] += vertAdv_VWIND
-
-            if i_coriolis:
-                # CORIOLIS AND SPHERICAL GRID CONVERSION
-                coriolis_UWIND, coriolis_VWIND = coriolis_term(GR, UWIND, VWIND, COLP, k)
-                dUFLXdt[:,:,k] += coriolis_UWIND
-                dVFLXdt[:,:,k] += coriolis_VWIND
-
-            if i_pre_grad:
-                # PRESSURE GRADIENT
-                preGrad_UWIND, preGrad_VWIND = pressure_gradient_term(GR, COLP, PHI, POTT,
-                                                                    PVTF, PVTFVB, k)
-                dUFLXdt[:,:,k] += preGrad_UWIND
-                dVFLXdt[:,:,k] += preGrad_VWIND
-
-            if i_num_dif and (WIND_hor_dif_tau > 0):
-                # HORIZONTAL DIFFUSION
-                diff_UWIND, diff_VWIND = horizontal_diffusion(GR, UFLX, VFLX, k)
-                dUFLXdt[:,:,k] += diff_UWIND
-                dVFLXdt[:,:,k] += diff_VWIND
+                dUFLXdt[:,:,k][GR.iisjj] += diff_UWIND
+                dVFLXdt[:,:,k][GR.iijjs] += diff_VWIND
 
 
     return(dUFLXdt, dVFLXdt)
@@ -321,13 +247,10 @@ def pressure_gradient_term(GR, COLP, PHI, POTT, PVTF, PVTFVB, k):
     return(preGrad_UWIND, preGrad_VWIND)
 
 
-def horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX, k):
-    BFLX = np.full( (GR.nx +2*GR.nb,GR.ny +2*GR.nb), np.nan )
-    CFLX = np.full( (GR.nxs+2*GR.nb,GR.nys+2*GR.nb), np.nan )
-    DFLX = np.full( (GR.nx +2*GR.nb,GR.nys+2*GR.nb), np.nan )
-    EFLX = np.full( (GR.nx +2*GR.nb,GR.nys+2*GR.nb), np.nan )
+def horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX,
+                                    BFLX, CFLX, DFLX, EFLX, k):
 
-    BFLX[GR.iijj]   = 1/12 * (  UFLX[:,:,k][GR.iijj_jm1      ]   + \
+    BFLX[:,:,k][GR.iijj]   = 1/12 * (  UFLX[:,:,k][GR.iijj_jm1      ]   + \
                                 UFLX[:,:,k][GR.iijj_ip1_jm1  ]   + \
                             2*( UFLX[:,:,k][GR.iijj          ]   + \
                                 UFLX[:,:,k][GR.iijj_ip1      ] ) + \
@@ -335,7 +258,7 @@ def horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX, k):
                                 UFLX[:,:,k][GR.iijj_ip1_jp1  ]   )
     BFLX = exchange_BC(GR, BFLX)
 
-    CFLX[GR.iisjjs] = 1/12 * (  VFLX[:,:,k][GR.iisjjs_im1_jm1]   + \
+    CFLX[:,:,k][GR.iisjjs] = 1/12 * (  VFLX[:,:,k][GR.iisjjs_im1_jm1]   + \
                                 VFLX[:,:,k][GR.iisjjs_jm1    ]   +\
                             2*( VFLX[:,:,k][GR.iisjjs_im1    ]   + \
                                 VFLX[:,:,k][GR.iisjjs        ] ) +\
@@ -343,7 +266,7 @@ def horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX, k):
                                 VFLX[:,:,k][GR.iisjjs_jp1    ]   )
     CFLX = exchange_BC(GR, CFLX)
 
-    DFLX[GR.iijjs]  = 1/24 * (  VFLX[:,:,k][GR.iijjs_jm1     ]    + \
+    DFLX[:,:,k][GR.iijjs]  = 1/24 * (  VFLX[:,:,k][GR.iijjs_jm1     ]    + \
                                 2*VFLX[:,:,k][GR.iijjs       ]    +\
                                 VFLX[:,:,k][GR.iijjs_jp1     ]    + \
                                 UFLX[:,:,k][GR.iijjs_jm1     ]    +\
@@ -352,7 +275,7 @@ def horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX, k):
                                 UFLX[:,:,k][GR.iijjs_ip1     ]    )
     DFLX = exchange_BC(GR, DFLX)
 
-    EFLX[GR.iijjs]  = 1/24 * (  VFLX[:,:,k][GR.iijjs_jm1     ]     + \
+    EFLX[:,:,k][GR.iijjs]  = 1/24 * (  VFLX[:,:,k][GR.iijjs_jm1     ]     + \
                                 2*VFLX[:,:,k][GR.iijjs       ]     +\
                                 VFLX[:,:,k][GR.iijjs_jp1     ]     - \
                                 UFLX[:,:,k][GR.iijjs_jm1     ]     +\
@@ -361,75 +284,84 @@ def horizontal_advection_UWIND(GR, UWIND, UFLX, VFLX, k):
                               - UFLX[:,:,k][GR.iijjs_ip1     ]     )
     EFLX = exchange_BC(GR, EFLX)
 
-    horAdv_UWIND =  + BFLX [GR.iisjj_im1    ] * \
+    horAdv_UWIND =  + BFLX [:,:,k][GR.iisjj_im1    ] * \
                     ( UWIND[:,:,k][GR.iisjj_im1    ] + UWIND[:,:,k][GR.iisjj        ] )/2 \
-                    - BFLX [GR.iisjj        ] * \
+                    - BFLX [:,:,k][GR.iisjj        ] * \
                     ( UWIND[:,:,k][GR.iisjj        ] + UWIND[:,:,k][GR.iisjj_ip1    ] )/2 \
                     \
-                    + CFLX [GR.iisjj        ] * \
+                    + CFLX [:,:,k][GR.iisjj        ] * \
                     ( UWIND[:,:,k][GR.iisjj_jm1    ] + UWIND[:,:,k][GR.iisjj        ] )/2 \
-                    - CFLX [GR.iisjj_jp1    ] * \
+                    - CFLX [:,:,k][GR.iisjj_jp1    ] * \
                     ( UWIND[:,:,k][GR.iisjj        ] + UWIND[:,:,k][GR.iisjj_jp1    ] )/2 \
                     \
-                    + DFLX [GR.iisjj_im1    ] * \
+                    + DFLX [:,:,k][GR.iisjj_im1    ] * \
                     ( UWIND[:,:,k][GR.iisjj_im1_jm1] + UWIND[:,:,k][GR.iisjj        ] )/2 \
-                    - DFLX [GR.iisjj_jp1    ] * \
+                    - DFLX [:,:,k][GR.iisjj_jp1    ] * \
                     ( UWIND[:,:,k][GR.iisjj        ] + UWIND[:,:,k][GR.iisjj_ip1_jp1] )/2 \
                     \
-                    + EFLX [GR.iisjj        ] * \
+                    + EFLX [:,:,k][GR.iisjj        ] * \
                     ( UWIND[:,:,k][GR.iisjj_ip1_jm1] + UWIND[:,:,k][GR.iisjj        ] )/2 \
-                    - EFLX [GR.iisjj_im1_jp1] * \
+                    - EFLX [:,:,k][GR.iisjj_im1_jp1] * \
                     ( UWIND[:,:,k][GR.iisjj        ] + UWIND[:,:,k][GR.iisjj_im1_jp1] )/2 
 
     return( horAdv_UWIND )
 
 
-def horizontal_advection_VWIND(GR, VWIND, UFLX, VFLX, k):
-    RFLX = np.zeros( (GR.nx +2*GR.nb,GR.ny +2*GR.nb) )
-    QFLX = np.zeros( (GR.nxs+2*GR.nb,GR.nys+2*GR.nb) )
-    SFLX = np.zeros( (GR.nxs+2*GR.nb,GR.ny +2*GR.nb) )
-    TFLX = np.zeros( (GR.nxs+2*GR.nb,GR.ny +2*GR.nb) )
+def horizontal_advection_VWIND(GR, VWIND, UFLX, VFLX,
+                                RFLX, QFLX, SFLX, TFLX, k):
 
-    RFLX[GR.iijj] = 1/12 * (    VFLX[:,:,k][GR.iijj_im1    ]   +   VFLX[:,:,k][GR.iijj_im1_jp1]   +\
-                            2*( VFLX[:,:,k][GR.iijj        ]   +   VFLX[:,:,k][GR.iijj_jp1    ] ) +\
-                                VFLX[:,:,k][GR.iijj_ip1    ]   +   VFLX[:,:,k][GR.iijj_ip1_jp1]    )
+    RFLX[:,:,k][GR.iijj] = 1/12 * (    VFLX[:,:,k][GR.iijj_im1    ]   + \
+                               VFLX[:,:,k][GR.iijj_im1_jp1]   +\
+                            2*( VFLX[:,:,k][GR.iijj        ]   + \
+                              VFLX[:,:,k][GR.iijj_jp1    ] ) +\
+                                VFLX[:,:,k][GR.iijj_ip1    ]   + \
+                              VFLX[:,:,k][GR.iijj_ip1_jp1]    )
     RFLX = exchange_BC(GR, RFLX)
 
-    QFLX[GR.iisjjs] = 1/12 * (  UFLX[:,:,k][GR.iisjjs_im1_jm1]   +   UFLX[:,:,k][GR.iisjjs_im1    ]   +\
-                            2*( UFLX[:,:,k][GR.iisjjs_jm1    ]   +   UFLX[:,:,k][GR.iisjjs        ] ) +\
-                                UFLX[:,:,k][GR.iisjjs_ip1_jm1]   +   UFLX[:,:,k][GR.iisjjs_ip1    ]    )
+    QFLX[:,:,k][GR.iisjjs] = 1/12 * (  UFLX[:,:,k][GR.iisjjs_im1_jm1]   + \
+                               UFLX[:,:,k][GR.iisjjs_im1    ]   +\
+                            2*( UFLX[:,:,k][GR.iisjjs_jm1    ]   + \
+                               UFLX[:,:,k][GR.iisjjs        ] ) +\
+                                UFLX[:,:,k][GR.iisjjs_ip1_jm1]   + \
+                              UFLX[:,:,k][GR.iisjjs_ip1    ]    )
     QFLX = exchange_BC(GR, QFLX)
 
-    SFLX[GR.iisjj]  = 1/24 * (  VFLX[:,:,k][GR.iisjj_im1     ]   +   VFLX[:,:,k][GR.iisjj_im1_jp1]   +\
-                                VFLX[:,:,k][GR.iisjj         ]   +   VFLX[:,:,k][GR.iisjj_jp1    ]   +\
-                                UFLX[:,:,k][GR.iisjj_im1     ]   + 2*UFLX[:,:,k][GR.iisjj        ]   +\
-                                UFLX[:,:,k][GR.iisjj_ip1     ]                                  )
+    SFLX[:,:,k][GR.iisjj]  = 1/24 * (  VFLX[:,:,k][GR.iisjj_im1     ]   + \
+                              VFLX[:,:,k][GR.iisjj_im1_jp1]   +\
+                                VFLX[:,:,k][GR.iisjj         ]   +   \
+                                VFLX[:,:,k][GR.iisjj_jp1    ]   +\
+                                UFLX[:,:,k][GR.iisjj_im1     ]   + \
+                             2*UFLX[:,:,k][GR.iisjj        ]   +\
+                                UFLX[:,:,k][GR.iisjj_ip1     ]    )
     SFLX = exchange_BC(GR, SFLX)
 
-    TFLX[GR.iisjj]  = 1/24 * (  VFLX[:,:,k][GR.iisjj_im1    ]   +   VFLX[:,:,k][GR.iisjj_im1_jp1]   +\
-                                VFLX[:,:,k][GR.iisjj        ]   +   VFLX[:,:,k][GR.iisjj_jp1    ]   +\
-                              - UFLX[:,:,k][GR.iisjj_im1    ]   - 2*UFLX[:,:,k][GR.iisjj        ]   +\
-                              - UFLX[:,:,k][GR.iisjj_ip1    ]                                  )
+    TFLX[:,:,k][GR.iisjj]  = 1/24 * (  VFLX[:,:,k][GR.iisjj_im1    ]   + \
+                                   VFLX[:,:,k][GR.iisjj_im1_jp1]   +\
+                                VFLX[:,:,k][GR.iisjj        ]   + \
+                                   VFLX[:,:,k][GR.iisjj_jp1    ]   +\
+                              - UFLX[:,:,k][GR.iisjj_im1    ]   - \
+                                 2*UFLX[:,:,k][GR.iisjj        ]   +\
+                              - UFLX[:,:,k][GR.iisjj_ip1    ]     )
     TFLX = exchange_BC(GR, TFLX)
 
-    horAdv_VWIND =  + RFLX [GR.iijjs_jm1    ] * \
+    horAdv_VWIND =  + RFLX [:,:,k][GR.iijjs_jm1    ] * \
                     ( VWIND[:,:,k][GR.iijjs_jm1    ] + VWIND[:,:,k][GR.iijjs        ] )/2 \
-                    - RFLX [GR.iijjs        ] * \
+                    - RFLX [:,:,k][GR.iijjs        ] * \
                     ( VWIND[:,:,k][GR.iijjs        ] + VWIND[:,:,k][GR.iijjs_jp1    ] )/2 \
                     \
-                    + QFLX [GR.iijjs        ] * \
+                    + QFLX [:,:,k][GR.iijjs        ] * \
                     ( VWIND[:,:,k][GR.iijjs_im1    ] + VWIND[:,:,k][GR.iijjs        ] )/2 \
-                    - QFLX        [GR.iijjs_ip1    ] * \
+                    - QFLX [:,:,k][GR.iijjs_ip1    ] * \
                     ( VWIND[:,:,k][GR.iijjs        ] + VWIND[:,:,k][GR.iijjs_ip1    ] )/2 \
                     \
-                    + SFLX [GR.iijjs_jm1    ] * \
+                    + SFLX [:,:,k][GR.iijjs_jm1    ] * \
                     ( VWIND[:,:,k][GR.iijjs_im1_jm1] + VWIND[:,:,k][GR.iijjs        ] )/2 \
-                    - SFLX        [GR.iijjs_ip1    ] * \
+                    - SFLX [:,:,k][GR.iijjs_ip1    ] * \
                     ( VWIND[:,:,k][GR.iijjs        ] + VWIND[:,:,k][GR.iijjs_ip1_jp1] )/2 \
                     \
-                    + TFLX [GR.iijjs_ip1_jm1] * \
+                    + TFLX [:,:,k][GR.iijjs_ip1_jm1] * \
                     ( VWIND[:,:,k][GR.iijjs_ip1_jm1] + VWIND[:,:,k][GR.iijjs        ] )/2 \
-                    - TFLX        [GR.iijjs        ] * \
+                    - TFLX [:,:,k][GR.iijjs        ] * \
                     ( VWIND[:,:,k][GR.iijjs        ] + VWIND[:,:,k][GR.iijjs_im1_jp1] )/2 
 
     return( horAdv_VWIND )

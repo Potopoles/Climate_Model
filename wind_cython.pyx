@@ -25,7 +25,17 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
         double[:,:, ::1] VWIND,
         double[:,:, ::1] WWIND,
         double[:,:, ::1] UFLX,
+        double[:,:, ::1] dUFLXdt,
         double[:,:, ::1] VFLX,
+        double[:,:, ::1] dVFLXdt,
+        double[:,:, ::1] BFLX,
+        double[:,:, ::1] CFLX,
+        double[:,:, ::1] DFLX,
+        double[:,:, ::1] EFLX,
+        double[:,:, ::1] RFLX,
+        double[:,:, ::1] QFLX,
+        double[:,:, ::1] SFLX,
+        double[:,:, ::1] TFLX,
         double[:,   ::1] COLP,
         double[:,   ::1] COLP_NEW,
         double[:,:, ::1] PHI,
@@ -63,18 +73,18 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
     cdef double c_con_rE = con_rE
     cdef double c_con_cp = con_cp
 
-    cdef double[:,:, ::1] dUFLXdt = np.zeros( (nxs,ny ,nz) )
-    cdef double[:,:, ::1] dVFLXdt = np.zeros( (nx ,nys,nz) )
+    #cdef double[:,:, ::1] dUFLXdt = np.zeros( (nxs,ny ,nz) )
+    #cdef double[:,:, ::1] dVFLXdt = np.zeros( (nx ,nys,nz) )
 
-    cdef double[:,:, ::1] BFLX = np.zeros( (nx +2*nb,ny +2*nb,nz) )
-    cdef double[:,:, ::1] CFLX = np.zeros( (nxs+2*nb,nys+2*nb,nz) )
-    cdef double[:,:, ::1] DFLX = np.zeros( (nx +2*nb,nys+2*nb,nz) )
-    cdef double[:,:, ::1] EFLX = np.zeros( (nx +2*nb,nys+2*nb,nz) )
+    #cdef double[:,:, ::1] BFLX = np.zeros( (nx +2*nb,ny +2*nb,nz) )
+    #cdef double[:,:, ::1] CFLX = np.zeros( (nxs+2*nb,nys+2*nb,nz) )
+    #cdef double[:,:, ::1] DFLX = np.zeros( (nx +2*nb,nys+2*nb,nz) )
+    #cdef double[:,:, ::1] EFLX = np.zeros( (nx +2*nb,nys+2*nb,nz) )
 
-    cdef double[:,:, ::1] RFLX = np.zeros( (nx +2*nb,ny +2*nb,nz) )
-    cdef double[:,:, ::1] QFLX = np.zeros( (nxs+2*nb,nys+2*nb,nz) )
-    cdef double[:,:, ::1] SFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
-    cdef double[:,:, ::1] TFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
+    #cdef double[:,:, ::1] RFLX = np.zeros( (nx +2*nb,ny +2*nb,nz) )
+    #cdef double[:,:, ::1] QFLX = np.zeros( (nxs+2*nb,nys+2*nb,nz) )
+    #cdef double[:,:, ::1] SFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
+    #cdef double[:,:, ::1] TFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
 
     cdef double[:,:, ::1] WWIND_UWIND_ks = np.zeros( (nxs+2*nb,ny +2*nb,nzs) )
     cdef double[:,:, ::1] WWIND_VWIND_ks = np.zeros( (nx +2*nb,nys+2*nb,nzs) )
@@ -82,6 +92,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
     cdef double COLPAWWIND_is_ks, UWIND_ks
     cdef double COLPAWWIND_js_ks, VWIND_ks
 
+    dUFLXdt[:] = 0.
+    dVFLXdt[:] = 0.
 
     if i_wind_tendency:
 
@@ -372,7 +384,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                         - EFLX [ism1,jp1,k] * \
                                         ( UWIND[i_s ,j  ,k] + UWIND[ism1,jp1,k] )/2. 
 
-                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + horAdv_UWIND
+                        dUFLXdt[i_s,j,k] = dUFLXdt[i_s,j,k] + horAdv_UWIND
 
                     #######################################################################
 
@@ -380,7 +392,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     if i_vert_adv == 1:
                         vertAdv_UWIND = (WWIND_UWIND_ks[i_s ,j  ,k  ] - \
                                          WWIND_UWIND_ks[i_s,j  ,k+1]  ) / dsigma[k]
-                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + vertAdv_UWIND
+                        dUFLXdt[i_s,j,k] = dUFLXdt[i_s,j,k] + vertAdv_UWIND
 
                     #######################################################################
 
@@ -390,7 +402,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                              (  UFLX[ism1,j  ,k] + UFLX[isp1,j  ,k] \
                               + UFLX[i_s ,jm1,k] + UFLX[i_s ,jp1,k] - 4.*UFLX[i_s ,j  ,k])
 
-                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + diff_UWIND
+                        dUFLXdt[i_s,j,k] = dUFLXdt[i_s,j,k] + diff_UWIND
 
                     #######################################################################
 
@@ -412,7 +424,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                   sin(latis_rad[i_s ,j  ]) ) \
                                 )
 
-                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + coriolis_UWIND
+                        dUFLXdt[i_s,j,k] = dUFLXdt[i_s,j,k] + coriolis_UWIND
 
                     #######################################################################
 
@@ -439,7 +451,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                     ) \
                                 ) )
 
-                        dUFLXdt[i_s-nb,j-nb,k] = dUFLXdt[i_s-nb,j-nb,k] + preGrad_UWIND
+                        dUFLXdt[i_s,j,k] = dUFLXdt[i_s,j,k] + preGrad_UWIND
 
         #######################################################################
         #######################################################################
@@ -489,7 +501,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                         - TFLX [i  ,js  ,k] * \
                                         ( VWIND[i  ,js  ,k] + VWIND[im1,jsp1,k] )/2. 
 
-                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + horAdv_VWIND
+                        dVFLXdt[i,js,k] = dVFLXdt[i,js,k] + horAdv_VWIND
 
                     #######################################################################
 
@@ -497,7 +509,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     if i_vert_adv == 1:
                         vertAdv_VWIND = (WWIND_VWIND_ks[i  ,js  ,k  ] - \
                                          WWIND_VWIND_ks[i  ,js  ,k+1]  ) / dsigma[k]
-                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + vertAdv_VWIND
+                        dVFLXdt[i,js,k] = dVFLXdt[i,js,k] + vertAdv_VWIND
 
                     #######################################################################
 
@@ -508,7 +520,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                               + VFLX[i  ,jsm1,k] + VFLX[i  ,jsp1,k] - 4.*VFLX[i ,js  ,k])
 
 
-                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + diff_VWIND
+                        dVFLXdt[i,js,k] = dVFLXdt[i,js,k] + diff_VWIND
 
                     #######################################################################
 
@@ -530,7 +542,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                   sin(lat_rad[i  ,js  ]) ) \
                                 )
 
-                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + coriolis_VWIND
+                        dVFLXdt[i,js,k] = dVFLXdt[i,js,k] + coriolis_VWIND
 
                     #######################################################################
 
@@ -557,7 +569,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                     ) \
                                 ) )
 
-                        dVFLXdt[i-nb,js-nb,k] = dVFLXdt[i-nb,js-nb,k] + preGrad_VWIND
+                        dVFLXdt[i,js,k] = dVFLXdt[i,js,k] + preGrad_VWIND
 
         #######################################################################
         #######################################################################

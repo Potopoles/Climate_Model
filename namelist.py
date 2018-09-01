@@ -45,14 +45,14 @@ i_turbulence = 0
 
 
 # TESTSUITE EQUALITY
-nz = 5
+nz = 4
 lat0_deg = -80
 lat1_deg = 80
 dlat_deg = 3
 dlon_deg = 3
 #output_path = '../output_orig'
 output_path = '../output'
-i_sim_n_days = 1.00
+i_sim_n_days = 0.50
 i_out_nth_hour = 2
 i_radiation = 0
 njobs = 2
@@ -61,12 +61,12 @@ i_microphysics = 0
 i_turbulence = 0
 
 ### BENCHMARK EXPERIMENT
-#nz = 15
+#nz = 16
 #lat0_deg = -78
 #lat1_deg = 78
 #dlat_deg = 1.5
 #dlon_deg = 1.5
-#output_path = '../output_cur'
+#output_path = '../output'
 #i_sim_n_days = 0.5
 #i_out_nth_hour = 3
 #njobs = 4
@@ -92,9 +92,9 @@ i_turbulence = 0
 ### TODO : CURRENT CHANGES
 #i_out_nth_hour = 2.0
 #i_curved_earth = 0
-#i_radiation = 3
-#i_microphysics = 1
-#i_turbulence = 0
+i_radiation = 0
+i_microphysics = 0
+i_turbulence = 0
 
 
 
@@ -103,9 +103,10 @@ i_turbulence = 0
 wp = 'float64'
 # cython
 njobs = 2
-# gpu
-tpbh  = 1    # tasks per block horizontal
-tpbv  = nz   # tasks per block vertical
+# gpu 
+tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
+tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)
+tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
 
 
 
@@ -126,6 +127,7 @@ i_time_stepping = 'MATSUNO'
 if i_time_stepping != 'RK4':
     CFL = 0.7
 else:
+    raise NotImplementedError()
     CFL = 1.0
 
 # INITIAL CONDITIONS
@@ -137,10 +139,10 @@ gaussian_dlat = np.pi/15
 #gaussian_dlat = 1000
 u0 = 0
 UWIND_gaussian_pert = 10
-UWIND_random_pert = 1
+UWIND_random_pert = 0
 v0 = 0
 VWIND_gaussian_pert = 10
-VWIND_random_pert = 1
+VWIND_random_pert = 0
 pTop = 10000
 pSurf = 101350
 COLP_gaussian_pert = 10000

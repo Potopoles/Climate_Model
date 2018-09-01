@@ -60,6 +60,9 @@ class Grid:
             self.dlat_rad = self.dlat_deg/180*np.pi
 
             # NUMBER OF GRID POINTS IN EACH DIMENSION
+            possible_nz = [2,4,8,16,32,64]
+            if nz not in possible_nz:
+                raise NotImplementedError('Vertical reduction for GPU needs nz of 2**x')
             self.nz = nz
             self.nzs = nz+1
             self.nx = int((self.lon1_deg - self.lon0_deg)/self.dlon_deg)
@@ -216,18 +219,26 @@ class Grid:
             if tpbh > 1:
                 raise NotImplementedError('tpbh > 1 not yet possible see below (I guess)')
             self.blockdim      = (tpbh, tpbh, tpbv)
+            self.blockdim_ks   = (tpbh, tpbh, tpbv+1)
+            self.blockdim_xy   = (tpbh, tpbh, 1)
             self.griddim       = ((self.nx+2*self.nb)//self.blockdim[0], \
-                                 (self.ny+2*self.nb)//self.blockdim[1], \
-                                  self.nz//self.blockdim[2])
+                                  (self.ny+2*self.nb)//self.blockdim[1], \
+                                   self.nz//self.blockdim[2])
             self.griddim_is    = ((self.nxs+2*self.nb)//self.blockdim[0], \
-                                 (self.ny+2*self.nb)//self.blockdim[1], \
-                                  self.nz//self.blockdim[2])
+                                  (self.ny+2*self.nb)//self.blockdim[1], \
+                                   self.nz//self.blockdim[2])
             self.griddim_js    = ((self.nx+2*self.nb)//self.blockdim[0], \
-                                 (self.nys+2*self.nb)//self.blockdim[1], \
-                                  self.nz//self.blockdim[2])
+                                  (self.nys+2*self.nb)//self.blockdim[1], \
+                                   self.nz//self.blockdim[2])
             self.griddim_is_js = ((self.nx+2*self.nb)//self.blockdim[0], \
-                                 (self.nys+2*self.nb)//self.blockdim[1], \
-                                  self.nz//self.blockdim[2])
+                                  (self.nys+2*self.nb)//self.blockdim[1], \
+                                   self.nz//self.blockdim[2])
+            self.griddim_ks    = ((self.nx+2*self.nb)//self.blockdim_ks[0], \
+                                  (self.ny+2*self.nb)//self.blockdim_ks[1], \
+                                   self.nzs//self.blockdim_ks[2])
+            self.griddim_xy    = ((self.nx+2*self.nb)//self.blockdim_xy[0], \
+                                  (self.ny+2*self.nb)//self.blockdim_xy[1], \
+                                   1//self.blockdim_xy[2])
 
             zonal   = np.zeros((2,self.ny+2*self.nb ,self.nz), np.float64)
             zonals  = np.zeros((2,self.nys+2*self.nb,self.nz), np.float64)
