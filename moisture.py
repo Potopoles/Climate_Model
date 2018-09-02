@@ -10,12 +10,7 @@ i_microphysics = 1
 i_turb         = 0
 
 
-def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
-
-    #t_start = time.time()
-
-
-    dQVdt = np.zeros( (GR.nx ,GR.ny ,GR.nz) )
+def water_vapor_tendency(GR, dQVdt, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, dQVdt_MIC):
 
     QVVB = np.zeros( (GR.nx ,GR.ny ,GR.nzs) )
     QVVB[:,:,1:(GR.nzs-1)] = (QV[:,:,:-1][GR.iijj] + QV[:,:,1:][GR.iijj])/2
@@ -27,7 +22,7 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
 
         # HORIZONTAL ADVECTION
         if i_hor_adv:
-            dQVdt[:,:,k] = (+ UFLX[:,:,k][GR.iijj    ] *\
+            dQVdt[:,:,k][GR.iijj] = (+ UFLX[:,:,k][GR.iijj    ] *\
                                  (QV[:,:,k][GR.iijj_im1] + QV[:,:,k][GR.iijj    ])/2 \
                               - UFLX[:,:,k][GR.iijj_ip1] *\
                                  (QV[:,:,k][GR.iijj    ] + QV[:,:,k][GR.iijj_ip1])/2 \
@@ -53,11 +48,11 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
                         - WWIND[:,:,k+1][GR.iijj] * QVVB[:,:,k+1] \
                                                ) / GR.dsigma[k]
 
-            dQVdt[:,:,k] = dQVdt[:,:,k] + vertAdv_QV
+            dQVdt[:,:,k][GR.iijj] = dQVdt[:,:,k][GR.iijj] + vertAdv_QV
 
         # TURBULENCE
         if (i_turb and TURB.i_turbulence):
-            dQVdt[:,:,k] = dQVdt[:,:,k] + turb_flux_div[:,:,k] * COLP[GR.iijj]
+            dQVdt[:,:,k][GR.iijj] = dQVdt[:,:,k][GR.iijj] + turb_flux_div[:,:,k] * COLP[GR.iijj]
 
 
         # NUMERICAL DIFUSION 
@@ -68,18 +63,12 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
                           + COLP[GR.iijj_jm1] * QV[:,:,k][GR.iijj_jm1] \
                           + COLP[GR.iijj_jp1] * QV[:,:,k][GR.iijj_jp1] \
                           - 4*COLP[GR.iijj] * QV[:,:,k][GR.iijj] ) 
-            dQVdt[:,:,k] = dQVdt[:,:,k] + num_diff
+            dQVdt[:,:,k][GR.iijj] = dQVdt[:,:,k][GR.iijj] + num_diff
 
         # MICROPHYSICS
         if i_microphysics:
-            dQVdt[:,:,k] = dQVdt[:,:,k] + MIC.dQVdt_MIC[:,:,k] * COLP[GR.iijj]
-
-    #print(np.max(MIC.dQVdt_MIC))
-
-
-    #t_end = time.time()
-    #GR.mic_comp_time += t_end - t_start
-
+            dQVdt[:,:,k][GR.iijj] = dQVdt[:,:,k][GR.iijj] + \
+                                     dQVdt_MIC[:,:,k] * COLP[GR.iijj]
 
     return(dQVdt)
 
@@ -88,12 +77,7 @@ def water_vapor_tendency(GR, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC, TURB):
 
 
 
-def cloud_water_tendency(GR, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
-
-    #t_start = time.time()
-
-
-    dQCdt = np.zeros( (GR.nx ,GR.ny ,GR.nz) )
+def cloud_water_tendency(GR, dQCdt, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, dQCdt_MIC):
 
     QCVB = np.zeros( (GR.nx ,GR.ny ,GR.nzs) )
     QCVB[:,:,1:(GR.nzs-1)] = (QC[:,:,:-1][GR.iijj] + QC[:,:,1:][GR.iijj])/2
@@ -103,7 +87,7 @@ def cloud_water_tendency(GR, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
 
         # HORIZONTAL ADVECTION
         if i_hor_adv:
-            dQCdt[:,:,k] = (+ UFLX[:,:,k][GR.iijj    ] *\
+            dQCdt[:,:,k][GR.iijj] = (+ UFLX[:,:,k][GR.iijj    ] *\
                                  (QC[:,:,k][GR.iijj_im1] + QC[:,:,k][GR.iijj    ])/2 \
                               - UFLX[:,:,k][GR.iijj_ip1] *\
                                  (QC[:,:,k][GR.iijj    ] + QC[:,:,k][GR.iijj_ip1])/2 \
@@ -129,7 +113,7 @@ def cloud_water_tendency(GR, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
                         - WWIND[:,:,k+1][GR.iijj] * QCVB[:,:,k+1] \
                                                ) / GR.dsigma[k]
 
-            dQCdt[:,:,k] = dQCdt[:,:,k] + vertAdv_QC
+            dQCdt[:,:,k][GR.iijj] = dQCdt[:,:,k][GR.iijj] + vertAdv_QC
 
 
         # NUMERICAL DIFUSION 
@@ -140,16 +124,12 @@ def cloud_water_tendency(GR, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, MIC):
                           + COLP[GR.iijj_jm1] * QC[:,:,k][GR.iijj_jm1] \
                           + COLP[GR.iijj_jp1] * QC[:,:,k][GR.iijj_jp1] \
                           - 4*COLP[GR.iijj] * QC[:,:,k][GR.iijj] ) 
-            dQCdt[:,:,k] = dQCdt[:,:,k] + num_diff
+            dQCdt[:,:,k][GR.iijj] = dQCdt[:,:,k][GR.iijj] + num_diff
 
         # MICROPHYSICS
         if i_microphysics:
-            dQCdt[:,:,k] = dQCdt[:,:,k] + MIC.dQCdt_MIC[:,:,k] * COLP[GR.iijj]
-
-
-    #t_end = time.time()
-    #GR.trac_comp_time += t_end - t_start
-
+            dQCdt[:,:,k][GR.iijj] = dQCdt[:,:,k][GR.iijj] +  \
+                                    dQCdt_MIC[:,:,k] * COLP[GR.iijj]
 
     return(dQCdt)
 

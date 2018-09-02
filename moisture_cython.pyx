@@ -14,6 +14,7 @@ cdef int i_microphysics = 1
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef water_vapor_tendency_c( GR, njobs,\
+        double[:,:, ::1] dQVdt,
         double[:,:, ::1] QV,
         double[:,   ::1] COLP,
         double[:,   ::1] COLP_NEW,
@@ -37,7 +38,6 @@ cpdef water_vapor_tendency_c( GR, njobs,\
 
     cdef double c_QV_hor_dif_tau = QV_hor_dif_tau
 
-    cdef double[:,:, ::1] dQVdt = np.zeros( (nx ,ny ,nz ) )
     cdef double[:,:, ::1] QVVB  = np.zeros( (nx ,ny ,nzs) )
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
@@ -56,6 +56,8 @@ cpdef water_vapor_tendency_c( GR, njobs,\
             for k in range(0,nz):
                 kp1 = k + 1
 
+                dQVdt[i,j,k] = 0.
+
                 # HORIZONTAL ADVECTION
                 if i_hor_adv:
                     hor_adv = (+ UFLX[i  ,j  ,k  ] *\
@@ -72,7 +74,7 @@ cpdef water_vapor_tendency_c( GR, njobs,\
                                    QV[i  ,jp1,k  ])/2. \
                               ) / A[i  ,j  ]
 
-                    dQVdt[inb,jnb,k] = dQVdt[inb,jnb,k] + hor_adv
+                    dQVdt[i,j,k] = dQVdt[i,j,k] + hor_adv
 
 
                 # VERTICAL ADVECTION
@@ -91,7 +93,7 @@ cpdef water_vapor_tendency_c( GR, njobs,\
                                 - WWIND[i  ,j  ,kp1] * QVVB[inb,jnb,kp1] \
                                                        ) / dsigma[k]
 
-                    dQVdt[inb,jnb,k] = dQVdt[inb,jnb,k] + vert_adv
+                    dQVdt[i,j,k] = dQVdt[i,j,k] + vert_adv
 
 
                 # NUMERICAL DIFUSION 
@@ -103,11 +105,11 @@ cpdef water_vapor_tendency_c( GR, njobs,\
                                   + COLP[i  ,jp1] * QV[i  ,jp1,k  ] \
                                 - 4.*COLP[i  ,j  ] * QV[i  ,j  ,k  ] )
 
-                    dQVdt[inb,jnb,k] = dQVdt[inb,jnb,k] + num_diff
+                    dQVdt[i,j,k] = dQVdt[i,j,k] + num_diff
 
                 # MICROPHYSICS 
                 if i_microphysics:
-                    dQVdt[inb,jnb,k] = dQVdt[inb,jnb,k] + \
+                    dQVdt[i,j,k] = dQVdt[i,j,k] + \
                                         dQVdt_MIC[inb,jnb,k  ]*COLP[i  ,j  ]
 
 
@@ -120,6 +122,7 @@ cpdef water_vapor_tendency_c( GR, njobs,\
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef cloud_water_tendency_c( GR, njobs,\
+        double[:,:, ::1] dQCdt,
         double[:,:, ::1] QC,
         double[:,   ::1] COLP,
         double[:,   ::1] COLP_NEW,
@@ -143,7 +146,6 @@ cpdef cloud_water_tendency_c( GR, njobs,\
 
     cdef double c_QC_hor_dif_tau = QV_hor_dif_tau
 
-    cdef double[:,:, ::1] dQCdt = np.zeros( (nx ,ny ,nz ) )
     cdef double[:,:, ::1] QCVB  = np.zeros( (nx ,ny ,nzs) )
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
@@ -162,6 +164,8 @@ cpdef cloud_water_tendency_c( GR, njobs,\
             for k in range(0,nz):
                 kp1 = k + 1
 
+                dQCdt[i,j,k] = 0.
+
                 # HORIZONTAL ADVECTION
                 if i_hor_adv:
                     hor_adv = (+ UFLX[i  ,j  ,k  ] *\
@@ -178,7 +182,7 @@ cpdef cloud_water_tendency_c( GR, njobs,\
                                   QC[i  ,jp1,k  ])/2. \
                              ) / A[i  ,j  ]
 
-                    dQCdt[inb,jnb,k] = dQCdt[inb,jnb,k] + hor_adv
+                    dQCdt[i,j,k] = dQCdt[i,j,k] + hor_adv
 
 
                 # VERTICAL ADVECTION
@@ -197,7 +201,7 @@ cpdef cloud_water_tendency_c( GR, njobs,\
                                 - WWIND[i  ,j  ,kp1] * QCVB[inb,jnb,kp1] \
                                                        ) / dsigma[k]
 
-                    dQCdt[inb,jnb,k] = dQCdt[inb,jnb,k] + vert_adv
+                    dQCdt[i,j,k] = dQCdt[i,j,k] + vert_adv
 
 
                 # NUMERICAL DIFUSION 
@@ -209,11 +213,11 @@ cpdef cloud_water_tendency_c( GR, njobs,\
                                   + COLP[i  ,jp1] * QC[i  ,jp1,k  ] \
                                 - 4.*COLP[i  ,j  ] * QC[i  ,j  ,k  ] )
 
-                    dQCdt[inb,jnb,k] = dQCdt[inb,jnb,k] + num_diff
+                    dQCdt[i,j,k] = dQCdt[i,j,k] + num_diff
 
                 # MICROPHYSICS 
                 if i_microphysics:
-                    dQCdt[inb,jnb,k] = dQCdt[inb,jnb,k] + \
+                    dQCdt[i,j,k] = dQCdt[i,j,k] + \
                                         dQCdt_MIC[inb,jnb,k  ] * COLP[i  ,j  ]
 
 

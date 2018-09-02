@@ -41,10 +41,12 @@ class microphysics:
                 (TAIR[GR.iijj] - 273.15 + 243.04) )
         self.QV[GR.iijj] = self.RH_init * (0.622 * e_satw) / PAIR[GR.iijj]
         self.QV = exchange_BC(GR, self.QV)
+        self.dQVdt = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
         #self.QV[:,:,range(0,GR.nz)] = 0.003 - 0.003*(np.exp(-0.1*np.arange(0,GR.nz))-0.01)
         ## specific cloud liquid water content
         self.QC_OLD = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
         self.QC = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
+        self.dQCdt = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
 
 
     def relative_humidity(self, GR, TAIR, QV, PAIR):

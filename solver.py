@@ -17,9 +17,9 @@ if i_time_stepping == 'MATSUNO':
     #    from time_integration_cuda import matsuno as time_stepper
     #    from gpu_helper import copy_fields_to_device
     #else:
-    from time_integration import matsuno as time_stepper
+    from matsuno import step_matsuno as time_stepper
 elif i_time_stepping == 'RK4':
-    from OLD_time_integration import RK4 as time_stepper
+    from RK4 import step_RK4 as time_stepper
 
 
 GR = Grid()
@@ -97,7 +97,8 @@ while GR.ts < GR.nts:
                         BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
                         HSURF, PVTF, PVTFVB, 
                         RAD.dPOTTdt_RAD, MIC.dPOTTdt_MIC,
-                        MIC.QV_OLD, MIC.QV, MIC.QC_OLD, MIC.QC,
+                        MIC.QV_OLD, MIC.QV, MIC.dQVdt,
+                        MIC.QC_OLD, MIC.QC, MIC.dQCdt,
                         MIC.dQVdt_MIC, MIC.dQCdt_MIC)
     t_end = time.time()
     GR.dyn_comp_time += t_end - t_start

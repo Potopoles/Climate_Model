@@ -33,7 +33,7 @@ strings = ['wind_cython']
 #strings = ['temperature_cython']
 #strings = ['moisture_cython']
 #strings = ['continuity_cython']
-#strings = ['jacobson_cython']
+strings = ['jacobson_cython']
 
 for string in strings:
     if remove_existing:

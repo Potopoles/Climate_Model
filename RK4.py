@@ -1,138 +1,13 @@
 import copy
 import time
 import numpy as np
+from namelist import comp_mode
 from boundaries import exchange_BC
 from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
                     diagnose_fields_jacobson
 from bin.jacobson_cython import proceed_timestep_jacobson_c
 #from jacobson import proceed_timestep_jacobson
 from diagnostics import interp_COLPA
-
-######################################################################################
-######################################################################################
-######################################################################################
-
-def matsuno(GR, subgrids,
-            COLP_OLD, COLP, COLP_NEW, dCOLPdt, PHI, PHIVB, \
-            POTT_OLD, POTT, dPOTTdt, POTTVB,
-            UWIND_OLD, UWIND, VWIND_OLD, VWIND, WWIND,
-            UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
-            BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-            HSURF, PVTF, PVTFVB,
-            dPOTTdt_RAD, dPOTTdt_MIC,
-            QV_OLD, QV, QC_OLD, QC, dQVdt_MIC, dQCdt_MIC):
-
-    ########## ESTIMATE
-    UWIND_OLD[:] = UWIND[:]
-    VWIND_OLD[:] = VWIND[:]
-    POTT_OLD[:]  = POTT[:]
-    QV_OLD[:]    = QV[:]
-    QC_OLD[:]    = QC[:]
-    COLP_OLD[:]  = COLP[:]
-
-    COLP_NEW, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND,\
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-                                        COLP_OLD, COLP, COLP_NEW, dCOLPdt,
-                                        POTT, dPOTTdt, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
-                                        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                                        PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
-    COLP[:] = COLP_NEW[:]
-
-    t_start = time.time()
-    UWIND, VWIND, COLP, POTT, QV, QC \
-                    = proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND, 
-                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-    #UWIND, VWIND, COLP, POTT, QV, QC \
-    #                 = proceed_timestep_jacobson_c(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
-    #                        COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-    #                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-    #UWIND = np.asarray(UWIND)
-    #VWIND = np.asarray(VWIND)
-    #COLP = np.asarray(COLP)
-    #POTT = np.asarray(POTT)
-    #QV = np.asarray(QV)
-    #QC = np.asarray(QC)
-    t_end = time.time()
-    GR.step_comp_time += t_end - t_start
-
-
-    t_start = time.time()
-    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-                diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                        HSURF, PVTF, PVTFVB, POTTVB)
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
-
-    #import pickle
-    #out = {}
-    #out['COLP'] = COLP
-    #out['WWIND'] = WWIND
-    #out['UWIND'] = UWIND
-    #out['VWIND'] = VWIND
-    #out['POTT'] = POTT
-    #out['QV'] = QV
-    #out['QC'] = QC
-    #out['PHI'] = PHI
-    #out['POTTVB'] = POTTVB
-    #with open('testarray.pkl', 'wb') as f:
-    #    pickle.dump(out, f)
-    #quit()
-
-
-    ########## FINAL
-    COLP_NEW, dUFLXdt, dVFLXdt, \
-    dPOTTdt, WWIND, \
-    dQVdt, dQCdt = tendencies_jacobson(GR, subgrids,
-                                        COLP_OLD, COLP, COLP_NEW, dCOLPdt,
-                                        POTT, dPOTTdt, POTTVB, HSURF,
-                                        UWIND, VWIND, WWIND,
-                                        UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
-                                        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                                        PHI, PVTF, PVTFVB,
-                                        dPOTTdt_RAD, dPOTTdt_MIC,
-                                        QV, QC, dQVdt_MIC, dQCdt_MIC)
-    COLP[:] = COLP_NEW[:]
-
-    t_start = time.time()
-    UWIND, VWIND, COLP, POTT, QV, QC \
-                     = proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
-                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-                           dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-    #UWIND, VWIND, COLP, POTT, QV, QC \
-    #                 = proceed_timestep_jacobson_c(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
-    #                        COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-    #                        dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-    #UWIND = np.asarray(UWIND)
-    #VWIND = np.asarray(VWIND)
-    #COLP = np.asarray(COLP)
-    #POTT = np.asarray(POTT)
-    #QV = np.asarray(QV)
-    #QC = np.asarray(QC)
-    t_end = time.time()
-    GR.step_comp_time += t_end - t_start
-
-
-    t_start = time.time()
-    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-            diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, \
-                                    HSURF, PVTF, PVTFVB, POTTVB)
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
-
-    
-    return(COLP, PHI, PHIVB, POTT, POTTVB,
-            UWIND, VWIND, WWIND,
-            UFLX, VFLX, QV, QC)
-
-
-
-
 
 
 ######################################################################################
@@ -172,7 +47,7 @@ def RK_time_step(GR, COLP0, UWIND0, VWIND0, POTT0, QV0, QC0, \
 
     return(COLP1, UWIND1, VWIND1, POTT1, QV1, QC1)
 
-def RK4(GR, subgrids,
+def step_RK4(GR, subgrids,
         COLP, PHI, PHIVB, POTT, POTTVB,
         UWIND, VWIND, WWIND,
         UFLX, VFLX, 

@@ -59,7 +59,7 @@ cpdef proceed_timestep_jacobson_c(GR, \
             for k in range(0,nz):
                 UWIND[i_s,j  ,k] = UWIND_OLD[i_s,j  ,k] * \
                                     COLPA_is_OLD[ismb,jmb]/COLPA_is_NEW[ismb,jmb] \
-                                        + dt*dUFLXdt[ismb,jmb,k]/COLPA_is_NEW[ismb,jmb]
+                                        + dt*dUFLXdt[i_s,j  ,k]/COLPA_is_NEW[ismb,jmb]
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):
@@ -69,7 +69,7 @@ cpdef proceed_timestep_jacobson_c(GR, \
             for k in range(0,nz):
                 VWIND[i  ,js ,k] = VWIND_OLD[i  ,js ,k] * \
                                     COLPA_js_OLD[imb,jsmb]/COLPA_js_NEW[imb,jsmb] \
-                                        + dt*dVFLXdt[imb,jsmb,k]/COLPA_js_NEW[imb,jsmb]
+                                        + dt*dVFLXdt[i  ,js  ,k]/COLPA_js_NEW[imb,jsmb]
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):
@@ -82,10 +82,10 @@ cpdef proceed_timestep_jacobson_c(GR, \
                                         + dt*dPOTTdt[i  ,j  ,k]/COLP        [i  ,j  ]
                 QV[i  ,j  ,k]    =    QV_OLD[i  ,j  ,k] * \
                                     COLP_OLD    [i  ,j  ]/COLP        [i  ,j  ] \
-                                        + dt*dQVdt  [imb,jmb,k]/COLP        [i  ,j  ]
+                                        + dt*dQVdt  [i  ,j  ,k]/COLP        [i  ,j  ]
                 QC[i  ,j  ,k]    =    QC_OLD[i  ,j  ,k] * \
                                     COLP_OLD    [i  ,j  ]/COLP        [i  ,j  ] \
-                                        + dt*dQCdt  [imb,jmb,k]/COLP        [i  ,j  ]
+                                        + dt*dQCdt  [i  ,j  ,k]/COLP        [i  ,j  ]
 
                 if QV[i  ,j  ,k] < 0.:
                     QV[i  ,j  ,k] = 0.
