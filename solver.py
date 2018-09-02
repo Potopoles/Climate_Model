@@ -10,7 +10,7 @@ from namelist import i_time_stepping, \
                     i_load_from_restart, i_save_to_restart, \
                     i_radiation, njobs
 #from diagnostics import diagnose_secondary_fields
-from diagnostics_cython import diagnose_secondary_fields_c
+from bin.diagnostics_cython import diagnose_secondary_fields_c
 from IO_helper_functions import print_ts_info, print_computation_time_info
 if i_time_stepping == 'MATSUNO':
     #if use_gpu:

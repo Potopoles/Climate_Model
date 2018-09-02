@@ -50,17 +50,6 @@ def interp_COLPA(GR, COLP):
                         COLP[GR.iisjj_im1_jm1] * GR.A[GR.iisjj_im1_jm1] + \
                         COLP[GR.iisjj_jm1    ] * GR.A[GR.iisjj_jm1    ]   )
 
-    # ATTEMPT TO INTERPOLATE ONLY WITH TWO NEIGHBORING POINTS
-    #COLPA_is[:, 0] = 1/2*( COLP[GR.iis-1,GR.jj[ 0]] * GR.A[GR.iis-1,GR.jj[ 0]] + \
-    #                       COLP[GR.iis  ,GR.jj[ 0]] * GR.A[GR.iis  ,GR.jj[ 0]]   )
-    #COLPA_is[:,-1] = 1/2*( COLP[GR.iis-1,GR.jj[-1]] * GR.A[GR.iis-1,GR.jj[-1]] + \
-    #                       COLP[GR.iis  ,GR.jj[-1]] * GR.A[GR.iis  ,GR.jj[-1]]   )
-
-    # ATTEMPT TO SET BOUNDARY AREA TO ZERO (see grid)
-    # consequently change 1/8 to 1/6
-    #COLPA_is[:, 0] = COLPA_is[:, 0]*4/3
-    #COLPA_is[:, -1] = COLPA_is[:, -1]*4/3
-
     # ATTEMPT TO INTERPOLATE ONLY WITH TWO NEIGHBORING POINTS (JACOBSON)
     COLPA_is[:,-1] = 1/4*(    COLP[GR.iis-1,GR.jj[-1]] * GR.A[GR.iis-1,GR.jj[-1]] + \
                               COLP[GR.iis  ,GR.jj[-1]] * GR.A[GR.iis  ,GR.jj[-1]] + \

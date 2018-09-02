@@ -5,9 +5,28 @@ from netCDF4 import Dataset
 from scipy.interpolate import interp2d
 from boundaries import exchange_BC_rigid_y, exchange_BC_periodic_x
 from namelist import pTop, n_topo_smooth, tau_topo_smooth
-from geopotential import diag_pvt_factor
+#from geopotential import diag_pvt_factor
 from constants import con_kappa
 from scipy import interpolate
+from constants import con_g, con_Rd, con_kappa, con_cp
+
+def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
+    PAIRVB = np.full( (GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs), np.nan )
+
+    # TODO: WHY IS PAIRVB NOT FILLED AT UPPERMOST AND LOWER MOST HALFLEVEL??? 
+    for ks in range(0,GR.nzs):
+        PAIRVB[:,:,ks][GR.iijj] = pTop + GR.sigma_vb[ks] * COLP[GR.iijj]
+    
+    PVTFVB = np.power(PAIRVB/100000, con_kappa)
+
+    for k in range(0,GR.nz):
+        kp1 = k + 1
+        PVTF[:,:,k][GR.iijj] = 1/(1+con_kappa) * \
+                    ( PVTFVB[:,:,kp1][GR.iijj] * PAIRVB[:,:,kp1][GR.iijj] - \
+                      PVTFVB[:,:,k  ][GR.iijj] * PAIRVB[:,:,k  ][GR.iijj] ) / \
+                    ( PAIRVB[:,:,kp1][GR.iijj] - PAIRVB[:,:,k  ][GR.iijj] )
+
+    return(PVTF, PVTFVB)
 
 
 

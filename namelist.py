@@ -116,7 +116,7 @@ i_turbulence = 0
 
 # PARALLEL AND DEVICE
 # 0: numpy, 1: cython cpu, 2: numba-cuda
-comp_mode = 2
+comp_mode = 0
 # general
 wp = 'float64'
 # cython

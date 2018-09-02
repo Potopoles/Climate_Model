@@ -41,7 +41,8 @@ cpdef diag_pvt_factor_c(GR, njobs,
 
             for ks in range(0,nzs):
                 PAIRVB[i,j,ks  ] = c_pTop + sigma_vb[ks] * COLP[i,j]
-                # TODO: IN THE FOLLOWING COMMAND THE RESULT GETS DIFFERENT THAN IN PYTHON VERSION!!!!
+                # TODO: IN THE FOLLOWING COMMAND THE RESULT GETS DIFFERENT COMPARED 
+                # TO THE PYTHON VERSION!!!!
                 #PVTFVB[i,j,ks  ] = (PAIRVB[i,j,ks ]/100000.) ** c_con_kappa
 
     # SOLUTION (inefficient): do it outside of loop

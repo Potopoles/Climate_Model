@@ -248,16 +248,31 @@ class Grid:
                                   (self.ny +2*self.nb)//self.blockdim_xy[1], \
                                    1       //self.blockdim_xy[2])
 
-            zonal   = np.zeros((2,self.ny+2*self.nb ,self.nz), np.float64)
-            zonals  = np.zeros((2,self.nys+2*self.nb,self.nz), np.float64)
-            merid   = np.zeros((self.nx+2*self.nb,2 ,self.nz), np.float64)
-            merids  = np.zeros((self.nxs+2*self.nb,2,self.nz), np.float64)
-            self.zonal  = cuda.to_device(zonal,  self.stream)
-            self.zonals = cuda.to_device(zonals, self.stream)
-            self.merid  = cuda.to_device(merid,  self.stream)
-            self.merids = cuda.to_device(merids, self.stream)
+            zonal   = np.zeros((2,self.ny +2*self.nb   ,self.nz  ), np.float64)
+            zonals  = np.zeros((2,self.nys+2*self.nb   ,self.nz  ), np.float64)
+            zonalvb = np.zeros((2,self.ny +2*self.nb   ,self.nz+1), np.float64)
+            merid   = np.zeros((  self.nx +2*self.nb,2 ,self.nz  ), np.float64)
+            merids  = np.zeros((  self.nxs+2*self.nb,2 ,self.nz  ), np.float64)
+            meridvb = np.zeros((  self.nx +2*self.nb,2 ,self.nz+1), np.float64)
+            self.zonal   = cuda.to_device(zonal,  self.stream)
+            self.zonals  = cuda.to_device(zonals, self.stream)
+            self.zonalvb = cuda.to_device(zonalvb, self.stream)
+            self.merid   = cuda.to_device(merid,  self.stream)
+            self.merids  = cuda.to_device(merids, self.stream)
+            self.meridvb = cuda.to_device(meridvb, self.stream)
 
 
+            ## LOAD GRID FIELDS TO GPU
+            #if comp_mode == 2:
+            #    stream = cuda.stream()
+            #    self.Ad            = cuda.to_device(self.A, stream)
+            #    self.dsigmad       = cuda.to_device(self.dsigma, stream)
+            #    self.sigma_vbd     = cuda.to_device(self.sigma_vb, stream)
+            #    self.dxjsd         = cuda.to_device(self.dxjs, stream)
+            #    self.corfd         = cuda.to_device(self.corf, stream)
+            #    self.corf_isd      = cuda.to_device(self.corf_is, stream)
+            #    self.lat_radd      = cuda.to_device(self.lat_rad, stream)
+            #    self.latis_radd    = cuda.to_device(self.latis_rad, stream)
 
 
 
