@@ -5,16 +5,16 @@ from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency
 
 i_hor_adv  = 1
-i_vert_adv = 0
+i_vert_adv = 1
 i_coriolis = 1
 i_pre_grad = 1
-i_num_dif  = 0
+i_num_dif  = 1
 
 
 
 def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVFLXdt,
                             BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                            COLP, COLP_NEW, HSURF, PHI, POTT, PVTF, PVTFVB):
+                            COLP, COLP_NEW, PHI, POTT, PVTF, PVTFVB):
 
     dUFLXdt[:] = 0.
     dVFLXdt[:] = 0.
@@ -22,13 +22,16 @@ def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVFLXdt
     if i_wind_tendency:
 
         if i_vert_adv:
-            WWIND_UWIND = np.zeros( (GR.nxs,GR.ny ,GR.nzs) )
-            WWIND_VWIND = np.zeros( (GR.nx ,GR.nys,GR.nzs) )
+            WWIND_UWIND = np.zeros( (GR.nxs+2*GR.nb,GR.ny +2*GR.nb,GR.nzs) )
+            WWIND_VWIND = np.zeros( (GR.nx +2*GR.nb,GR.nys+2*GR.nb,GR.nzs) )
             for ks in range(1,GR.nzs-1):
-                WWIND_UWIND[:,:,ks] = vertical_interp_UWIND(GR, COLP_NEW, UWIND,
+                WWIND_UWIND[:,:,ks][GR.iisjj] = vertical_interp_UWIND(GR, COLP_NEW, UWIND,
                                                         WWIND, WWIND_UWIND, ks)
-                WWIND_VWIND[:,:,ks] = vertical_interp_VWIND(GR, COLP_NEW, VWIND,
+                WWIND_VWIND[:,:,ks][GR.iijjs] = vertical_interp_VWIND(GR, COLP_NEW, VWIND,
                                                     WWIND, WWIND_VWIND, ks)
+        #else: #TODO REMOVE THIS (DEBUGGING)
+        #    WWIND_UWIND = np.zeros( (GR.nxs+2*GR.nb,GR.ny +2*GR.nb,GR.nzs) )
+        #    WWIND_VWIND = np.zeros( (GR.nx +2*GR.nb,GR.nys+2*GR.nb,GR.nzs) )
 
         for k in range(0,GR.nz):
 
@@ -68,8 +71,7 @@ def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVFLXdt
                 dVFLXdt[:,:,k][GR.iijjs] += diff_VWIND
 
 
-    return(dUFLXdt, dVFLXdt, 
-        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX)
+    return(dUFLXdt, dVFLXdt)
 
 
 def vertical_interp_UWIND(GR, COLP_NEW, UWIND, WWIND, WWIND_UWIND, ks):
@@ -142,8 +144,10 @@ def vertical_interp_VWIND(GR, COLP_NEW, VWIND, WWIND, WWINDVWIND, ks):
 
 def vertical_advection(GR, WWIND_UWIND, WWIND_VWIND, k):
 
-    vertAdv_UWIND = (WWIND_UWIND[:,:,k  ] - WWIND_UWIND[:,:,k+1]) / GR.dsigma[k]
-    vertAdv_VWIND = (WWIND_VWIND[:,:,k  ] - WWIND_VWIND[:,:,k+1]) / GR.dsigma[k]
+    vertAdv_UWIND = (WWIND_UWIND[:,:,k  ][GR.iisjj] - WWIND_UWIND[:,:,k+1][GR.iisjj]) / \
+                    GR.dsigma[k]
+    vertAdv_VWIND = (WWIND_VWIND[:,:,k  ][GR.iijjs] - WWIND_VWIND[:,:,k+1][GR.iijjs]) / \
+                    GR.dsigma[k]
 
     return(vertAdv_UWIND, vertAdv_VWIND)
 

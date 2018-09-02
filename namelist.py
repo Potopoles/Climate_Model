@@ -60,19 +60,35 @@ i_radiation = 0
 i_microphysics = 0
 i_turbulence = 0
 
-### BENCHMARK EXPERIMENT
-#nz = 16
-#lat0_deg = -78
-#lat1_deg = 78
-#dlat_deg = 1.5
-#dlon_deg = 1.5
-#output_path = '../output'
-#i_sim_n_days = 0.5
-#i_out_nth_hour = 3
-#njobs = 4
-#i_radiation = 3
-#i_microphysics = 1
-#i_turbulence = 0
+## BENCHMARK EXPERIMENT
+nz = 16
+lat0_deg = -78
+lat1_deg = 78
+dlat_deg = 1.5
+dlon_deg = 1.5
+output_path = '../output'
+i_sim_n_days = 0.5
+i_out_nth_hour = 3
+njobs = 4
+i_radiation = 3
+i_microphysics = 1
+i_turbulence = 0
+
+
+## BENCHMARK EXPERIMENT
+nz = 32
+lat0_deg = -78
+lat1_deg = 78
+dlat_deg = 1.0
+dlon_deg = 1.0
+output_path = '../output'
+i_sim_n_days = 0.02
+i_out_nth_hour = 3
+njobs = 4
+i_radiation = 3
+i_microphysics = 1
+i_turbulence = 0
+
 #
 ### LONGTIME RUN
 #nz = 10
@@ -99,6 +115,8 @@ i_turbulence = 0
 
 
 # PARALLEL AND DEVICE
+# 0: numpy, 1: cython cpu, 2: numba-cuda
+comp_mode = 2
 # general
 wp = 'float64'
 # cython

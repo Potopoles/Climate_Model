@@ -32,6 +32,7 @@ class Grid:
             self.cont_comp_time = 0
             self.diag_comp_time = 0
             self.step_comp_time = 0
+            self.copy_time = 0
 
             self.rad_comp_time = 0
             self.mic_comp_time = 0
@@ -215,30 +216,37 @@ class Grid:
             self.GMT = GMT_initialization
 
             # GPU
+            # TODO THIS IS VERY COMPLICATED. SIMPLIFY (e.g. fix blockdim)
             self.stream = cuda.stream()
             if tpbh > 1:
                 raise NotImplementedError('tpbh > 1 not yet possible see below (I guess)')
             self.blockdim      = (tpbh, tpbh, tpbv)
             self.blockdim_ks   = (tpbh, tpbh, tpbv+1)
             self.blockdim_xy   = (tpbh, tpbh, 1)
-            self.griddim       = ((self.nx+2*self.nb)//self.blockdim[0], \
-                                  (self.ny+2*self.nb)//self.blockdim[1], \
-                                   self.nz//self.blockdim[2])
+            self.griddim       = ((self.nx +2*self.nb)//self.blockdim[0], \
+                                  (self.ny +2*self.nb)//self.blockdim[1], \
+                                   self.nz //self.blockdim[2])
             self.griddim_is    = ((self.nxs+2*self.nb)//self.blockdim[0], \
-                                  (self.ny+2*self.nb)//self.blockdim[1], \
-                                   self.nz//self.blockdim[2])
-            self.griddim_js    = ((self.nx+2*self.nb)//self.blockdim[0], \
+                                  (self.ny +2*self.nb)//self.blockdim[1], \
+                                   self.nz //self.blockdim[2])
+            self.griddim_js    = ((self.nx +2*self.nb)//self.blockdim[0], \
                                   (self.nys+2*self.nb)//self.blockdim[1], \
-                                   self.nz//self.blockdim[2])
-            self.griddim_is_js = ((self.nx+2*self.nb)//self.blockdim[0], \
+                                   self.nz //self.blockdim[2])
+            self.griddim_is_js = ((self.nxs+2*self.nb)//self.blockdim[0], \
                                   (self.nys+2*self.nb)//self.blockdim[1], \
-                                   self.nz//self.blockdim[2])
-            self.griddim_ks    = ((self.nx+2*self.nb)//self.blockdim_ks[0], \
-                                  (self.ny+2*self.nb)//self.blockdim_ks[1], \
+                                   self.nz //self.blockdim[2])
+            self.griddim_ks    = ((self.nx +2*self.nb)//self.blockdim_ks[0], \
+                                  (self.ny +2*self.nb)//self.blockdim_ks[1], \
                                    self.nzs//self.blockdim_ks[2])
-            self.griddim_xy    = ((self.nx+2*self.nb)//self.blockdim_xy[0], \
-                                  (self.ny+2*self.nb)//self.blockdim_xy[1], \
-                                   1//self.blockdim_xy[2])
+            self.griddim_is_ks = ((self.nxs+2*self.nb)//self.blockdim[0], \
+                                  (self.ny +2*self.nb)//self.blockdim[1], \
+                                   self.nzs//self.blockdim_ks[2])
+            self.griddim_js_ks = ((self.nx +2*self.nb)//self.blockdim[0], \
+                                  (self.nys+2*self.nb)//self.blockdim[1], \
+                                   self.nzs//self.blockdim_ks[2])
+            self.griddim_xy    = ((self.nx +2*self.nb)//self.blockdim_xy[0], \
+                                  (self.ny +2*self.nb)//self.blockdim_xy[1], \
+                                   1       //self.blockdim_xy[2])
 
             zonal   = np.zeros((2,self.ny+2*self.nb ,self.nz), np.float64)
             zonals  = np.zeros((2,self.nys+2*self.nb,self.nz), np.float64)

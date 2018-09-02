@@ -2,7 +2,7 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-from namelist import pTop, njobs
+from namelist import pTop, njobs, comp_mode
 from constants import con_Rd
 
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
@@ -35,6 +35,7 @@ from numba import cuda
 import numba
 
 
+
 def tendencies_jacobson(GR, subgrids,\
                     COLP_OLD, COLP, COLP_NEW, dCOLPdt, POTT, dPOTTdt, POTTVB, HSURF,
                     UWIND, VWIND, WWIND,
@@ -44,266 +45,195 @@ def tendencies_jacobson(GR, subgrids,\
                     dPOTTdt_RAD, dPOTTdt_MIC,
                     QV, QC, dQVdt_MIC, dQCdt_MIC):
 
+    if comp_mode == 2:
+        t_start = time.time()
+        stream = cuda.stream()
+
+        COLP_OLDd     = cuda.to_device(COLP_OLD, stream)
+        COLPd         = cuda.to_device(COLP, stream)
+        COLP_NEWd     = cuda.to_device(COLP_NEW, stream)
+        dCOLPdtd      = cuda.to_device(dCOLPdt, stream)
+        UFLXd         = cuda.to_device(UFLX, stream)
+        dUFLXdtd      = cuda.to_device(dUFLXdt, stream)
+        VFLXd         = cuda.to_device(VFLX, stream)
+        dVFLXdtd      = cuda.to_device(dVFLXdt, stream)
+        FLXDIVd       = cuda.to_device(FLXDIV, stream)
+        BFLXd         = cuda.to_device(BFLX, stream)
+        CFLXd         = cuda.to_device(CFLX, stream)
+        DFLXd         = cuda.to_device(DFLX, stream)
+        EFLXd         = cuda.to_device(EFLX, stream)
+        RFLXd         = cuda.to_device(RFLX, stream)
+        QFLXd         = cuda.to_device(QFLX, stream)
+        SFLXd         = cuda.to_device(SFLX, stream)
+        TFLXd         = cuda.to_device(TFLX, stream)
+        UWINDd        = cuda.to_device(UWIND, stream)
+        VWINDd        = cuda.to_device(VWIND, stream)
+        WWINDd        = cuda.to_device(WWIND, stream)
+        POTTd         = cuda.to_device(POTT, stream)
+        POTTVBd       = cuda.to_device(POTTVB, stream)
+        dPOTTdtd      = cuda.to_device(dPOTTdt, stream)
+        dPOTTdt_RADd  = cuda.to_device(dPOTTdt_RAD, stream)
+        dPOTTdt_MICd  = cuda.to_device(dPOTTdt_MIC, stream)
+        PVTFd         = cuda.to_device(PVTF, stream)
+        PVTFVBd       = cuda.to_device(PVTFVB, stream)
+        PHId          = cuda.to_device(PHI, stream)
+
+        Ad            = cuda.to_device(GR.A, stream)
+        dsigmad       = cuda.to_device(GR.dsigma, stream)
+        sigma_vbd     = cuda.to_device(GR.sigma_vb, stream)
+        dxjsd         = cuda.to_device(GR.dxjs, stream)
+        corfd         = cuda.to_device(GR.corf, stream)
+        corf_isd      = cuda.to_device(GR.corf_is, stream)
+        lat_radd      = cuda.to_device(GR.lat_rad, stream)
+        latis_radd    = cuda.to_device(GR.latis_rad, stream)
+
+        stream.synchronize()
+
+        t_end = time.time()
+        GR.copy_time += t_end - t_start
 
     ##############################
-
+    ##############################
     t_start = time.time()
     # PROGNOSE COLP
-    #dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND, VWIND, \
-    #                                                    dCOLPdt, UFLX, VFLX, FLXDIV)
-    #dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson_c(GR, COLP, UWIND, VWIND, \
-    #                                                     dCOLPdt, UFLX, VFLX, FLXDIV)
-    #dCOLPdt = np.asarray(dCOLPdt)
-    #UFLX = np.asarray(UFLX)
-    #VFLX = np.asarray(VFLX)
-    #FLXDIV = np.asarray(FLXDIV)
+    if comp_mode == 0:
+        dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson(GR, COLP, UWIND, VWIND, \
+                                                            dCOLPdt, UFLX, VFLX, FLXDIV)
+        COLP_NEW[GR.iijj] = COLP_OLD[GR.iijj] + GR.dt*dCOLPdt[GR.iijj]
 
+    elif comp_mode == 1:
+        dCOLPdt, UFLX, VFLX, FLXDIV = colp_tendency_jacobson_c(GR, COLP, UWIND, VWIND, \
+                                                             dCOLPdt, UFLX, VFLX, FLXDIV)
+        dCOLPdt = np.asarray(dCOLPdt)
+        UFLX = np.asarray(UFLX)
+        VFLX = np.asarray(VFLX)
+        FLXDIV = np.asarray(FLXDIV)
+        COLP_NEW[GR.iijj] = COLP_OLD[GR.iijj] + GR.dt*dCOLPdt[GR.iijj]
 
-    #UFLX_cpu = copy.deepcopy(UFLX)
-    #VFLX_cpu = copy.deepcopy(VFLX)
-    #FLXDIV_cpu = copy.deepcopy(FLXDIV)
-    #dCOLPdt_cpu = copy.deepcopy(dCOLPdt)
-    #UFLX[GR.iisjj] = 0.
-    #VFLX[GR.iijjs] = 0.
+    elif comp_mode == 2:
+        dCOLPdtd, UFLXd, VFLXd, FLXDIVd = \
+                     colp_tendency_jacobson_gpu(GR, GR.griddim, GR.blockdim, stream,\
+                                                dCOLPdtd, UFLXd, VFLXd, FLXDIVd,\
+                                                COLPd, UWINDd, VWINDd, \
+                                                GR.dy, dxjsd, Ad, dsigmad)
+        time_step_2D[GR.griddim, GR.blockdim, stream]\
+                            (COLP_NEWd, COLP_OLDd, dCOLPdtd, GR.dt)
 
-    stream = cuda.stream()
-
-    COLPd         = cuda.to_device(COLP, stream)
-    dCOLPdtd      = cuda.to_device(dCOLPdt, stream)
-    UFLXd         = cuda.to_device(UFLX, stream)
-    VFLXd         = cuda.to_device(VFLX, stream)
-    FLXDIVd       = cuda.to_device(FLXDIV, stream)
-    UWINDd        = cuda.to_device(UWIND, stream)
-    VWINDd        = cuda.to_device(VWIND, stream)
-    dxjsd         = cuda.to_device(GR.dxjs, stream)
-    Ad            = cuda.to_device(GR.A, stream)
-    dsigmad       = cuda.to_device(GR.dsigma, stream)
-    dxjsd         = cuda.to_device(GR.dxjs, stream)
-
-    dCOLPdtd, UFLXd, VFLXd, FLXDIVd = \
-                 colp_tendency_jacobson_gpu(GR, GR.griddim, GR.blockdim, stream,\
-                                            dCOLPdtd, UFLXd, VFLXd, FLXDIVd,\
-                                            COLPd, UWINDd, VWINDd, \
-                                            GR.dy, dxjsd, Ad, dsigmad)
-
-    #quit()
-
-
-
-
-    #dCOLPdtd.to_host(stream)
-    #stream.synchronize()
-    #COLP_NEW[GR.iijj] = COLP_OLD[GR.iijj] + GR.dt*dCOLPdt[GR.iijj]
-
-    COLP_NEWd         = cuda.to_device(COLP_NEW, stream)
-    COLP_OLDd         = cuda.to_device(COLP_OLD, stream)
-    time_step_2D[GR.griddim, GR.blockdim, stream]\
-                        (COLP_NEWd, COLP_OLDd, dCOLPdtd, GR.dt)
-    dCOLPdtd.to_host(stream)
-    stream.synchronize()
-    #print(COLP_NEW)
-    #quit()
-
-    UFLXd.to_host(stream)
-    VFLXd.to_host(stream)
-    #COLP_OLDd.to_host(stream)
-    stream.synchronize()
 
     # DIAGNOSE WWIND
-    #WWIND = vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
-    #WWIND = vertical_wind_jacobson_c(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
-    #WWIND = np.asarray(WWIND)
+    if comp_mode == 0:
+        WWIND = vertical_wind_jacobson(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
+        # TODO 2 NECESSARY
+        COLP_NEW = exchange_BC(GR, COLP_NEW)
+        WWIND = exchange_BC(GR, WWIND)
 
-    WWINDd        = cuda.to_device(WWIND, stream)
-    sigma_vbd     = cuda.to_device(GR.sigma_vb, stream)
+    elif comp_mode == 1:
+        WWIND = vertical_wind_jacobson_c(GR, COLP_NEW, dCOLPdt, FLXDIV, WWIND)
+        WWIND = np.asarray(WWIND)
+        # TODO 2 NECESSARY
+        COLP_NEW = exchange_BC(GR, COLP_NEW)
+        WWIND = exchange_BC(GR, WWIND)
 
-    vertical_wind_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, stream]\
-                                    (WWINDd, dCOLPdtd, FLXDIVd, COLP_NEWd, sigma_vbd)
-
-    
-    #FLXDIVd.to_host(stream)
-    #COLP_NEWd.to_host(stream)
-    #WWINDd.to_host(stream)
-    # TODO 2 NECESSARY
-    #COLP_NEW = exchange_BC(GR, COLP_NEW)
-    #WWIND = exchange_BC(GR, WWIND)
-
-    # TODO 2 NECESSARY
-    COLP_NEWd = exchange_BC_gpu(COLP_NEWd, GR.zonal, GR.merid,
-                                GR.griddim_xy, GR.blockdim_xy, stream, array2D=True)
-    WWINDd = exchange_BC_gpu(WWINDd, GR.zonals, GR.merid,
-                                GR.griddim_ks, GR.blockdim_ks, stream)
-
-    #FLXDIVd.to_host(stream)
-    COLP_NEWd.to_host(stream)
-    WWINDd.to_host(stream)
-    stream.synchronize()
+    elif comp_mode == 2:
+        vertical_wind_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, stream]\
+                                        (WWINDd, dCOLPdtd, FLXDIVd, COLP_NEWd, sigma_vbd)
+        # TODO 2 NECESSARY
+        COLP_NEWd = exchange_BC_gpu(COLP_NEWd, GR.zonal, GR.merid,
+                                    GR.griddim_xy, GR.blockdim_xy, stream, array2D=True)
+        WWINDd = exchange_BC_gpu(WWINDd, GR.zonals, GR.merid,
+                                    GR.griddim_ks, GR.blockdim_ks, stream)
 
     t_end = time.time()
     GR.cont_comp_time += t_end - t_start
     ##############################
+    ##############################
+
 
 
 
     ##############################
-    #UFLX[:,0,:] = 300
-    #UFLX[:,GR.ny+1,:] = 300
-    #UFLX[0,:,:] = 300
-    #UFLX[GR.nxs+1,:,:] = 300
-    #UFLX_gpu = copy.deepcopy(UFLX)
-    #UFLX_cpu = copy.deepcopy(UFLX)
-    #from fields import gaussian2D
-    #for k in range(1,GR.nzs-1):
-    #    WWIND[:,:,k] = gaussian2D(GR, WWIND[:,:,k], 1E-4, np.pi, 0,  np.pi/3, np.pi/4)
+    ##############################
     t_start = time.time()
     # PROGNOSE WIND
-    t0 = time.time()
-    dUFLXdt, dVFLXdt, \
-    BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX = \
-    wind_tendency_jacobson(GR, UWIND, VWIND, WWIND,
+    if comp_mode == 0:
+        dUFLXdt, dVFLXdt = wind_tendency_jacobson(GR, UWIND, VWIND, WWIND,
                                         UFLX, dUFLXdt, VFLX, dVFLXdt,
                                         BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                                        COLP, COLP_NEW, HSURF, PHI, POTT,
+                                        COLP, COLP_NEW, PHI, POTT,
                                         PVTF, PVTFVB)
-    #dUFLXdt, dVFLXdt = wind_tendency_jacobson_c(GR, njobs, UWIND, VWIND, WWIND,
-    #                                        UFLX, dUFLXdt, VFLX, dVFLXdt,
-    #                                        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-    #                                        COLP, COLP_NEW, PHI,
-    #                                        POTT, PVTF, PVTFVB)
-    #dUFLXdt = np.asarray(dUFLXdt)
-    #dVFLXdt = np.asarray(dVFLXdt)
-    t1 = time.time()
-    print('orig ' + str(t1 - t0))
 
+    elif comp_mode == 1:
+        dUFLXdt, dVFLXdt = wind_tendency_jacobson_c(GR, njobs, UWIND, VWIND, WWIND,
+                                        UFLX, dUFLXdt, VFLX, dVFLXdt,
+                                        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
+                                        COLP, COLP_NEW, PHI,
+                                        POTT, PVTF, PVTFVB)
+        dUFLXdt = np.asarray(dUFLXdt)
+        dVFLXdt = np.asarray(dVFLXdt)
 
-    dUFLXdt_cpu = copy.deepcopy(dUFLXdt)
-    dVFLXdt_cpu = copy.deepcopy(dVFLXdt)
-    TFLX_cpu = copy.deepcopy(TFLX)
-    #FLXDIV_cpu = copy.deepcopy(FLXDIV)
-    #dCOLPdt_cpu = copy.deepcopy(dCOLPdt)
-    #UFLX[GR.iisjj] = 0.
-    #VFLX[GR.iijjs] = 0.
-
-
-
-    t0 = time.time()
-    dUFLXdtd, dVFLXdtd, \
-    BFLXd, CFLXd, DFLXd, EFLXd, RFLXd, QFLXd, SFLXd, TFLXd = \
-    wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND,
-                                    UFLX, dUFLXdt, VFLX, dVFLXdt,
-                                    BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                                    COLP, COLP_NEW, HSURF, PHI, POTT,
-                                    PVTF, PVTFVB,
-                                    stream)
-    t1 = time.time()
-    print('gpu  ' + str(t1 - t0))
-
-
-    dUFLXdtd.to_host(stream)
-    dVFLXdtd.to_host(stream)
-    BFLXd.to_host(stream)
-    CFLXd.to_host(stream)
-    DFLXd.to_host(stream)
-    EFLXd.to_host(stream)
-    RFLXd.to_host(stream)
-    QFLXd.to_host(stream)
-    SFLXd.to_host(stream)
-    TFLXd.to_host(stream)
-    stream.synchronize()
-    dUFLXdt_gpu = copy.deepcopy(dUFLXdt)
-    dVFLXdt_gpu = copy.deepcopy(dVFLXdt)
-
-    var = dVFLXdt_gpu
-    var_orig = dVFLXdt_cpu
-    #var = dUFLXdt_gpu
-    #var_orig = dUFLXdt_cpu
-    print('###################')
-    nan_here = np.isnan(var)
-    nan_orig = np.isnan(var_orig)
-    diff = var - var_orig
-    nan_diff = nan_here != nan_orig 
-    print('values ' + str(np.nansum(np.abs(diff))))
-    print('  nans ' + str(np.sum(nan_diff)))
-    print('###################')
-
-    quit()
-    #plt.contourf(var_orig[:,:,1].T)
-    #plt.contourf(var[:,:,1].T)
-    plt.contourf(diff[:,:,1].T)
-    plt.colorbar()
-    plt.show()
-    quit()
-
-
-
+    elif comp_mode == 2:
+        dUFLXdtd, dVFLXdtd = wind_tendency_jacobson_gpu(GR, UWINDd, VWINDd, WWINDd,
+                            UFLXd, dUFLXdtd, VFLXd, dVFLXdtd,
+                            BFLXd, CFLXd, DFLXd, EFLXd, RFLXd, QFLXd, SFLXd, TFLXd, 
+                            COLPd, COLP_NEWd, PHId, POTTd, PVTFd, PVTFVBd,
+                            Ad, dsigmad, sigma_vbd, corfd, corf_isd, lat_radd, latis_radd,
+                            GR.dy, GR.dlon_rad, dxjsd,
+                            stream)
 
     t_end = time.time()
     GR.wind_comp_time += t_end - t_start
     ##############################
+    ##############################
 
 
 
+    ##############################
     ##############################
     t_start = time.time()
     # PROGNOSE POTT
-    #dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
-    #                                        UFLX, VFLX, WWIND, \
-    #                                        dPOTTdt_RAD, dPOTTdt_MIC)
-    #dPOTTdt = temperature_tendency_jacobson_c(GR, njobs, POTT, POTTVB, COLP, COLP_NEW,\
-    #                                        UFLX, VFLX, WWIND, \
-    #                                        dPOTTdt_RAD, dPOTTdt_MIC)
-    #dPOTTdt = np.asarray(dPOTTdt)
+    if comp_mode == 0:
+        dPOTTdt = temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW,\
+                                                UFLX, VFLX, WWIND, \
+                                                dPOTTdt_RAD, dPOTTdt_MIC)
+
+    elif comp_mode == 1:
+        dPOTTdt = temperature_tendency_jacobson_c(GR, njobs, POTT, POTTVB, COLP, COLP_NEW,\
+                                                UFLX, VFLX, WWIND, \
+                                                dPOTTdt_RAD, dPOTTdt_MIC)
+        dPOTTdt = np.asarray(dPOTTdt)
+
+    elif comp_mode == 2:
+        temperature_tendency_jacobson_gpu[GR.griddim, GR.blockdim, stream] \
+                                            (dPOTTdtd, \
+                                            POTTd, POTTVBd, COLPd, COLP_NEWd, \
+                                            UFLXd, VFLXd, WWINDd, \
+                                            dPOTTdt_RADd, dPOTTdt_MICd, \
+                                            Ad, dsigmad)
+
     t_end = time.time()
     GR.temp_comp_time += t_end - t_start
-    #cpu_time = t_end - t_start
+    ##############################
+    ##############################
 
+    if comp_mode == 2:
+        t_start = time.time()
 
-    stream = cuda.stream()
-    dPOTTdtd      = cuda.to_device(dPOTTdt, stream)
-    dPOTTdt_RADd  = cuda.to_device(dPOTTdt_RAD, stream)
-    dPOTTdt_MICd  = cuda.to_device(dPOTTdt_MIC, stream)
-    UFLXd         = cuda.to_device(UFLX, stream)
-    VFLXd         = cuda.to_device(VFLX, stream)
-    POTTd         = cuda.to_device(POTT, stream)
-    POTTVBd       = cuda.to_device(POTTVB, stream)
-    COLPd         = cuda.to_device(COLP, stream)
-    COLP_NEWd     = cuda.to_device(COLP_NEW, stream)
-    WWINDd        = cuda.to_device(WWIND, stream)
-    Ad            = cuda.to_device(GR.A, stream)
-    dsigmad       = cuda.to_device(GR.dsigma, stream)
+        COLPd     .to_host(stream)
+        COLP_NEWd .to_host(stream)
+        UFLXd     .to_host(stream)
+        dUFLXdtd  .to_host(stream)
+        VFLXd     .to_host(stream)
+        dVFLXdtd  .to_host(stream)
+        WWINDd    .to_host(stream) 
+        dPOTTdtd  .to_host(stream)
 
-    t_start = time.time()
-    temperature_tendency_jacobson_gpu[GR.griddim, GR.blockdim, stream] \
-                                        (dPOTTdtd, \
-                                        POTTd, POTTVBd, COLPd, COLP_NEWd, \
-                                        UFLXd, VFLXd, WWINDd, \
-                                        dPOTTdt_RADd, dPOTTdt_MICd, \
-                                        Ad, dsigmad)
-    t_end = time.time()
-    time_gpu = t_end - t_start
+        stream.synchronize()
 
-    dPOTTdtd.to_host(stream)
-    stream.synchronize()
-    #dPOTTdt_gpu = copy.deepcopy(dPOTTdt)
-
-    #for k in range(0,GR.nz):
-    #    POTT_gpu[:,:,k][GR.iijj] = POTT[:,:,k][GR.iijj] + GR.dt*dPOTTdt[:,:,k][GR.iijj]/COLP[GR.iijj]
-
-    #POTT_gpud       = cuda.to_device(POTT_gpu, stream)
-
-    #t_start = time.time()
-    #POTT_gpud = exchange_BC_gpu(GR, POTT_gpud, zonald, meridd, stream)
-    #t_end = time.time()
-    #cpu_time += t_end - t_start
-    #print('gpu ' + str(time_gpu))
-
-    #POTT_gpud.to_host(stream)
+        t_end = time.time()
+        GR.copy_time += t_end - t_start
 
 
     ##############################
-
-
-
     ##############################
     t_start = time.time()
     # MOIST VARIABLES
@@ -317,6 +247,7 @@ def tendencies_jacobson(GR, subgrids,\
     dQCdt = np.asarray(dQCdt)
     t_end = time.time()
     GR.trac_comp_time += t_end - t_start
+    ##############################
     ##############################
 
     return(COLP_NEW, dUFLXdt, dVFLXdt, dPOTTdt, WWIND, dQVdt, dQCdt)

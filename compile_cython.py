@@ -27,7 +27,7 @@ all_par = ['wind_cython_par']
 
 strings = all_par
 strings = all
-#strings = ['wind_cython']
+strings = ['wind_cython']
 #strings = ['geopotential_cython']
 #strings = ['diagnostics_cython']
 #strings = ['temperature_cython']
