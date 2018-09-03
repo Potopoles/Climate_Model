@@ -245,7 +245,8 @@ def proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
 
 
 
-def diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTFVB, POTTVB):
+def diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, HSURF,
+                                PVTF, PVTFVB, POTTVB):
 
     ##############################
     ##############################
@@ -266,23 +267,9 @@ def diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PV
     #            comp_modes 0 and 1. I guess the difference comes from numerical
     #            precision. So this should be fine. (e.g. surf. press. differences
     #            of max. 5 Pa after 10 days of simulation, close to topography)
-        #PHI, PHIVB, PVTF, PVTFVB = \
-        #         diag_geopotential_jacobson_gpu(GR, stream, PHI, PHIVB, HSURF, 
-        #                                            POTT, COLP, PVTF, PVTFVB)
-        PHId     = cuda.to_device(PHI, stream)
-        PHIVBd         = cuda.to_device(PHIVB, stream)
-        HSURFd     = cuda.to_device(HSURF, stream)
-        POTTd      = cuda.to_device(POTT, stream)
-        COLPd         = cuda.to_device(COLP, stream)
-        PVTFd         = cuda.to_device(PVTF, stream)
-        PVTFVBd         = cuda.to_device(PVTFVB, stream)
-        PHId, PHIVBd, PVTFd, PVTFVBd = \
-                 diag_geopotential_jacobson_gpu(GR, stream, PHId, PHIVBd, HSURFd, 
-                                                    POTTd, COLPd, PVTFd, PVTFVBd)
-        PVTFd     .to_host(stream)
-        PVTFVBd .to_host(stream)
-        PHId    .to_host(stream)
-        PHIVBd    .to_host(stream)
+        PHI, PHIVB, PVTF, PVTFVB = \
+                 diag_geopotential_jacobson_gpu(GR, stream, PHI, PHIVB, HSURF, 
+                                                    POTT, COLP, PVTF, PVTFVB)
     ##############################
     ##############################
 
@@ -298,16 +285,8 @@ def diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PV
         POTTVB = np.asarray(POTTVB)
 
     elif comp_mode == 2:
-        PVTFd         = cuda.to_device(PVTF, stream)
-        PVTFVBd         = cuda.to_device(PVTFVB, stream)
-        POTTd         = cuda.to_device(POTT, stream)
-        POTTVBd         = cuda.to_device(POTTVB, stream)
         diagnose_POTTVB_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, stream] \
-                                        (POTTVBd, POTTd, PVTFd, PVTFVBd)
-        PVTFd     .to_host(stream)
-        PVTFVBd .to_host(stream)
-        POTTd    .to_host(stream)
-        POTTVBd    .to_host(stream)
+                                        (POTTVB, POTT, PVTF, PVTFVB)
     ##############################
     ##############################
 

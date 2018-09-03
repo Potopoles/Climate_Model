@@ -20,7 +20,6 @@ def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, R
                                         UWIND[:,:,k][GR.iijj_ip1])/2)**2 + \
                         ((VWIND[:,:,k][GR.iijj] + VWIND[:,:,k][GR.iijj_jp1])/2)**2 )
 
-
     return(PAIR, TAIR, TAIRVB, RHO, WIND)
 
 

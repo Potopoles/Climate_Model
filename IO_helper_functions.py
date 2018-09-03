@@ -5,6 +5,7 @@ from geopotential import diag_pvt_factor
 from constants import con_kappa, con_g 
 
 def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
+    t_start = time.time()
     vmax = 0
     mean_wind = 0
     mean_temp = 0
@@ -22,6 +23,8 @@ def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
 
     mean_colp = np.sum(COLP[GR.iijj]*GR.A[GR.iijj])/np.sum(GR.A[GR.iijj])
 
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
 
     return(WIND, vmax, mean_wind, mean_temp, mean_colp)
 
@@ -29,7 +32,6 @@ def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
 def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                     PHI, PHIVB, RHO, MIC):
 
-    t_start = time.time()
 
     # VORTICITY
     VORT = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
@@ -65,8 +67,6 @@ def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
     WVP = np.sum(MIC.QV[GR.iijj]*dz*RHO[GR.iijj],2)
     CWP = np.sum(MIC.QC[GR.iijj]*dz*RHO[GR.iijj],2)
 
-    t_end = time.time()
-    GR.IO_comp_time += t_end - t_start
 
     return(VORT, PAIR, TAIR, WWIND_ms, WVP, CWP)
 
@@ -74,15 +74,18 @@ def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
 
 def print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT):
 
-    WIND, vmax, mean_wind, mean_temp, mean_colp = console_output_diagnostics(GR, \
-                                    WIND, UWIND, VWIND, COLP, POTT)
+    #WIND, vmax, mean_wind, mean_temp, mean_colp = console_output_diagnostics(GR, \
+    #                                WIND, UWIND, VWIND, COLP, POTT)
+
+    #print('################')
+    #print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,2)) + \
+    #        '  days  vmax: ' + str(np.round(vmax,1)) + '  m/s vmean: ' + \
+    #        str(np.round(mean_wind,3)) + ' m/s Tmean: ' + \
+    #        str(np.round(mean_temp,7)) + \
+    #        '  K  COLP: ' + str(np.round(mean_colp,2)) + ' Pa')
 
     print('################')
-    print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,2)) + \
-            '  days  vmax: ' + str(np.round(vmax,1)) + '  m/s vmean: ' + \
-            str(np.round(mean_wind,3)) + ' m/s Tmean: ' + \
-            str(np.round(mean_temp,7)) + \
-            '  K  COLP: ' + str(np.round(mean_colp,2)) + ' Pa')
+    print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,2)))
 
     try:
         faster_than_reality = int(GR.sim_time_sec/GR.total_comp_time)
@@ -100,6 +103,7 @@ def print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT):
         pass
 
 
+
     
 def print_computation_time_info(GR):
     # FINNAL OUTPUT
@@ -107,8 +111,8 @@ def print_computation_time_info(GR):
     print('took ' + str(np.round(GR.total_comp_time/60,2)) + ' mins.')
     print('Relative amount of CPU time')
     print('#### gernal')
-    print('IO         :  ' + str(int(100*GR.IO_comp_time/GR.total_comp_time)) + '  \t%\t' \
-                           + str(int(GR.IO_comp_time)) + '\ts')
+    print('IO         :  ' + str(int(100*GR.IO_time/GR.total_comp_time)) + '  \t%\t' \
+                           + str(int(GR.IO_time)) + '\ts')
     print('#### dynamics')
     print('total      :  ' + str(int(100*GR.dyn_comp_time/GR.total_comp_time)) + '  \t%\t' \
                            + str(int(GR.dyn_comp_time)) + '\ts')

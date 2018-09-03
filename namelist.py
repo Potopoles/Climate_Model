@@ -43,6 +43,9 @@ i_microphysics = 0
 # TURBULENCE
 i_turbulence = 0
 
+# SOIL
+i_soil = 0
+
 
 # TESTSUITE EQUALITY
 nz = 4
@@ -53,12 +56,13 @@ dlon_deg = 3
 output_path = '../output_orig'
 output_path = '../output'
 i_sim_n_days = 0.50
-i_out_nth_hour = 2
+i_out_nth_hour = 12
 i_radiation = 0
 njobs = 2
 i_radiation = 0
 i_microphysics = 0
 i_turbulence = 0
+i_soil = 0
 
 ### BENCHMARK EXPERIMENT
 #nz = 16
@@ -73,36 +77,23 @@ i_turbulence = 0
 #i_radiation = 3
 #i_microphysics = 1
 #i_turbulence = 0
+#i_soil = 0
 
 
-### BENCHMARK EXPERIMENT heavy
-#nz = 32
-#lat0_deg = -78
-#lat1_deg = 78
-#dlat_deg = 1.0
-#dlon_deg = 1.0
-#output_path = '../output'
-#i_sim_n_days = 0.02
-#i_out_nth_hour = 3
-#njobs = 4
-#i_radiation = 3
-#i_microphysics = 1
-#i_turbulence = 0
-
-#
-### LONGTIME RUN
-#nz = 10
-#lat0_deg = -78
-#lat1_deg = 78
-#dlat_deg = 3
-#dlon_deg = 3
-#output_path = '../output'
-#i_sim_n_days = 100.
-#i_out_nth_hour = 24
-#njobs = 2
-#i_radiation = 3
-#i_microphysics = 1
-#i_turbulence = 0
+## BENCHMARK EXPERIMENT heavy
+nz = 32
+lat0_deg = -78
+lat1_deg = 78
+dlat_deg = 1.0
+dlon_deg = 1.0
+output_path = '../output'
+i_sim_n_days = 0.10
+i_out_nth_hour = 3
+njobs = 4
+i_radiation = 0
+i_microphysics = 0
+i_turbulence = 0
+i_soil = 0
 
 
 ### TODO : CURRENT CHANGES
@@ -111,6 +102,7 @@ i_turbulence = 0
 i_radiation = 0
 i_microphysics = 0
 i_turbulence = 0
+i_soil = 0
 
 
 
@@ -120,7 +112,7 @@ comp_mode = 2
 # general
 wp = 'float64'
 # cython
-njobs = 2
+njobs = 4
 # gpu 
 tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
 tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)

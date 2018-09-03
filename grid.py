@@ -24,7 +24,7 @@ class Grid:
 
             # TIMERS
             self.total_comp_time = 0
-            self.IO_comp_time = 0
+            self.IO_time = 0
             self.dyn_comp_time = 0
             self.wind_comp_time = 0
             self.temp_comp_time = 0

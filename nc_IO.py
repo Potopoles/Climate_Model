@@ -9,8 +9,6 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
                 POTT, TAIR, RHO, PVTF, PVTFVB,
                 RAD, SOIL, MIC):
 
-    t_start = time.time()
-
     print('###########################################')
     print('###########################################')
     print('write fields')
@@ -187,14 +185,9 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
     ncf.close()
 
 
-    t_end = time.time()
-    GR.IO_comp_time += t_end - t_start
-
 
 
 def constant_fields_to_NC(GR, HSURF, RAD, SOIL):
-
-    t_start = time.time()
 
     print('###########################################')
     print('###########################################')
@@ -246,8 +239,5 @@ def constant_fields_to_NC(GR, HSURF, RAD, SOIL):
         pass
 
     ncf.close()
-
-    t_end = time.time()
-    GR.IO_comp_time += t_end - t_start
 
 
