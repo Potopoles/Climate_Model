@@ -262,17 +262,17 @@ class Grid:
             self.meridvb = cuda.to_device(meridvb, self.stream)
 
 
-            ## LOAD GRID FIELDS TO GPU
-            #if comp_mode == 2:
-            #    stream = cuda.stream()
-            #    self.Ad            = cuda.to_device(self.A, stream)
-            #    self.dsigmad       = cuda.to_device(self.dsigma, stream)
-            #    self.sigma_vbd     = cuda.to_device(self.sigma_vb, stream)
-            #    self.dxjsd         = cuda.to_device(self.dxjs, stream)
-            #    self.corfd         = cuda.to_device(self.corf, stream)
-            #    self.corf_isd      = cuda.to_device(self.corf_is, stream)
-            #    self.lat_radd      = cuda.to_device(self.lat_rad, stream)
-            #    self.latis_radd    = cuda.to_device(self.latis_rad, stream)
+            # LOAD GRID FIELDS TO GPU
+            if comp_mode == 2:
+                stream = cuda.stream()
+                self.stream        = stream
+                self.Ad            = cuda.to_device(self.A, stream)
+                self.dxjsd         = cuda.to_device(self.dxjs, stream)
+                self.corfd         = cuda.to_device(self.corf, stream)
+                self.corf_isd      = cuda.to_device(self.corf_is, stream)
+                self.lat_radd      = cuda.to_device(self.lat_rad, stream)
+                self.latis_radd    = cuda.to_device(self.latis_rad, stream)
+                # dsigma and sigma_vb are copied in fields
 
 
 

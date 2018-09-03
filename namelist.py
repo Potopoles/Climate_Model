@@ -26,7 +26,7 @@ i_curved_earth = 1
 
 # SIMULATION
 output_path = '../output'
-#output_path = '../output_fine'
+output_path = '../output_fine'
 i_sim_n_days = 0.5
 i_out_nth_hour = 0.1
 #i_sim_n_days = 3*365.0
@@ -116,7 +116,7 @@ i_turbulence = 0
 
 # PARALLEL AND DEVICE
 # 0: numpy, 1: cython cpu, 2: numba-cuda
-comp_mode = 0
+comp_mode = 2
 # general
 wp = 'float64'
 # cython

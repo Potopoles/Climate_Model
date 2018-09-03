@@ -27,6 +27,7 @@ from geopotential_cuda import diag_geopotential_jacobson_gpu
 
 from diagnostics import diagnose_POTTVB_jacobson, interp_COLPA
 from bin.diagnostics_cython import diagnose_POTTVB_jacobson_c
+from diagnostics_cuda import diagnose_POTTVB_jacobson_gpu
 
 from boundaries import exchange_BC
 from boundaries_cuda import exchange_BC_gpu
@@ -246,12 +247,13 @@ def proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
 
 def diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTFVB, POTTVB):
 
+    ##############################
+    ##############################
     if comp_mode == 0:
         PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, 
                                                     POTT, COLP, PVTF, PVTFVB)
 
-    #elif comp_mode == 1:
-    elif comp_mode in [1,2]:
+    elif comp_mode == 1:
         PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson_c(GR, njobs, PHI, PHIVB, HSURF, 
                                                         POTT, COLP, PVTF, PVTFVB)
         PHI = np.asarray(PHI)
@@ -259,54 +261,55 @@ def diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PV
         PVTF = np.asarray(PVTF)
         PVTFVB = np.asarray(PVTFVB)
 
-    ##elif comp_mode == 2:
-    ##    pass
-
-    PVTF_orig = copy.copy(PVTF) 
-    PVTFVB_orig = copy.copy(PVTFVB) 
-
-
-    PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson_gpu(GR, stream, PHI, PHIVB, HSURF, 
-                                                    POTT, COLP, PVTF, PVTFVB)
-    PVTF_gpu = copy.copy(PVTF)
-    PVTFVB_gpu = copy.copy(PVTFVB)
-
-
-    var = PVTFVB_gpu
-    var_orig = PVTFVB_orig
-    #var = PVTF_gpu
-    #var_orig = PVTF_orig
-    print('###################')
-    nan_here = np.isnan(var)
-    nan_orig = np.isnan(var_orig)
-    diff = var - var_orig
-    nan_diff = nan_here != nan_orig 
-    print('values ' + str(np.nansum(np.abs(diff))))
-    print('  nans ' + str(np.sum(nan_diff)))
-    print('###################')
-
-    #quit()
-    #plt.contourf(var_orig[:,:,1].T)
-    #plt.contourf(var[:,:,0].T)
-    plt.contourf(diff[:,:,2].T)
-    plt.colorbar()
-    plt.show()
-    quit()
+    elif comp_mode == 2:
+    # ATTENTION: With the following function, comp_mode 2 becomes different from
+    #            comp_modes 0 and 1. I guess the difference comes from numerical
+    #            precision. So this should be fine. (e.g. surf. press. differences
+    #            of max. 5 Pa after 10 days of simulation, close to topography)
+        #PHI, PHIVB, PVTF, PVTFVB = \
+        #         diag_geopotential_jacobson_gpu(GR, stream, PHI, PHIVB, HSURF, 
+        #                                            POTT, COLP, PVTF, PVTFVB)
+        PHId     = cuda.to_device(PHI, stream)
+        PHIVBd         = cuda.to_device(PHIVB, stream)
+        HSURFd     = cuda.to_device(HSURF, stream)
+        POTTd      = cuda.to_device(POTT, stream)
+        COLPd         = cuda.to_device(COLP, stream)
+        PVTFd         = cuda.to_device(PVTF, stream)
+        PVTFVBd         = cuda.to_device(PVTFVB, stream)
+        PHId, PHIVBd, PVTFd, PVTFVBd = \
+                 diag_geopotential_jacobson_gpu(GR, stream, PHId, PHIVBd, HSURFd, 
+                                                    POTTd, COLPd, PVTFd, PVTFVBd)
+        PVTFd     .to_host(stream)
+        PVTFVBd .to_host(stream)
+        PHId    .to_host(stream)
+        PHIVBd    .to_host(stream)
+    ##############################
+    ##############################
 
 
 
+    ##############################
+    ##############################
     if comp_mode == 0:
         POTTVB = diagnose_POTTVB_jacobson(GR, POTTVB, POTT, PVTF, PVTFVB)
 
-    #elif comp_mode == 1:
-    elif comp_mode in [1,2]:
+    elif comp_mode == 1:
         POTTVB = diagnose_POTTVB_jacobson_c(GR, njobs, POTTVB, POTT, PVTF, PVTFVB)
         POTTVB = np.asarray(POTTVB)
 
-    #elif comp_mode == 2:
-    #    pass
-
-
+    elif comp_mode == 2:
+        PVTFd         = cuda.to_device(PVTF, stream)
+        PVTFVBd         = cuda.to_device(PVTFVB, stream)
+        POTTd         = cuda.to_device(POTT, stream)
+        POTTVBd         = cuda.to_device(POTTVB, stream)
+        diagnose_POTTVB_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, stream] \
+                                        (POTTVBd, POTTd, PVTFd, PVTFVBd)
+        PVTFd     .to_host(stream)
+        PVTFVBd .to_host(stream)
+        POTTd    .to_host(stream)
+        POTTVBd    .to_host(stream)
+    ##############################
+    ##############################
 
 
     #TURB.diag_rho(GR, COLP, POTT, PVTF, POTTVB, PVTFVB)
@@ -318,3 +321,23 @@ def diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PV
 
 
 
+    ##var = PHIVB
+    ##var_orig = PHIVB_orig
+    #var = PVTF
+    #var_orig = PVTF_orig
+    #print('###################')
+    #nan_here = np.isnan(var)
+    #nan_orig = np.isnan(var_orig)
+    #diff = var - var_orig
+    #nan_diff = nan_here != nan_orig 
+    #print('values ' + str(np.nansum(np.abs(diff))))
+    #print('  nans ' + str(np.sum(nan_diff)))
+    #print('###################')
+
+    ##quit()
+    ##plt.contourf(var_orig[:,:,0].T)
+    ##plt.contourf(var[:,:,0].T)
+    #plt.contourf(diff[:,:,0].T)
+    #plt.colorbar()
+    #plt.show()
+    #quit()

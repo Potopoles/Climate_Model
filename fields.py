@@ -10,6 +10,8 @@ from org_microphysics import microphysics
 from org_turbulence import turbulence
 from constants import con_g, con_Rd, con_kappa, con_cp
 
+from numba import cuda
+
 def initialize_fields(GR, subgrids):
     if i_load_from_restart:
         COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
@@ -121,6 +123,10 @@ def initialize_fields(GR, subgrids):
         RAD = radiation(GR, i_radiation)
         RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC)
 
+        # LOAD CONSTANT FIELDS TO GPU
+        if comp_mode == 2:
+            GR.dsigmad       = cuda.to_device(GR.dsigma, GR.stream)
+            GR.sigma_vbd     = cuda.to_device(GR.sigma_vb, GR.stream)
 
 
     return(COLP_OLD, COLP, COLP_NEW, dCOLPdt, PAIR, PHI, PHIVB, \
