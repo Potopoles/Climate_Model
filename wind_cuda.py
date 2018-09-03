@@ -18,13 +18,14 @@ i_num_dif  = 1
 
 def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVFLXdt,
                                 BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                                COLP, COLP_NEW, PHI, POTT, PVTF, PVTFVB,
-                                A, dsigma, sigma_vb, corf, corf_is, lat_rad, latis_rad,
-                                dy, dlon_rad, dxjs,
-                                stream):
-    
+                                COLP, COLP_NEW, PHI, POTT, PVTF, PVTFVB):
+
+    stream = GR.stream
+
     set_to[GR.griddim_is, GR.blockdim, stream](dUFLXdt, 0.)
+    stream.synchronize()
     set_to[GR.griddim_js, GR.blockdim, stream](dVFLXdt, 0.)
+    stream.synchronize()
 
     WWIND_UWIND_ks = cuda.device_array( (GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs), \
                                         dtype=UWIND.dtype )
@@ -44,6 +45,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
             # CALCULATE MOMENTUM FLUXES
             calc_fluxes_ij[GR.griddim, GR.blockdim, stream] \
                             (BFLX, RFLX, UFLX, VFLX)
+            stream.synchronize()
             BFLX = exchange_BC_gpu(BFLX, GR.zonal, GR.merid, GR.griddim,
                                     GR.blockdim, stream)
             RFLX = exchange_BC_gpu(RFLX, GR.zonal, GR.merid, GR.griddim,
@@ -51,6 +53,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
 
             calc_fluxes_isj[GR.griddim_is, GR.blockdim, stream] \
                             (SFLX, TFLX, UFLX, VFLX)
+            stream.synchronize()
             SFLX = exchange_BC_gpu(SFLX, GR.zonal, GR.merids, GR.griddim_is,
                                     GR.blockdim, stream, stagx=True)
             TFLX = exchange_BC_gpu(TFLX, GR.zonal, GR.merids, GR.griddim_is,
@@ -58,6 +61,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
 
             calc_fluxes_ijs[GR.griddim_js, GR.blockdim, stream] \
                             (DFLX, EFLX, UFLX, VFLX)
+            stream.synchronize()
             DFLX = exchange_BC_gpu(DFLX, GR.zonals, GR.merid, GR.griddim_js,
                                     GR.blockdim, stream, stagy=True)
             EFLX = exchange_BC_gpu(EFLX, GR.zonals, GR.merid, GR.griddim_js,
@@ -65,6 +69,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
 
             calc_fluxes_isjs[GR.griddim_is_js, GR.blockdim, stream] \
                             (CFLX, QFLX, UFLX, VFLX)
+            stream.synchronize()
             CFLX = exchange_BC_gpu(CFLX, GR.zonals, GR.merids, GR.griddim_is_js,
                                     GR.blockdim, stream, stagx=True, stagy=True)
             QFLX = exchange_BC_gpu(QFLX, GR.zonals, GR.merids, GR.griddim_is_js,
@@ -73,11 +78,13 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
         # VERTICAL ADVECTION
         if i_vert_adv:
             calc_WWIND_VWIND_ks[GR.griddim_js_ks, GR.blockdim_ks, stream] \
-                                (WWIND_VWIND_ks, VWIND, COLP_NEW, WWIND, A, 
-                                dsigma)
+                                (WWIND_VWIND_ks, VWIND, COLP_NEW, WWIND, GR.Ad, 
+                                GR.dsigmad)
+            stream.synchronize()
             calc_WWIND_UWIND_ks[GR.griddim_is_ks, GR.blockdim_ks, stream] \
-                                (WWIND_UWIND_ks, UWIND, COLP_NEW, WWIND, A, 
-                                dsigma)
+                                (WWIND_UWIND_ks, UWIND, COLP_NEW, WWIND, GR.Ad, 
+                                GR.dsigmad)
+            stream.synchronize()
 
         #######################################################################
         #######################################################################
@@ -88,15 +95,17 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
                         (dUFLXdt, UWIND, VWIND, COLP,
                         UFLX, BFLX, CFLX, DFLX, EFLX,
                         PHI, POTT, PVTF, PVTFVB, WWIND_UWIND_ks,
-                        corf_is, latis_rad, dlon_rad,
-                        dsigma, sigma_vb, dy)
+                        GR.corf_isd, GR.latis_radd, GR.dlon_rad,
+                        GR.dsigmad, GR.sigma_vbd, GR.dy)
+        stream.synchronize()
 
         run_VWIND[GR.griddim_js, GR.blockdim, stream] \
                         (dVFLXdt, UWIND, VWIND, COLP,
                         VFLX, RFLX, QFLX, SFLX, TFLX,
                         PHI, POTT, PVTF, PVTFVB, WWIND_VWIND_ks,
-                        corf, lat_rad, dlon_rad,
-                        dsigma, sigma_vb, dxjs)
+                        GR.corfd, GR.lat_radd, GR.dlon_rad,
+                        GR.dsigmad, GR.sigma_vbd, GR.dxjsd)
+        stream.synchronize()
 
         #######################################################################
         #######################################################################

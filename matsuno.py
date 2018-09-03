@@ -34,6 +34,9 @@ def step_matsuno(GR, subgrids,
 
     stream = GR.stream
 
+    ##############################
+    ##############################
+    t_start = time.time()
     if comp_mode in [0,1]:
         UWIND_OLD[:] = UWIND[:]
         VWIND_OLD[:] = VWIND[:]
@@ -42,12 +45,16 @@ def step_matsuno(GR, subgrids,
         QC_OLD[:]    = QC[:]
         COLP_OLD[:]  = COLP[:]
     elif comp_mode == 2:
-        set_equal  [GR.griddim_is, GR.blockdim, stream](UWIND_OLD, UWIND)
-        set_equal  [GR.griddim_js, GR.blockdim, stream](VWIND_OLD, VWIND)
-        set_equal  [GR.griddim   , GR.blockdim, stream](POTT_OLD, POTT)
-        set_equal  [GR.griddim   , GR.blockdim, stream](QV_OLD, QV)
-        set_equal  [GR.griddim   , GR.blockdim, stream](QC_OLD, QC)
-        set_equal2D[GR.griddim   , GR.blockdim, stream](COLP_OLD, COLP)
+        set_equal  [GR.griddim_is, GR.blockdim   , stream](UWIND_OLD, UWIND)
+        set_equal  [GR.griddim_js, GR.blockdim   , stream](VWIND_OLD, VWIND)
+        set_equal  [GR.griddim   , GR.blockdim   , stream](POTT_OLD, POTT)
+        set_equal  [GR.griddim   , GR.blockdim   , stream](QV_OLD, QV)
+        set_equal  [GR.griddim   , GR.blockdim   , stream](QC_OLD, QC)
+        set_equal2D[GR.griddim_xy, GR.blockdim_xy, stream](COLP_OLD, COLP)
+    t_end = time.time()
+    GR.step_comp_time += t_end - t_start
+    ##############################
+    ##############################
 
     ############################################################
     ############################################################
@@ -83,7 +90,8 @@ def step_matsuno(GR, subgrids,
                                 PHI, PVTF, PVTFVB,
                                 dPOTTdt_RAD, dPOTTdt_MIC,
                                 QV, dQVdt, QC, dQCdt, dQVdt_MIC, dQCdt_MIC)
-        COLP[:] = COLP_NEW[:]
+        set_equal2D[GR.griddim_xy, GR.blockdim_xy, stream](COLP, COLP_NEW)
+        stream.synchronize()
     ##############################
     ##############################
 
@@ -168,7 +176,8 @@ def step_matsuno(GR, subgrids,
                                 PHI, PVTF, PVTFVB,
                                 dPOTTdt_RAD, dPOTTdt_MIC,
                                 QV, dQVdt, QC, dQCdt, dQVdt_MIC, dQCdt_MIC)
-        COLP[:] = COLP_NEW[:]
+        set_equal2D[GR.griddim_xy, GR.blockdim_xy, stream](COLP, COLP_NEW)
+        stream.synchronize()
     ##############################
     ##############################
 

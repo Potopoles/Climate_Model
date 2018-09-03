@@ -96,7 +96,9 @@ def colp_tendency_jacobson_gpu(GR, griddim, blockdim, stream,
                                 dy, dxjs, A, dsigma):
     
     calc_UFLX[GR.griddim_is, blockdim, stream](UFLX, COLP, UWIND, dy)
+    stream.synchronize()
     calc_VFLX[GR.griddim_js, blockdim, stream](VFLX, COLP, VWIND, dxjs)
+    stream.synchronize()
     
     # TODO 1 NECESSARY
     UFLX = exchange_BC_gpu(UFLX, GR.zonal , GR.merids, GR.griddim_is, blockdim, stream, \
@@ -105,7 +107,9 @@ def colp_tendency_jacobson_gpu(GR, griddim, blockdim, stream,
                             stagy=True)
 
     calc_FLXDIV[GR.griddim, blockdim, stream](FLXDIV, UFLX, VFLX, dsigma, A)
+    stream.synchronize()
     calc_dCOLPdt[GR.griddim, blockdim, stream](dCOLPdt, FLXDIV)
+    stream.synchronize()
 
     return(dCOLPdt, UFLX, VFLX, FLXDIV)
 

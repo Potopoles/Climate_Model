@@ -11,14 +11,22 @@ def exchange_BC_gpu(FIELD, zonal, merid, griddim, blockdim, stream,
 
     if array2D:
         get_BCx2D[griddim, blockdim, stream](FIELD, zonal, stagx)
+        stream.synchronize()
         set_BCx2D[griddim, blockdim, stream](FIELD, zonal, stagx)
+        stream.synchronize()
         get_BCy2D[griddim, blockdim, stream](FIELD, merid, stagy)
+        stream.synchronize()
         set_BCy2D[griddim, blockdim, stream](FIELD, merid, stagy)
+        stream.synchronize()
     else:
         get_BCx[griddim, blockdim, stream](FIELD, zonal, stagx)
+        stream.synchronize()
         set_BCx[griddim, blockdim, stream](FIELD, zonal, stagx)
+        stream.synchronize()
         get_BCy[griddim, blockdim, stream](FIELD, merid, stagy)
+        stream.synchronize()
         set_BCy[griddim, blockdim, stream](FIELD, merid, stagy)
+        stream.synchronize()
 
     return(FIELD)
 

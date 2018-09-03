@@ -22,9 +22,11 @@ def proceed_timestep_jacobson_gpu(GR, stream, UWIND_OLD, UWIND, VWIND_OLD, VWIND
                 (QV, QV_OLD, dQVdt, COLP, COLP_OLD, GR.dt)
     time_step_3D[GR.griddim, GR.blockdim, stream] \
                 (QC, QC_OLD, dQCdt, COLP, COLP_OLD, GR.dt)
+    stream.synchronize()
 
     make_equal_or_larger[GR.griddim, GR.blockdim, stream](QV, 0.)
     make_equal_or_larger[GR.griddim, GR.blockdim, stream](QC, 0.)
+    stream.synchronize()
 
     # TODO 4 NECESSARY
     UWIND = exchange_BC_gpu(UWIND, GR.zonal, GR.merids, \

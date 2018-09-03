@@ -87,7 +87,7 @@ lat1_deg = 78
 dlat_deg = 1.0
 dlon_deg = 1.0
 output_path = '../output'
-i_sim_n_days = 0.10
+i_sim_n_days = 0.02
 i_out_nth_hour = 3
 njobs = 4
 i_radiation = 0
@@ -108,11 +108,11 @@ i_soil = 0
 
 # PARALLEL AND DEVICE
 # 0: numpy, 1: cython cpu, 2: numba-cuda
-comp_mode = 2
+comp_mode = 1
 # general
 wp = 'float64'
 # cython
-njobs = 4
+njobs = 1
 # gpu 
 tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
 tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)

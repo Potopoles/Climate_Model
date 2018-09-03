@@ -128,9 +128,9 @@ def print_computation_time_info(GR):
                            + str(int(GR.diag_comp_time)) + '\ts')
     print('time steps :  ' + str(int(100*GR.step_comp_time/GR.total_comp_time)) + '  \t%\t' \
                            + str(int(GR.step_comp_time)) + '\ts')
+    print('#### other')
     print('copy       :  ' + str(int(100*GR.copy_time/GR.total_comp_time)) + '  \t%\t' \
                            + str(int(GR.copy_time)) + '\ts')
-    print('#### other')
     print('radiation  :  ' + str(int(100*GR.rad_comp_time/GR.total_comp_time)) + '  \t%\t' \
                            + str(int(GR.rad_comp_time)) + '\ts')
     print('microphyis :  ' + str(int(100*GR.mic_comp_time/GR.total_comp_time)) + '  \t%\t' \

@@ -75,6 +75,7 @@ def tendencies_jacobson(GR, subgrids, stream,\
                                                 GR.dy, GR.dxjsd, GR.Ad, GR.dsigmad)
         time_step_2D[GR.griddim, GR.blockdim, stream]\
                             (COLP_NEW, COLP_OLD, dCOLPdt, GR.dt)
+        stream.synchronize()
 
 
     # DIAGNOSE WWIND
@@ -94,6 +95,7 @@ def tendencies_jacobson(GR, subgrids, stream,\
     elif comp_mode == 2:
         vertical_wind_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, stream]\
                                         (WWIND, dCOLPdt, FLXDIV, COLP_NEW, GR.sigma_vbd)
+        stream.synchronize()
         # TODO 2 NECESSARY
         COLP_NEWd = exchange_BC_gpu(COLP_NEW, GR.zonal, GR.merid,
                                     GR.griddim_xy, GR.blockdim_xy, stream, array2D=True)
@@ -131,10 +133,7 @@ def tendencies_jacobson(GR, subgrids, stream,\
         dUFLXdt, dVFLXdt = wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND,
                             UFLX, dUFLXdt, VFLX, dVFLXdt,
                             BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                            COLP, COLP_NEW, PHI, POTT, PVTF, PVTFVB,
-                            GR.Ad, GR.dsigmad, GR.sigma_vbd, GR.corfd, GR.corf_isd,
-                            GR.lat_radd, GR.latis_radd, GR.dy, GR.dlon_rad, GR.dxjsd,
-                            stream)
+                            COLP, COLP_NEW, PHI, POTT, PVTF, PVTFVB)
 
     t_end = time.time()
     GR.wind_comp_time += t_end - t_start
@@ -165,6 +164,7 @@ def tendencies_jacobson(GR, subgrids, stream,\
                                             UFLX, VFLX, WWIND, 
                                             dPOTTdt_RAD, dPOTTdt_MIC, 
                                             GR.Ad, GR.dsigmad)
+        stream.synchronize()
 
     t_end = time.time()
     GR.temp_comp_time += t_end - t_start
@@ -196,10 +196,12 @@ def tendencies_jacobson(GR, subgrids, stream,\
                                     (dQVdt, QV, COLP, COLP_NEW,
                                      UFLX, VFLX, WWIND, dQVdt_MIC,
                                      GR.Ad, GR.dsigmad)
+        stream.synchronize()
         cloud_water_tendency_gpu[GR.griddim, GR.blockdim, stream] \
                                     (dQCdt, QC, COLP, COLP_NEW,
                                      UFLX, VFLX, WWIND, dQCdt_MIC,
                                      GR.Ad, GR.dsigmad)
+        stream.synchronize()
 
     t_end = time.time()
     GR.trac_comp_time += t_end - t_start
@@ -287,6 +289,7 @@ def diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, HSURF,
     elif comp_mode == 2:
         diagnose_POTTVB_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, stream] \
                                         (POTTVB, POTT, PVTF, PVTFVB)
+        stream.synchronize()
     ##############################
     ##############################
 

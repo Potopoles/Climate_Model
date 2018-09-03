@@ -72,9 +72,11 @@ def diag_geopotential_jacobson_gpu(GR, stream, PHI, PHIVB, HSURF, POTT, COLP,
 
     diag_pvt_factor[GR.griddim, GR.blockdim, stream] \
                         (COLP, PVTF, PVTFVB, GR.sigma_vbd)
+    stream.synchronize()
 
     get_geopotential[GR.griddim_ks, GR.blockdim_ks, stream] \
                        (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
+    stream.synchronize()
 
     # TODO 5 NECESSARY
     PVTF  = exchange_BC_gpu(PVTF, GR.zonal, GR.merid,   \
