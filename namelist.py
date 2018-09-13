@@ -11,8 +11,6 @@ nz = 8
 
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
-#lat0_deg = -50
-#lat1_deg = 50
 lat0_deg = -80
 lat1_deg = 80
 lon0_deg = 0
@@ -20,8 +18,6 @@ lon1_deg = 360
 
 dlat_deg = 4.0
 dlon_deg = 4.0
-#dlat_deg = 10
-#dlon_deg = 60
 
 i_curved_earth = 1
 
@@ -34,18 +30,18 @@ i_out_nth_hour = 2
 #i_sim_n_days = 947
 #i_out_nth_hour = 2*24
 
-# RADIATION
-#i_radiation = 3
-i_radiation = 0
 
-# MICROPHYSICS
-i_microphysics = 0
-
-# TURBULENCE
-i_turbulence = 0
-
-# SOIL
-i_soil = 0
+# PARALLEL AND DEVICE
+# 0: numpy, 1: cython cpu, 2: numba-cuda
+comp_mode = 2
+# general
+wp = 'float64'
+# cython
+njobs = 4
+# gpu 
+tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
+tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)
+tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
 
 
 # 0: testsuite equality
@@ -54,14 +50,15 @@ i_simulation_mode = 0
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 0:
-    nz = 8
+    nz = 4
     lat0_deg = -80
     lat1_deg = 80
     dlat_deg = 3
     dlon_deg = 3
-    output_path = '../output_orig'
-    output_path = '../output'
-    i_sim_n_days = 2.00
+    output_path = '../output_orig_cpu'
+    output_path = '../output_orig_gpu'
+    #output_path = '../output'
+    i_sim_n_days = 1.00
     i_out_nth_hour = 6
     i_radiation = 0
     njobs = 2
@@ -113,17 +110,6 @@ i_soil = 0
 
 
 
-# PARALLEL AND DEVICE
-# 0: numpy, 1: cython cpu, 2: numba-cuda
-comp_mode = 2
-# general
-wp = 'float64'
-# cython
-njobs = 4
-# gpu 
-tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
-tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)
-tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
 
 
 i_load_from_restart = 0
