@@ -55,9 +55,9 @@ if i_simulation_mode == 0:
     lat1_deg = 80
     dlat_deg = 3
     dlon_deg = 3
-    output_path = '../output_orig_cpu'
-    output_path = '../output_orig_gpu'
-    #output_path = '../output'
+    #output_path = '../output_orig_cpu'
+    #output_path = '../output_orig_gpu'
+    output_path = '../output'
     i_sim_n_days = 1.00
     i_out_nth_hour = 6
     i_radiation = 0

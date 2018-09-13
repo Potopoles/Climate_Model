@@ -256,6 +256,7 @@ class Grid:
                 merid   = np.zeros((  self.nx +2*self.nb,2 ,self.nz  ), np.float64)
                 merids  = np.zeros((  self.nxs+2*self.nb,2 ,self.nz  ), np.float64)
                 meridvb = np.zeros((  self.nx +2*self.nb,2 ,self.nz+1), np.float64)
+
                 self.zonal   = cuda.to_device(zonal,  self.stream)
                 self.zonals  = cuda.to_device(zonals, self.stream)
                 self.zonalvb = cuda.to_device(zonalvb, self.stream)

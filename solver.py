@@ -57,10 +57,10 @@ if comp_mode == 2:
     ##############################
     t_start = time.time()
     stream = GR.stream
-    #COLP_OLDd         = cuda.to_device(COLP_OLD, stream)
-    #COLPd             = cuda.to_device(COLP, stream)
-    #COLP_NEWd         = cuda.to_device(COLP_NEW, stream)
-    #dCOLPdtd          = cuda.to_device(dCOLPdt, stream)
+    #COLP_OLDd         = cuda.to_device(CF.COLP_OLD, stream)
+    #COLPd             = cuda.to_device(CF.COLP, stream)
+    #COLP_NEWd         = cuda.to_device(CF.COLP_NEW, stream)
+    #dCOLPdtd          = cuda.to_device(CF.dCOLPdt, stream)
     UFLXd             = cuda.to_device(UFLX, stream)
     dUFLXdtd          = cuda.to_device(dUFLXdt, stream)
     VFLXd             = cuda.to_device(VFLX, stream)
@@ -166,11 +166,11 @@ while GR.ts < GR.nts:
     ######## DYNAMICS
     t_dyn_start = time.time()
     if comp_mode in [0,1]:
-        #F.COLP, PHI, PHIVB, POTT, POTTVB, \
+        #COLP, PHI, PHIVB, POTT, POTTVB, \
         #UWIND, VWIND, WWIND,\
         #UFLX, VFLX, MIC.QV, MIC.QC \
         #            = time_stepper(GR, subgrids,
-        #                    F.COLP_OLD, F.COLP, F.COLP_NEW, dCOLPdt, PHI, PHIVB,
+        #                    COLP_OLD, COLP, COLP_NEW, dCOLPdt, PHI, PHIVB,
         #                    POTT_OLD, POTT, dPOTTdt, POTTVB,
         #                    UWIND_OLD, UWIND, VWIND_OLD, VWIND, WWIND,
         #                    UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,

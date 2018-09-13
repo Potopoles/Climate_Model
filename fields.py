@@ -45,7 +45,7 @@ def initialize_fields(GR, subgrids, F):
     else:
         # CREATE ARRAYS
         # scalars
-        #F.COLP_OLD =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        #COLP_OLD =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
         #COLP =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
         #COLP_NEW =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
         #dCOLPdt = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb), np.nan)

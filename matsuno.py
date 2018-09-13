@@ -43,6 +43,7 @@ def step_matsuno(GR, subgrids, F,
             QC_OLD, QC, dQCdt,
             dQVdt_MIC, dQCdt_MIC):
 
+
     # Prepare stream object for simple usage
     if comp_mode in [0,1]:
         stream = None
@@ -60,6 +61,7 @@ def step_matsuno(GR, subgrids, F,
         QC_OLD[:]    = QC[:]
         F.COLP_OLD[:]  = F.COLP[:]
     elif comp_mode == 2:
+        # TODO: ERROR HERE
         set_equal  [GR.griddim_is, GR.blockdim   , stream](UWIND_OLD, UWIND)
         set_equal  [GR.griddim_js, GR.blockdim   , stream](VWIND_OLD, VWIND)
         set_equal  [GR.griddim   , GR.blockdim   , stream](POTT_OLD, POTT)
