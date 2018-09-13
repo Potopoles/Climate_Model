@@ -12,20 +12,43 @@ from constants import con_g, con_Rd, con_kappa, con_cp
 
 from numba import cuda
 
-def initialize_fields(GR, subgrids):
+class CPU_Fields:
+
+    def __init__(self, GR, subgrids):
+
+        # 2D FIELDS
+        self.COLP_OLD =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        self.COLP     =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        self.COLP_NEW =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        self.dCOLPdt  =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+
+
+class GPU_Fields:
+
+    def __init__(self, GR, subgrids, CF):
+
+        # 2D FIELDS
+        self.COLP_OLD         = cuda.to_device(CF.COLP_OLD,  GR.stream)
+        self.COLP             = cuda.to_device(CF.COLP,      GR.stream)
+        self.COLP_NEW         = cuda.to_device(CF.COLP_NEW,  GR.stream)
+        self.dCOLPdt          = cuda.to_device(CF.dCOLPdt,   GR.stream)
+
+
+def initialize_fields(GR, subgrids, F):
     if i_load_from_restart:
-        COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
-        UFLX, VFLX, \
-        HSURF, POTT, TAIR, TAIRVB, RHO, \
-        POTTVB, PVTF, PVTFVB, \
-        RAD, SOIL, MIC, TURB = load_restart_fields(GR)
+        raise NotImplementedError()
+        #COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
+        #UFLX, VFLX, \
+        #HSURF, POTT, TAIR, TAIRVB, RHO, \
+        #POTTVB, PVTF, PVTFVB, \
+        #RAD, SOIL, MIC, TURB = load_restart_fields(GR)
     else:
         # CREATE ARRAYS
         # scalars
-        COLP_OLD =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
-        COLP =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
-        COLP_NEW =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
-        dCOLPdt = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb), np.nan)
+        #F.COLP_OLD =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        #COLP =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        #COLP_NEW =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        #dCOLPdt = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb), np.nan)
         PSURF =  np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
         PAIR =   np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
         PHI =    np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
@@ -73,12 +96,12 @@ def initialize_fields(GR, subgrids):
             HSURF = exchange_BC(GR, HSURF)
         
         # INITIAL CONDITIONS
-        GR, COLP, PSURF, POTT, TAIR \
-                = load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, \
+        GR, F.COLP, PSURF, POTT, TAIR \
+                = load_profile(GR, subgrids, F.COLP, HSURF, PSURF, PVTF, \
                                 PVTFVB, POTT, TAIR)
-        COLP = gaussian2D(GR, COLP, COLP_gaussian_pert, np.pi*3/4, 0, \
+        F.COLP = gaussian2D(GR, F.COLP, COLP_gaussian_pert, np.pi*3/4, 0, \
                             gaussian_dlon, gaussian_dlat)
-        COLP = random2D(GR, COLP, COLP_random_pert)
+        F.COLP = random2D(GR, F.COLP, COLP_random_pert)
 
         for k in range(0,GR.nz):
             UWIND[:,:,k][GR.iisjj] = u0   
@@ -95,7 +118,7 @@ def initialize_fields(GR, subgrids):
             POTT[:,:,k] = random2D(GR, POTT[:,:,k], POTT_random_pert)
 
         # BOUNDARY CONDITIONS
-        COLP  = exchange_BC(GR, COLP)
+        F.COLP  = exchange_BC(GR, F.COLP)
         UWIND  = exchange_BC(GR, UWIND)
         VWIND  = exchange_BC(GR, VWIND)
         POTT  = exchange_BC(GR, POTT)
@@ -105,11 +128,11 @@ def initialize_fields(GR, subgrids):
         TURB = turbulence(GR, i_turbulence) 
 
         PHI, PHIVB, PVTF, PVTFVB, POTTVB \
-                    = diagnose_fields_first_time(GR, PHI, PHIVB, COLP, POTT, \
+                    = diagnose_fields_first_time(GR, PHI, PHIVB, F.COLP, POTT, \
                                             HSURF, PVTF, PVTFVB, POTTVB)
 
         PAIR, TAIR, TAIRVB, RHO, WIND = \
-                diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
+                diagnose_secondary_fields(GR, F.COLP, PAIR, PHI, POTT, POTTVB,
                                         TAIR, TAIRVB, RHO,\
                                         PVTF, PVTFVB, UWIND, VWIND, WIND)
 
@@ -129,7 +152,13 @@ def initialize_fields(GR, subgrids):
             GR.sigma_vbd     = cuda.to_device(GR.sigma_vb, GR.stream)
 
 
-    return(COLP_OLD, COLP, COLP_NEW, dCOLPdt, PAIR, PHI, PHIVB, \
+    #return(COLP_OLD, COLP, COLP_NEW, dCOLPdt, PAIR, PHI, PHIVB, \
+    #        UWIND_OLD, UWIND, VWIND_OLD, VWIND, WIND, WWIND,
+    #        UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
+    #        BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
+    #        HSURF, POTT_OLD, POTT, dPOTTdt, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB,
+    #        RAD, SOIL, MIC, TURB)
+    return(PAIR, PHI, PHIVB, \
             UWIND_OLD, UWIND, VWIND_OLD, VWIND, WIND, WWIND,
             UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
             BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 

@@ -2,7 +2,7 @@ import numpy as np
 import time
 from datetime import timedelta
 from grid import Grid
-from fields import initialize_fields
+from fields import initialize_fields, CPU_Fields, GPU_Fields
 from nc_IO import constant_fields_to_NC, output_to_NC
 from IO import write_restart
 from multiproc import create_subgrids
@@ -24,13 +24,28 @@ GR = Grid()
 #GR, subgrids = create_subgrids(GR, njobs)
 subgrids = {}
 
-COLP_OLD, COLP, COLP_NEW, dCOLPdt, PAIR, PHI, PHIVB, \
+# INITIALIZE FIELDS ON CPU
+CF = CPU_Fields(GR, subgrids)
+
+#COLP_OLD, COLP, COLP_NEW, dCOLPdt, PAIR, PHI, PHIVB, \
+#UWIND_OLD, UWIND, VWIND_OLD, VWIND, WIND, WWIND,\
+#UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,\
+#BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, \
+#HSURF, POTT_OLD, POTT, dPOTTdt, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
+#RAD, SOIL, MIC, TURB = initialize_fields(GR, subgrids, F)
+PAIR, PHI, PHIVB, \
 UWIND_OLD, UWIND, VWIND_OLD, VWIND, WIND, WWIND,\
 UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,\
 BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, \
 HSURF, POTT_OLD, POTT, dPOTTdt, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
-RAD, SOIL, MIC, TURB = initialize_fields(GR, subgrids)
+RAD, SOIL, MIC, TURB = initialize_fields(GR, subgrids, CF)
+
+# INITIALIZE FIELDS ON GPU AND COPY TO DEVICE
+if comp_mode == 2:
+    GF = GPU_Fields(GR, subgrids, CF)
+
 constant_fields_to_NC(GR, HSURF, RAD, SOIL)
+
 
 if i_load_from_restart:
     outCounter = GR.outCounter
@@ -42,10 +57,10 @@ if comp_mode == 2:
     ##############################
     t_start = time.time()
     stream = GR.stream
-    COLP_OLDd         = cuda.to_device(COLP_OLD, stream)
-    COLPd             = cuda.to_device(COLP, stream)
-    COLP_NEWd         = cuda.to_device(COLP_NEW, stream)
-    dCOLPdtd          = cuda.to_device(dCOLPdt, stream)
+    #COLP_OLDd         = cuda.to_device(COLP_OLD, stream)
+    #COLPd             = cuda.to_device(COLP, stream)
+    #COLP_NEWd         = cuda.to_device(COLP_NEW, stream)
+    #dCOLPdtd          = cuda.to_device(dCOLPdt, stream)
     UFLXd             = cuda.to_device(UFLX, stream)
     dUFLXdtd          = cuda.to_device(dUFLXdt, stream)
     VFLXd             = cuda.to_device(VFLX, stream)
@@ -102,60 +117,74 @@ while GR.ts < GR.nts:
     GR.sim_time_sec = GR.ts*GR.dt
     GR.GMT += timedelta(seconds=GR.dt)
 
-    print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT)
+    print_ts_info(GR, WIND, UWIND, VWIND, CF.COLP, POTT)
 
-    ######### DIAGNOSTICS (not related to dynamics)
-    if i_radiation or i_microphysics or i_soil:
-        t_start = time.time()
-        PAIR, TAIR, TAIRVB, RHO, WIND = \
-                diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
-                                        TAIR, TAIRVB, RHO,\
-                                        PVTF, PVTFVB, UWIND, VWIND, WIND)
-        #PAIR, TAIR, TAIRVB, RHO, WIND = \
-        #        diagnose_secondary_fields_c(GR, COLP, PAIR, PHI, POTT, POTTVB,
-        #                                TAIR, TAIRVB, RHO,\
-        #                                PVTF, PVTFVB, UWIND, VWIND, WIND)
-        #PAIR = np.asarray(PAIR)
-        #TAIR = np.asarray(TAIR)
-        #TAIRVB = np.asarray(TAIRVB)
-        #RHO = np.asarray(RHO)
-        #WIND = np.asarray(WIND)
-        t_end = time.time()
-        GR.diag_comp_time += t_end - t_start
-    #########
+    ########## DIAGNOSTICS (not related to dynamics)
+    #if i_radiation or i_microphysics or i_soil:
+    #    t_start = time.time()
+    #    PAIR, TAIR, TAIRVB, RHO, WIND = \
+    #            diagnose_secondary_fields(GR, CF.COLP, PAIR, PHI, POTT, POTTVB,
+    #                                    TAIR, TAIRVB, RHO,\
+    #                                    PVTF, PVTFVB, UWIND, VWIND, WIND)
+    #    #PAIR, TAIR, TAIRVB, RHO, WIND = \
+    #    #        diagnose_secondary_fields_c(GR, CF.COLP, PAIR, PHI, POTT, POTTVB,
+    #    #                                TAIR, TAIRVB, RHO,\
+    #    #                                PVTF, PVTFVB, UWIND, VWIND, WIND)
+    #    #PAIR = np.asarray(PAIR)
+    #    #TAIR = np.asarray(TAIR)
+    #    #TAIRVB = np.asarray(TAIRVB)
+    #    #RHO = np.asarray(RHO)
+    #    #WIND = np.asarray(WIND)
+    #    t_end = time.time()
+    #    GR.diag_comp_time += t_end - t_start
+    ##########
 
-    ######### RADIATION
-    if i_radiation:
-        t_start = time.time()
-        RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC)
-        t_end = time.time()
-        GR.rad_comp_time += t_end - t_start
-    #########
+    ########## RADIATION
+    #if i_radiation:
+    #    t_start = time.time()
+    #    RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC)
+    #    t_end = time.time()
+    #    GR.rad_comp_time += t_end - t_start
+    ##########
 
-    ######### MICROPHYSICS
-    if i_microphysics:
-        t_start = time.time()
-        MIC.calc_microphysics(GR, WIND, SOIL, TAIR, PAIR, RHO, PHIVB)
-        t_end = time.time()
-        GR.mic_comp_time += t_end - t_start
-    #########
+    ########## MICROPHYSICS
+    #if i_microphysics:
+    #    t_start = time.time()
+    #    MIC.calc_microphysics(GR, WIND, SOIL, TAIR, PAIR, RHO, PHIVB)
+    #    t_end = time.time()
+    #    GR.mic_comp_time += t_end - t_start
+    ##########
 
-    ######### SOIL
-    if i_soil:
-        t_start = time.time()
-        SOIL.advance_timestep(GR, RAD, MIC)
-        t_end = time.time()
-        GR.soil_comp_time += t_end - t_start
-    #########
+    ########## SOIL
+    #if i_soil:
+    #    t_start = time.time()
+    #    SOIL.advance_timestep(GR, RAD, MIC)
+    #    t_end = time.time()
+    #    GR.soil_comp_time += t_end - t_start
+    ##########
 
     ######## DYNAMICS
     t_dyn_start = time.time()
     if comp_mode in [0,1]:
-        COLP, PHI, PHIVB, POTT, POTTVB, \
+        #F.COLP, PHI, PHIVB, POTT, POTTVB, \
+        #UWIND, VWIND, WWIND,\
+        #UFLX, VFLX, MIC.QV, MIC.QC \
+        #            = time_stepper(GR, subgrids,
+        #                    F.COLP_OLD, F.COLP, F.COLP_NEW, dCOLPdt, PHI, PHIVB,
+        #                    POTT_OLD, POTT, dPOTTdt, POTTVB,
+        #                    UWIND_OLD, UWIND, VWIND_OLD, VWIND, WWIND,
+        #                    UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
+        #                    BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
+        #                    HSURF, PVTF, PVTFVB, 
+        #                    RAD.dPOTTdt_RAD, MIC.dPOTTdt_MIC,
+        #                    MIC.QV_OLD, MIC.QV, MIC.dQVdt,
+        #                    MIC.QC_OLD, MIC.QC, MIC.dQCdt,
+        #                    MIC.dQVdt_MIC, MIC.dQCdt_MIC)
+        PHI, PHIVB, POTT, POTTVB, \
         UWIND, VWIND, WWIND,\
         UFLX, VFLX, MIC.QV, MIC.QC \
-                    = time_stepper(GR, subgrids,
-                            COLP_OLD, COLP, COLP_NEW, dCOLPdt, PHI, PHIVB,
+                    = time_stepper(GR, subgrids, CF,
+                            PHI, PHIVB,
                             POTT_OLD, POTT, dPOTTdt, POTTVB,
                             UWIND_OLD, UWIND, VWIND_OLD, VWIND, WWIND,
                             UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
@@ -167,11 +196,11 @@ while GR.ts < GR.nts:
                             MIC.dQVdt_MIC, MIC.dQCdt_MIC)
 
     elif comp_mode == 2:
-        COLPd, PHId, PHIVBd, POTTd, POTTVBd, \
+        PHId, PHIVBd, POTTd, POTTVBd, \
         UWINDd, VWINDd, WWINDd,\
         UFLXd, VFLXd, MIC.QVd, MIC.QCd\
-                    = time_stepper(GR, subgrids,
-                            COLP_OLDd, COLPd, COLP_NEWd, dCOLPdtd, PHId, PHIVBd,
+                    = time_stepper(GR, subgrids, GF,
+                            PHId, PHIVBd,
                             POTT_OLDd, POTTd, dPOTTdtd, POTTVBd,
                             UWIND_OLDd, UWINDd, VWIND_OLDd, VWINDd, WWINDd,
                             UFLXd, dUFLXdtd, VFLXd, dVFLXdtd, FLXDIVd,
@@ -199,7 +228,7 @@ while GR.ts < GR.nts:
         if comp_mode == 2:
             ##############################
             t_start = time.time()
-            COLPd             .to_host(stream)
+            GF.COLP             .to_host(stream)
             PAIRd             .to_host(stream)
             PHId              .to_host(stream)
             PHIVBd            .to_host(stream)
@@ -231,7 +260,7 @@ while GR.ts < GR.nts:
         outCounter += 1
         #WIND, vmax, mean_wind, mean_temp, mean_colp = diagnostics(GR, \
         #                                WIND, UWIND, VWIND, COLP, POTT)
-        output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
+        output_to_NC(GR, outCounter, CF.COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
                     POTT, TAIR, RHO, PVTF, PVTFVB,
                     RAD, SOIL, MIC)
         t_end = time.time()
@@ -240,7 +269,7 @@ while GR.ts < GR.nts:
     # WRITE RESTART FILE
     if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
         GR.outCounter = outCounter
-        write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
+        write_restart(GR, F.COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
                         UFLX, VFLX, \
                         HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
                         RAD, SOIL, MIC, TURB)
