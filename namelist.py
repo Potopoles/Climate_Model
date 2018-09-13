@@ -48,37 +48,37 @@ i_turbulence = 0
 i_soil = 0
 
 
-# TESTSUITE EQUALITY
-nz = 8
-lat0_deg = -80
-lat1_deg = 80
-dlat_deg = 3
-dlon_deg = 3
-output_path = '../output_orig'
-output_path = '../output'
-i_sim_n_days = 2.00
-i_out_nth_hour = 6
-i_radiation = 0
-njobs = 2
-i_radiation = 0
-i_microphysics = 0
-i_turbulence = 0
-i_soil = 0
-
-### BENCHMARK EXPERIMENT
-#nz = 16
-#lat0_deg = -78
-#lat1_deg = 78
-#dlat_deg = 1.5
-#dlon_deg = 1.5
+## TESTSUITE EQUALITY
+#nz = 8
+#lat0_deg = -80
+#lat1_deg = 80
+#dlat_deg = 3
+#dlon_deg = 3
+#output_path = '../output_orig'
 #output_path = '../output'
-#i_sim_n_days = 0.5
-#i_out_nth_hour = 3
-#njobs = 4
-#i_radiation = 3
-#i_microphysics = 1
+#i_sim_n_days = 2.00
+#i_out_nth_hour = 6
+#i_radiation = 0
+#njobs = 2
+#i_radiation = 0
+#i_microphysics = 0
 #i_turbulence = 0
 #i_soil = 0
+
+## BENCHMARK EXPERIMENT
+nz = 16
+lat0_deg = -78
+lat1_deg = 78
+dlat_deg = 1.5
+dlon_deg = 1.5
+output_path = '../output_run'
+i_sim_n_days = 0.5
+i_out_nth_hour = 0.25
+njobs = 4
+i_radiation = 3
+i_microphysics = 1
+i_turbulence = 0
+i_soil = 0
 
 
 ### BENCHMARK EXPERIMENT heavy
