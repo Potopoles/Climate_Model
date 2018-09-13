@@ -54,12 +54,12 @@ lat0_deg = -80
 lat1_deg = 80
 dlat_deg = 3
 dlon_deg = 3
-output_path = '../output_orig'
-output_path = '../output'
+output_path = '../output_orig_cpu'
+#output_path = '../output_orig_gpu'
+#output_path = '../output'
 i_sim_n_days = 1.00
 i_out_nth_hour = 6
 i_radiation = 0
-njobs = 2
 i_radiation = 0
 i_microphysics = 0
 i_turbulence = 0
@@ -109,7 +109,7 @@ i_soil = 0
 
 # PARALLEL AND DEVICE
 # 0: numpy, 1: cython cpu, 2: numba-cuda
-comp_mode = 2
+comp_mode = 1
 # general
 wp = 'float64'
 # cython
