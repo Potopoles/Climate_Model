@@ -32,7 +32,11 @@ def step_matsuno(GR, subgrids,
             QC_OLD, QC, dQCdt,
             dQVdt_MIC, dQCdt_MIC):
 
-    stream = GR.stream
+    # Prepare stream object for simple usage
+    if comp_mode in [0,1]:
+        stream = None
+    elif comp_mode == 2:
+        stream = GR.stream
 
     ##############################
     ##############################

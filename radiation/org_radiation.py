@@ -110,8 +110,8 @@ class radiation:
         elif self.i_radiation == 3:
             if GR.ts % self.rad_nth_ts == 0:
                 print('calculate radiation')
-                #self.simple_radiation(GR, TAIR, RHO, PHIVB, SOIL, MIC)
-                self.simple_radiation_par(GR, TAIR, RHO, PHIVB, SOIL, MIC)
+                self.simple_radiation(GR, TAIR, RHO, PHIVB, SOIL, MIC)
+                #self.simple_radiation_par(GR, TAIR, RHO, PHIVB, SOIL, MIC)
         elif self.i_radiation == 0:
             pass
         else:
@@ -145,6 +145,11 @@ class radiation:
 
         #t1 = time.time()
         p = mp.Pool(processes=njobs_rad)
+        
+        print(type(TAIR))
+        print(type(RHO))
+        print(type(PHIVB))
+        quit()
 
         input = [(GR, TAIR[ii_ref[c],jj_ref[c],:], RHO[ii_ref[c],jj_ref[c],:],
                 PHIVB[ii[c],jj[c],:],

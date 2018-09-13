@@ -97,10 +97,26 @@ def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
                         HSURF, POTT, TAIR, TAIRVB, RHO,\
                         POTTVB, PVTF, PVTFVB,
                         RAD, SOIL, MIC, TURB):
+
+    print('###########################################')
+    print('###########################################')
+    print('write RESTART')
+    print('###########################################')
+    print('###########################################')
+ 
     filename = '../restart/'+str(GR.dlat_deg).zfill(2) + '_' +\
                             str(GR.dlon_deg).zfill(2) + '_' +\
                             str(GR.nz).zfill(3)+'.pkl'
     out = {}
+    #GR.stream  = None 
+    #GR.zonal   = None 
+    #GR.zonals  = None 
+    #GR.zonalvb = None 
+    #GR.merid   = None 
+    #GR.merids  = None 
+    #GR.meridvb = None 
+    #GR.dsigma = None 
+    #GR.sigma_vb = None 
     out['GR'] = GR
     out['COLP'] = COLP
     out['PAIR'] = PAIR

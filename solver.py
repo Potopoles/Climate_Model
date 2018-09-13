@@ -10,7 +10,7 @@ from namelist import i_time_stepping, \
                     i_load_from_restart, i_save_to_restart, \
                     i_radiation, njobs, comp_mode, \
                     i_microphysics, i_soil
-#from diagnostics import diagnose_secondary_fields
+from diagnostics import diagnose_secondary_fields
 from bin.diagnostics_cython import diagnose_secondary_fields_c
 from IO_helper_functions import print_ts_info, print_computation_time_info
 if i_time_stepping == 'MATSUNO':
@@ -21,7 +21,8 @@ elif i_time_stepping == 'RK4':
 from numba import cuda
 
 GR = Grid()
-GR, subgrids = create_subgrids(GR, njobs)
+#GR, subgrids = create_subgrids(GR, njobs)
+subgrids = {}
 
 COLP_OLD, COLP, COLP_NEW, dCOLPdt, PAIR, PHI, PHIVB, \
 UWIND_OLD, UWIND, VWIND_OLD, VWIND, WIND, WWIND,\
@@ -107,14 +108,18 @@ while GR.ts < GR.nts:
     if i_radiation or i_microphysics or i_soil:
         t_start = time.time()
         PAIR, TAIR, TAIRVB, RHO, WIND = \
-                diagnose_secondary_fields_c(GR, COLP, PAIR, PHI, POTT, POTTVB,
+                diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
                                         TAIR, TAIRVB, RHO,\
                                         PVTF, PVTFVB, UWIND, VWIND, WIND)
-        PAIR = np.asarray(PAIR)
-        TAIR = np.asarray(TAIR)
-        TAIRVB = np.asarray(TAIRVB)
-        RHO = np.asarray(RHO)
-        WIND = np.asarray(WIND)
+        #PAIR, TAIR, TAIRVB, RHO, WIND = \
+        #        diagnose_secondary_fields_c(GR, COLP, PAIR, PHI, POTT, POTTVB,
+        #                                TAIR, TAIRVB, RHO,\
+        #                                PVTF, PVTFVB, UWIND, VWIND, WIND)
+        #PAIR = np.asarray(PAIR)
+        #TAIR = np.asarray(TAIR)
+        #TAIRVB = np.asarray(TAIRVB)
+        #RHO = np.asarray(RHO)
+        #WIND = np.asarray(WIND)
         t_end = time.time()
         GR.diag_comp_time += t_end - t_start
     #########
@@ -191,35 +196,36 @@ while GR.ts < GR.nts:
     # WRITE NC FILE
     if GR.ts % GR.i_out_nth_ts == 0:
 
-        ##############################
-        t_start = time.time()
-        COLPd             .to_host(stream)
-        PAIRd             .to_host(stream)
-        PHId              .to_host(stream)
-        PHIVBd            .to_host(stream)
-        UWINDd            .to_host(stream)
-        VWINDd            .to_host(stream)
-        WINDd             .to_host(stream)
-        WWINDd            .to_host(stream) 
-        POTTd             .to_host(stream)
-        TAIRd             .to_host(stream)
-        RHOd              .to_host(stream)
-        PVTFVBd           .to_host(stream)
-        MIC.QV_OLDd       .to_host(stream)
-        MIC.QVd           .to_host(stream)
-        MIC.dQVdtd        .to_host(stream)
-        MIC.QC_OLDd       .to_host(stream)
-        MIC.QCd           .to_host(stream)
-        MIC.dQCdtd        .to_host(stream)
-        MIC.dQCdt_MICd    .to_host(stream)
-        RAD.dPOTTdt_RADd  .to_host(stream)
-        MIC.dPOTTdt_MICd  .to_host(stream)
+        if comp_mode == 2:
+            ##############################
+            t_start = time.time()
+            COLPd             .to_host(stream)
+            PAIRd             .to_host(stream)
+            PHId              .to_host(stream)
+            PHIVBd            .to_host(stream)
+            UWINDd            .to_host(stream)
+            VWINDd            .to_host(stream)
+            WINDd             .to_host(stream)
+            WWINDd            .to_host(stream) 
+            POTTd             .to_host(stream)
+            TAIRd             .to_host(stream)
+            RHOd              .to_host(stream)
+            PVTFVBd           .to_host(stream)
+            MIC.QV_OLDd       .to_host(stream)
+            MIC.QVd           .to_host(stream)
+            MIC.dQVdtd        .to_host(stream)
+            MIC.QC_OLDd       .to_host(stream)
+            MIC.QCd           .to_host(stream)
+            MIC.dQCdtd        .to_host(stream)
+            MIC.dQCdt_MICd    .to_host(stream)
+            RAD.dPOTTdt_RADd  .to_host(stream)
+            MIC.dPOTTdt_MICd  .to_host(stream)
 
-        stream.synchronize()
+            stream.synchronize()
 
-        t_end = time.time()
-        GR.copy_time += t_end - t_start
-        ##############################
+            t_end = time.time()
+            GR.copy_time += t_end - t_start
+            ##############################
 
         t_start = time.time()
         outCounter += 1
@@ -231,13 +237,13 @@ while GR.ts < GR.nts:
         t_end = time.time()
         GR.IO_time += t_end - t_start
 
-    ## WRITE RESTART FILE
-    #if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
-    #    GR.outCounter = outCounter
-    #    write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
-    #                    UFLX, VFLX, \
-    #                    HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
-    #                    RAD, SOIL, MIC, TURB)
+    # WRITE RESTART FILE
+    if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
+        GR.outCounter = outCounter
+        write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
+                        UFLX, VFLX, \
+                        HSURF, POTT, TAIR, TAIRVB, RHO, POTTVB, PVTF, PVTFVB, \
+                        RAD, SOIL, MIC, TURB)
 
 
     GR.total_comp_time += time.time() - real_time_ts_start

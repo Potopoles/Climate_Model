@@ -210,68 +210,65 @@ class Grid:
             self.ts = 0
             self.i_out_nth_ts = int(self.i_out_nth_hour*3600 / self.dt)
             self.i_restart_nth_day = i_restart_nth_day
-            self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
-                    self.i_out_nth_hour*self.i_out_nth_ts
+            self.i_restart_nth_ts = int(self.i_restart_nth_day*24/ \
+                    self.i_out_nth_hour*self.i_out_nth_ts)
             self.sim_time_sec = 0
             self.GMT = GMT_initialization
 
             # GPU
             # TODO THIS IS VERY COMPLICATED. SIMPLIFY (e.g. fix blockdim)
-            self.stream = cuda.stream()
-            if tpbh > 1:
-                raise NotImplementedError('tpbh > 1 not yet possible see below (I guess)')
-            self.blockdim      = (tpbh, tpbh, tpbv)
-            self.blockdim_ks   = (tpbh, tpbh, tpbv+1)
-            self.blockdim_xy   = (tpbh, tpbh, 1)
-            self.griddim       = ((self.nx +2*self.nb)//self.blockdim[0], \
-                                  (self.ny +2*self.nb)//self.blockdim[1], \
-                                   self.nz //self.blockdim[2])
-            self.griddim_is    = ((self.nxs+2*self.nb)//self.blockdim[0], \
-                                  (self.ny +2*self.nb)//self.blockdim[1], \
-                                   self.nz //self.blockdim[2])
-            self.griddim_js    = ((self.nx +2*self.nb)//self.blockdim[0], \
-                                  (self.nys+2*self.nb)//self.blockdim[1], \
-                                   self.nz //self.blockdim[2])
-            self.griddim_is_js = ((self.nxs+2*self.nb)//self.blockdim[0], \
-                                  (self.nys+2*self.nb)//self.blockdim[1], \
-                                   self.nz //self.blockdim[2])
-            self.griddim_ks    = ((self.nx +2*self.nb)//self.blockdim_ks[0], \
-                                  (self.ny +2*self.nb)//self.blockdim_ks[1], \
-                                   self.nzs//self.blockdim_ks[2])
-            self.griddim_is_ks = ((self.nxs+2*self.nb)//self.blockdim[0], \
-                                  (self.ny +2*self.nb)//self.blockdim[1], \
-                                   self.nzs//self.blockdim_ks[2])
-            self.griddim_js_ks = ((self.nx +2*self.nb)//self.blockdim[0], \
-                                  (self.nys+2*self.nb)//self.blockdim[1], \
-                                   self.nzs//self.blockdim_ks[2])
-            self.griddim_xy    = ((self.nx +2*self.nb)//self.blockdim_xy[0], \
-                                  (self.ny +2*self.nb)//self.blockdim_xy[1], \
-                                   1       //self.blockdim_xy[2])
-
-            zonal   = np.zeros((2,self.ny +2*self.nb   ,self.nz  ), np.float64)
-            zonals  = np.zeros((2,self.nys+2*self.nb   ,self.nz  ), np.float64)
-            zonalvb = np.zeros((2,self.ny +2*self.nb   ,self.nz+1), np.float64)
-            merid   = np.zeros((  self.nx +2*self.nb,2 ,self.nz  ), np.float64)
-            merids  = np.zeros((  self.nxs+2*self.nb,2 ,self.nz  ), np.float64)
-            meridvb = np.zeros((  self.nx +2*self.nb,2 ,self.nz+1), np.float64)
-            self.zonal   = cuda.to_device(zonal,  self.stream)
-            self.zonals  = cuda.to_device(zonals, self.stream)
-            self.zonalvb = cuda.to_device(zonalvb, self.stream)
-            self.merid   = cuda.to_device(merid,  self.stream)
-            self.merids  = cuda.to_device(merids, self.stream)
-            self.meridvb = cuda.to_device(meridvb, self.stream)
-
-
             # LOAD GRID FIELDS TO GPU
             if comp_mode == 2:
-                stream = cuda.stream()
-                self.stream        = stream
-                self.Ad            = cuda.to_device(self.A, stream)
-                self.dxjsd         = cuda.to_device(self.dxjs, stream)
-                self.corfd         = cuda.to_device(self.corf, stream)
-                self.corf_isd      = cuda.to_device(self.corf_is, stream)
-                self.lat_radd      = cuda.to_device(self.lat_rad, stream)
-                self.latis_radd    = cuda.to_device(self.latis_rad, stream)
+                self.stream = cuda.stream()
+                if tpbh > 1:
+                    raise NotImplementedError('tpbh > 1 not yet possible see below (I guess)')
+                self.blockdim      = (tpbh, tpbh, tpbv)
+                self.blockdim_ks   = (tpbh, tpbh, tpbv+1)
+                self.blockdim_xy   = (tpbh, tpbh, 1)
+                self.griddim       = ((self.nx +2*self.nb)//self.blockdim[0], \
+                                      (self.ny +2*self.nb)//self.blockdim[1], \
+                                       self.nz //self.blockdim[2])
+                self.griddim_is    = ((self.nxs+2*self.nb)//self.blockdim[0], \
+                                      (self.ny +2*self.nb)//self.blockdim[1], \
+                                       self.nz //self.blockdim[2])
+                self.griddim_js    = ((self.nx +2*self.nb)//self.blockdim[0], \
+                                      (self.nys+2*self.nb)//self.blockdim[1], \
+                                       self.nz //self.blockdim[2])
+                self.griddim_is_js = ((self.nxs+2*self.nb)//self.blockdim[0], \
+                                      (self.nys+2*self.nb)//self.blockdim[1], \
+                                       self.nz //self.blockdim[2])
+                self.griddim_ks    = ((self.nx +2*self.nb)//self.blockdim_ks[0], \
+                                      (self.ny +2*self.nb)//self.blockdim_ks[1], \
+                                       self.nzs//self.blockdim_ks[2])
+                self.griddim_is_ks = ((self.nxs+2*self.nb)//self.blockdim[0], \
+                                      (self.ny +2*self.nb)//self.blockdim[1], \
+                                       self.nzs//self.blockdim_ks[2])
+                self.griddim_js_ks = ((self.nx +2*self.nb)//self.blockdim[0], \
+                                      (self.nys+2*self.nb)//self.blockdim[1], \
+                                       self.nzs//self.blockdim_ks[2])
+                self.griddim_xy    = ((self.nx +2*self.nb)//self.blockdim_xy[0], \
+                                      (self.ny +2*self.nb)//self.blockdim_xy[1], \
+                                       1       //self.blockdim_xy[2])
+
+                zonal   = np.zeros((2,self.ny +2*self.nb   ,self.nz  ), np.float64)
+                zonals  = np.zeros((2,self.nys+2*self.nb   ,self.nz  ), np.float64)
+                zonalvb = np.zeros((2,self.ny +2*self.nb   ,self.nz+1), np.float64)
+                merid   = np.zeros((  self.nx +2*self.nb,2 ,self.nz  ), np.float64)
+                merids  = np.zeros((  self.nxs+2*self.nb,2 ,self.nz  ), np.float64)
+                meridvb = np.zeros((  self.nx +2*self.nb,2 ,self.nz+1), np.float64)
+                self.zonal   = cuda.to_device(zonal,  self.stream)
+                self.zonals  = cuda.to_device(zonals, self.stream)
+                self.zonalvb = cuda.to_device(zonalvb, self.stream)
+                self.merid   = cuda.to_device(merid,  self.stream)
+                self.merids  = cuda.to_device(merids, self.stream)
+                self.meridvb = cuda.to_device(meridvb, self.stream)
+
+                self.Ad            = cuda.to_device(self.A, self.stream)
+                self.dxjsd         = cuda.to_device(self.dxjs, self.stream)
+                self.corfd         = cuda.to_device(self.corf, self.stream)
+                self.corf_isd      = cuda.to_device(self.corf_is, self.stream)
+                self.lat_radd      = cuda.to_device(self.lat_rad, self.stream)
+                self.latis_radd    = cuda.to_device(self.latis_rad, self.stream)
                 # dsigma and sigma_vb are copied in fields
 
 

@@ -2,6 +2,8 @@ import numpy as np
 import time
 from netCDF4 import Dataset
 from namelist import output_path, pTop
+from namelist import i_radiation, \
+                     i_microphysics, i_soil
 from IO_helper_functions import NC_output_diagnostics
 
 
@@ -59,7 +61,6 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
     levels[:] = GR.levels
 
     # VARIABLES
-    ALBSFCSW_out = ncf.createVariable('ALBSFCSW', 'f4', ('time', 'lat', 'lon',) )
     PSURF_out = ncf.createVariable('PSURF', 'f4', ('time', 'lat', 'lon',) )
     #PAIR_out = ncf.createVariable('PAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
     PHI_out = ncf.createVariable('PHI', 'f4', ('time', 'level', 'lat', 'lon',) )
@@ -74,34 +75,40 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
 
 
     # RADIATION VARIABLES
-    SWDIFFLXDO_out =ncf.createVariable('SWDIFFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    SWDIRFLXDO_out =ncf.createVariable('SWDIRFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    SWFLXUP_out = ncf.createVariable('SWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    SWFLXDO_out = ncf.createVariable('SWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    SWFLXNET_out = ncf.createVariable('SWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    LWFLXUP_out = ncf.createVariable('LWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    LWFLXDO_out = ncf.createVariable('LWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    LWFLXNET_out = ncf.createVariable('LWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    dPOTTdt_RAD_out=ncf.createVariable('dPOTTdt_RAD', 'f4', ('time', 'level', 'lat', 'lon',) )
-    #SWFLXDIV_out = ncf.createVariable('SWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
-    #LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
+    if i_radiation:
+        SWDIFFLXDO_out =ncf.createVariable('SWDIFFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
+        SWDIRFLXDO_out =ncf.createVariable('SWDIRFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
+        SWFLXUP_out = ncf.createVariable('SWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
+        SWFLXDO_out = ncf.createVariable('SWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
+        SWFLXNET_out = ncf.createVariable('SWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
+        LWFLXUP_out = ncf.createVariable('LWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
+        LWFLXDO_out = ncf.createVariable('LWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
+        LWFLXNET_out = ncf.createVariable('LWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
+        dPOTTdt_RAD_out=ncf.createVariable('dPOTTdt_RAD', 'f4', ('time', 'level', 'lat', 'lon',) )
+        #SWFLXDIV_out = ncf.createVariable('SWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
+        #LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # MICROPHYSICS VARIABLES
     QV_out = ncf.createVariable('QV', 'f4', ('time', 'level', 'lat', 'lon',) )
     QC_out = ncf.createVariable('QC', 'f4', ('time', 'level', 'lat', 'lon',) )
-    RH_out = ncf.createVariable('RH', 'f4', ('time', 'level', 'lat', 'lon',) )
-    dQVdt_MIC_out = ncf.createVariable('dQVdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
-    dQCdt_MIC_out = ncf.createVariable('dQCdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
     WVP_out = ncf.createVariable('WVP', 'f4', ('time', 'lat', 'lon',) )
     CWP_out = ncf.createVariable('CWP', 'f4', ('time', 'lat', 'lon',) )
+    if i_microphysics:
+        RH_out = ncf.createVariable('RH', 'f4', ('time', 'level', 'lat', 'lon',) )
+        dQVdt_MIC_out = ncf.createVariable('dQVdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
+        dQCdt_MIC_out = ncf.createVariable('dQCdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
+        dPOTTdt_MIC_out=ncf.createVariable('dPOTTdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # SOIL VARIABLES
-    TSURF_out = ncf.createVariable('TSURF', 'f4', ('time', 'lat', 'lon',) )
-    SOILMOIST_out = ncf.createVariable('SOILMOIST', 'f4', ('time', 'lat', 'lon',) )
-    RAINRATE_out = ncf.createVariable('RAINRATE', 'f4', ('time', 'lat', 'lon',) )
-    ACCRAIN_out = ncf.createVariable('ACCRAIN', 'f4', ('time', 'lat', 'lon',) )
-    EVAPITY_out = ncf.createVariable('EVAPITY', 'f4', ('time', 'lat', 'lon',) )
-    dPOTTdt_MIC_out=ncf.createVariable('dPOTTdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
+    if i_soil:
+        TSURF_out = ncf.createVariable('TSURF', 'f4', ('time', 'lat', 'lon',) )
+        if i_microphysics:
+            SOILMOIST_out = ncf.createVariable('SOILMOIST', 'f4', ('time', 'lat', 'lon',) )
+            RAINRATE_out = ncf.createVariable('RAINRATE', 'f4', ('time', 'lat', 'lon',) )
+            ACCRAIN_out = ncf.createVariable('ACCRAIN', 'f4', ('time', 'lat', 'lon',) )
+            EVAPITY_out = ncf.createVariable('EVAPITY', 'f4', ('time', 'lat', 'lon',) )
+        if i_radiation:
+            ALBSFCSW_out = ncf.createVariable('ALBSFCSW', 'f4', ('time', 'lat', 'lon',) )
 
     # VERTICAL PROFILES
     POTTprof_out = ncf.createVariable('POTTprof', 'f4', ('time', 'level', 'lat',) )
@@ -116,13 +123,16 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
     ################################################################################
     ################################################################################
 
-    ALBSFCSW_out[0,:,:] = SOIL.ALBEDOSW.T
     PSURF_out[-1,:,:] = COLP[GR.iijj].T + pTop
-    TSURF_out[-1,:,:] = SOIL.TSOIL[:,:,0].T
-    SOILMOIST_out[-1,:,:] = SOIL.MOIST.T
-    RAINRATE_out[-1,:,:] = SOIL.RAINRATE.T*3600 # mm/h
-    ACCRAIN_out[-1,:,:] = SOIL.ACCRAIN.T # mm
-    EVAPITY_out[-1,:,:] = SOIL.EVAPITY.T
+    if i_soil:
+        TSURF_out[-1,:,:] = SOIL.TSOIL[:,:,0].T
+        if i_microphysics:
+            SOILMOIST_out[-1,:,:] = SOIL.MOIST.T
+            RAINRATE_out[-1,:,:] = SOIL.RAINRATE.T*3600 # mm/h
+            ACCRAIN_out[-1,:,:] = SOIL.ACCRAIN.T # mm
+            EVAPITY_out[-1,:,:] = SOIL.EVAPITY.T
+        if i_radiation:
+            ALBSFCSW_out[0,:,:] = SOIL.ALBEDOSW.T
 
     WVP_out[-1,:,:] = WVP.T
     CWP_out[-1,:,:] = CWP.T
@@ -140,18 +150,19 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
         #RHO_out[-1,k,:,:] = RHO[:,:,k][GR.iijj].T
 
         # RADIATION VARIABLES
-        if RAD.i_radiation > 0:
+        if i_radiation > 0:
             dPOTTdt_RAD_out[-1,k,:,:] = RAD.dPOTTdt_RAD[:,:,k].T * 3600
-        #SWFLXDIV_out[-1,k,:,:] = RAD.SWFLXDIV[:,:,k].T 
-        #LWFLXDIV_out[-1,k,:,:] = RAD.LWFLXDIV[:,:,k].T 
+            #SWFLXDIV_out[-1,k,:,:] = RAD.SWFLXDIV[:,:,k].T 
+            #LWFLXDIV_out[-1,k,:,:] = RAD.LWFLXDIV[:,:,k].T 
 
         # MICROPHYSICS VARIABLES
         QV_out[-1,k,:,:] = MIC.QV[:,:,k][GR.iijj].T
         QC_out[-1,k,:,:] = MIC.QC[:,:,k][GR.iijj].T
-        RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
-        dQVdt_MIC_out[-1,k,:,:] = MIC.dQVdt_MIC[:,:,k].T * 3600
-        dQCdt_MIC_out[-1,k,:,:] = MIC.dQCdt_MIC[:,:,k].T * 3600
-        dPOTTdt_MIC_out[-1,k,:,:] = MIC.dPOTTdt_MIC[:,:,k].T * 3600
+        if i_microphysics:
+            RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
+            dQVdt_MIC_out[-1,k,:,:] = MIC.dQVdt_MIC[:,:,k].T * 3600
+            dQCdt_MIC_out[-1,k,:,:] = MIC.dQCdt_MIC[:,:,k].T * 3600
+            dPOTTdt_MIC_out[-1,k,:,:] = MIC.dPOTTdt_MIC[:,:,k].T * 3600
 
         # VERTICAL PROFILES
         POTTprof_out[-1,GR.nz-k-1,:] = np.mean(POTT[:,:,k][GR.iijj],axis=0)
