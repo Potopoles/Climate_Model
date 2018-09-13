@@ -48,37 +48,37 @@ i_turbulence = 0
 i_soil = 0
 
 
-## TESTSUITE EQUALITY
-#nz = 4
-#lat0_deg = -80
-#lat1_deg = 80
-#dlat_deg = 3
-#dlon_deg = 3
-#output_path = '../output_orig'
-#output_path = '../output'
-#i_sim_n_days = 0.50
-#i_out_nth_hour = 12
-#i_radiation = 0
-#njobs = 2
-#i_radiation = 0
-#i_microphysics = 0
-#i_turbulence = 0
-#i_soil = 0
-
-## BENCHMARK EXPERIMENT
-nz = 16
-lat0_deg = -78
-lat1_deg = 78
-dlat_deg = 1.5
-dlon_deg = 1.5
+# TESTSUITE EQUALITY
+nz = 8
+lat0_deg = -80
+lat1_deg = 80
+dlat_deg = 3
+dlon_deg = 3
+output_path = '../output_orig'
 output_path = '../output'
-i_sim_n_days = 0.5
-i_out_nth_hour = 3
-njobs = 4
-i_radiation = 3
-i_microphysics = 1
+i_sim_n_days = 2.00
+i_out_nth_hour = 6
+i_radiation = 0
+njobs = 2
+i_radiation = 0
+i_microphysics = 0
 i_turbulence = 0
 i_soil = 0
+
+### BENCHMARK EXPERIMENT
+#nz = 16
+#lat0_deg = -78
+#lat1_deg = 78
+#dlat_deg = 1.5
+#dlon_deg = 1.5
+#output_path = '../output'
+#i_sim_n_days = 0.5
+#i_out_nth_hour = 3
+#njobs = 4
+#i_radiation = 3
+#i_microphysics = 1
+#i_turbulence = 0
+#i_soil = 0
 
 
 ### BENCHMARK EXPERIMENT heavy
@@ -142,19 +142,17 @@ else:
 # INITIAL CONDITIONS
 gaussian_dlon = np.pi/10
 gaussian_dlat = np.pi/10
-gaussian_dlon = np.pi/15
-gaussian_dlat = np.pi/15
 #gaussian_dlon = 1000
 #gaussian_dlat = 1000
 u0 = 0
-UWIND_gaussian_pert = 0
+UWIND_gaussian_pert = 10
 UWIND_random_pert = 0
 v0 = 0
-VWIND_gaussian_pert = 0
+VWIND_gaussian_pert = 10
 VWIND_random_pert = 0
 pTop = 10000
 pSurf = 101350
-COLP_gaussian_pert = -5000
+COLP_gaussian_pert = -10000
 COLP_random_pert = 000
 POTT_gaussian_pert = 10
 POTT_random_pert = 0.0
