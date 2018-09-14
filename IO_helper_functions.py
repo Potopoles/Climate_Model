@@ -29,7 +29,7 @@ def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
     return(WIND, vmax, mean_wind, mean_temp, mean_colp)
 
 
-def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
+def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                     PHI, PHIVB, RHO, MIC):
 
 
@@ -64,8 +64,8 @@ def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
 
     ALTVB = PHIVB / con_g
     dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
-    WVP = np.sum(MIC.QV[GR.iijj]*dz*RHO[GR.iijj],2)
-    CWP = np.sum(MIC.QC[GR.iijj]*dz*RHO[GR.iijj],2)
+    WVP = np.sum(F.QV[GR.iijj]*dz*RHO[GR.iijj],2)
+    CWP = np.sum(F.QC[GR.iijj]*dz*RHO[GR.iijj],2)
 
 
     return(VORT, PAIR, TAIR, WWIND_ms, WVP, CWP)

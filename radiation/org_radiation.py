@@ -63,7 +63,7 @@ def calc_par(GR, TAIR, RHO, PHIVB, TSOIL, ALBEDOLW, ALBEDOSW, QC,
 
 class radiation:
 
-    def __init__(self, GR, i_radiation):
+    def __init__(self, GR, i_radiation, dPOTTdt_RAD):
         print('Prepare Radiation')
 
         self.i_radiation = i_radiation
@@ -72,8 +72,8 @@ class radiation:
         self.rad_nth_hour = rad_nth_hour 
         self.rad_nth_ts = int(self.rad_nth_hour * 3600/GR.dt)
 
-        # temperature tendency due to radiation
-        self.dPOTTdt_RAD = np.full( ( GR.nx, GR.ny, GR.nz ), np.nan)
+        ## temperature tendency due to radiation
+        #self.dPOTTdt_RAD = np.full( ( GR.nx, GR.ny, GR.nz ), np.nan)
 
         if self.i_radiation >= 1:
             # solar zenith angle

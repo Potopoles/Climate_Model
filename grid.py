@@ -220,6 +220,7 @@ class Grid:
             # LOAD GRID FIELDS TO GPU
             if comp_mode == 2:
                 self.stream = cuda.stream()
+
                 if tpbh > 1:
                     raise NotImplementedError('tpbh > 1 not yet possible see below (I guess)')
                 self.blockdim      = (tpbh, tpbh, tpbv)

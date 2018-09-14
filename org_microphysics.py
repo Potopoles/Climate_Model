@@ -15,19 +15,10 @@ class microphysics:
 
     lh_cond_water = 2260 # J / (kg)
 
-    def __init__(self, GR, i_microphysics, TAIR, PAIR):
+    def __init__(self, GR, F, i_microphysics, TAIR, PAIR):
         print('Prepare Microphysics')
 
         self.i_microphysics = i_microphysics 
-
-        # temperature tendency due to microphysics
-        self.dPOTTdt_MIC = np.full( ( GR.nx, GR.ny, GR.nz ), np.nan)
-        ## total qv tendency
-        #self.dQVdt = np.full( ( GR.nx, GR.ny, GR.nz ), np.nan)
-        # qv tendency due to microphysics
-        self.dQVdt_MIC = np.full( ( GR.nx, GR.ny, GR.nz ), np.nan)
-        # qc tendency due to microphysics
-        self.dQCdt_MIC = np.full( ( GR.nx, GR.ny, GR.nz ), np.nan)
 
         self.RH = np.zeros( ( GR.nx, GR.ny, GR.nz ) )
 
@@ -35,18 +26,12 @@ class microphysics:
 
         #if self.i_microphysics >= 1:
         # specific water vapor content
-        self.QV_OLD = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
-        self.QV = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
         e_satw = 610.94 * np.exp( (17.625 * (TAIR[GR.iijj] - 273.15)) / \
                 (TAIR[GR.iijj] - 273.15 + 243.04) )
-        self.QV[GR.iijj] = self.RH_init * (0.622 * e_satw) / PAIR[GR.iijj]
-        self.QV = exchange_BC(GR, self.QV)
-        self.dQVdt = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
-        #self.QV[:,:,range(0,GR.nz)] = 0.003 - 0.003*(np.exp(-0.1*np.arange(0,GR.nz))-0.01)
+        F.QV[GR.iijj] = self.RH_init * (0.622 * e_satw) / PAIR[GR.iijj]
+        F.QV = exchange_BC(GR, F.QV)
+        #F.QV[:,:,range(0,GR.nz)] = 0.003 - 0.003*(np.exp(-0.1*np.arange(0,GR.nz))-0.01)
         ## specific cloud liquid water content
-        self.QC_OLD = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
-        self.QC = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
-        self.dQCdt = np.zeros( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ) ) 
 
 
     def relative_humidity(self, GR, TAIR, QV, PAIR):
@@ -64,15 +49,15 @@ class microphysics:
         dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
 
         # relative humidity
-        self.RH, qv_diff = self.relative_humidity(GR, TAIR, self.QV, PAIR)
+        self.RH, qv_diff = self.relative_humidity(GR, TAIR, F.QV, PAIR)
 
         # rain
-        rain_rate = self.qc_to_qr_rate * self.QC[GR.iijj]
+        rain_rate = self.qc_to_qr_rate * F.QC[GR.iijj]
 
-        self.dQVdt_MIC[:] = - qv_diff * self.qv_to_qc_rate
-        self.dQCdt_MIC[:] = + qv_diff * self.qv_to_qc_rate - rain_rate
+        F.dQVdt_MIC[:] = - qv_diff * self.qv_to_qc_rate
+        F.dQCdt_MIC[:] = + qv_diff * self.qv_to_qc_rate - rain_rate
 
-        self.dPOTTdt_MIC = qv_diff * self.qv_to_qc_rate * self.lh_cond_water / con_cp
+        F.dPOTTdt_MIC = qv_diff * self.qv_to_qc_rate * self.lh_cond_water / con_cp
 
         # surface moisture uptake
         QV_surf_flux = np.maximum((1 - self.RH[:,:,-1]),0) * WIND[:,:,-1][GR.iijj] * \
@@ -81,7 +66,7 @@ class microphysics:
         #print(np.max(self.surf_evap_flx))
         total_evaporation = self.surf_evap_flx * GR.dt
 
-        self.dQVdt_MIC[:,:,-1] = self.dQVdt_MIC[:,:,-1] + QV_surf_flux
+        F.dQVdt_MIC[:,:,-1] = F.dQVdt_MIC[:,:,-1] + QV_surf_flux
 
         SOIL.RAINRATE = np.sum(rain_rate*RHO[GR.iijj]*dz,2) # mm/s
         SOIL.ACCRAIN = SOIL.ACCRAIN + SOIL.RAINRATE*GR.dt

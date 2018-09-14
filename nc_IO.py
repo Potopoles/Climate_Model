@@ -7,7 +7,7 @@ from namelist import i_radiation, \
 from IO_helper_functions import NC_output_diagnostics
 
 
-def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
+def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
                 POTT, TAIR, RHO, PVTF, PVTFVB,
                 RAD, SOIL, MIC):
 
@@ -18,7 +18,7 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
     print('###########################################')
 
     VORT, PAIR, TAIR, WWIND_ms,\
-    WVP, CWP                 = NC_output_diagnostics(GR, UWIND, 
+    WVP, CWP                 = NC_output_diagnostics(GR, F, UWIND, 
                         VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                         PHI, PHIVB, RHO, MIC)
 
@@ -156,21 +156,21 @@ def output_to_NC(GR, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWI
             #LWFLXDIV_out[-1,k,:,:] = RAD.LWFLXDIV[:,:,k].T 
 
         # MICROPHYSICS VARIABLES
-        QV_out[-1,k,:,:] = MIC.QV[:,:,k][GR.iijj].T
-        QC_out[-1,k,:,:] = MIC.QC[:,:,k][GR.iijj].T
+        QV_out[-1,k,:,:] = F.QV[:,:,k][GR.iijj].T
+        QC_out[-1,k,:,:] = F.QC[:,:,k][GR.iijj].T
         if i_microphysics:
             RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
-            dQVdt_MIC_out[-1,k,:,:] = MIC.dQVdt_MIC[:,:,k].T * 3600
-            dQCdt_MIC_out[-1,k,:,:] = MIC.dQCdt_MIC[:,:,k].T * 3600
-            dPOTTdt_MIC_out[-1,k,:,:] = MIC.dPOTTdt_MIC[:,:,k].T * 3600
+            dQVdt_MIC_out[-1,k,:,:] = F.dQVdt_MIC[:,:,k].T * 3600
+            dQCdt_MIC_out[-1,k,:,:] = F.dQCdt_MIC[:,:,k].T * 3600
+            dPOTTdt_MIC_out[-1,k,:,:] = F.dPOTTdt_MIC[:,:,k].T * 3600
 
         # VERTICAL PROFILES
         POTTprof_out[-1,GR.nz-k-1,:] = np.mean(POTT[:,:,k][GR.iijj],axis=0)
         UWINDprof_out[-1,GR.nz-k-1,:] = np.mean(UWIND[:,:,k][GR.iijj],axis=0)
         VWINDprof_out[-1,GR.nz-k-1,:] = np.mean(VWIND[:,:,k][GR.iijjs],axis=0)
         VORTprof_out[-1,GR.nz-k-1,:] = np.mean(VORT[:,:,k][GR.iijj],axis=0)
-        QVprof_out[-1,GR.nz-k-1,:] = np.mean(MIC.QV[:,:,k][GR.iijj],axis=0)
-        QCprof_out[-1,GR.nz-k-1,:] = np.mean(MIC.QC[:,:,k][GR.iijj],axis=0)
+        QVprof_out[-1,GR.nz-k-1,:] = np.mean(F.QV[:,:,k][GR.iijj],axis=0)
+        QCprof_out[-1,GR.nz-k-1,:] = np.mean(F.QC[:,:,k][GR.iijj],axis=0)
 
 
     for ks in range(0,GR.nzs):
