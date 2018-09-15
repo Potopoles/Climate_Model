@@ -20,41 +20,26 @@ if wp == 'float64':
 ######################################################################################
 ######################################################################################
 
-def step_matsuno(GR, subgrids,
-            COLP_OLD, COLP, COLP_NEW, dCOLPdt, PHI, PHIVB, \
-            POTT_OLD, POTT, dPOTTdt, POTTVB,
-            UWIND_OLD, UWIND, VWIND_OLD, VWIND, WWIND,
-            UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
-            BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-            HSURF, PVTF, PVTFVB,
-            dPOTTdt_RAD, dPOTTdt_MIC,
-            QV_OLD, QV, dQVdt,
-            QC_OLD, QC, dQCdt,
-            dQVdt_MIC, dQCdt_MIC):
+def step_matsuno(GR, subgrids, F):
 
-    # Prepare stream object for simple usage
-    if comp_mode in [0,1]:
-        stream = None
-    elif comp_mode == 2:
-        stream = GR.stream
 
     ##############################
     ##############################
     t_start = time.time()
     if comp_mode in [0,1]:
-        UWIND_OLD[:] = UWIND[:]
-        VWIND_OLD[:] = VWIND[:]
-        POTT_OLD[:]  = POTT[:]
-        QV_OLD[:]    = QV[:]
-        QC_OLD[:]    = QC[:]
-        COLP_OLD[:]  = COLP[:]
+        F.UWIND_OLD[:] = F.UWIND[:]
+        F.VWIND_OLD[:] = F.VWIND[:]
+        F.POTT_OLD[:]  = F.POTT[:]
+        F.QV_OLD[:]    = F.QV[:]
+        F.QC_OLD[:]    = F.QC[:]
+        F.COLP_OLD[:]  = F.COLP[:]
     elif comp_mode == 2:
-        set_equal  [GR.griddim_is, GR.blockdim   , stream](UWIND_OLD, UWIND)
-        set_equal  [GR.griddim_js, GR.blockdim   , stream](VWIND_OLD, VWIND)
-        set_equal  [GR.griddim   , GR.blockdim   , stream](POTT_OLD, POTT)
-        set_equal  [GR.griddim   , GR.blockdim   , stream](QV_OLD, QV)
-        set_equal  [GR.griddim   , GR.blockdim   , stream](QC_OLD, QC)
-        set_equal2D[GR.griddim_xy, GR.blockdim_xy, stream](COLP_OLD, COLP)
+        set_equal  [GR.griddim_is, GR.blockdim   , GR.stream](F.UWIND_OLD, F.UWIND)
+        set_equal  [GR.griddim_js, GR.blockdim   , GR.stream](F.VWIND_OLD, F.VWIND)
+        set_equal  [GR.griddim   , GR.blockdim   , GR.stream](F.POTT_OLD, F.POTT)
+        set_equal  [GR.griddim   , GR.blockdim   , GR.stream](F.QV_OLD, F.QV)
+        set_equal  [GR.griddim   , GR.blockdim   , GR.stream](F.QC_OLD, F.QC)
+        set_equal2D[GR.griddim_xy, GR.blockdim_xy, GR.stream](F.COLP_OLD, F.COLP)
     t_end = time.time()
     GR.step_comp_time += t_end - t_start
     ##############################
@@ -68,34 +53,12 @@ def step_matsuno(GR, subgrids,
 
     ##############################
     ##############################
+    tendencies_jacobson(GR, F, subgrids)
     if comp_mode in [0,1]:
-        COLP_NEW, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND,\
-        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids, stream,
-                                COLP_OLD, COLP, COLP_NEW, dCOLPdt,
-                                POTT, dPOTTdt, POTTVB,
-                                UWIND, VWIND, WWIND,
-                                UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
-                                BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                                PHI, PVTF, PVTFVB,
-                                dPOTTdt_RAD, dPOTTdt_MIC,
-                                QV, dQVdt, QC, dQCdt, dQVdt_MIC, dQCdt_MIC)
-        COLP[:] = COLP_NEW[:]
-
+        F.COLP[:] = F.COLP_NEW[:]
     elif comp_mode == 2:
-        COLP_NEW, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND,\
-        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids, stream,
-                                COLP_OLD, COLP, COLP_NEW, dCOLPdt,
-                                POTT, dPOTTdt, POTTVB,
-                                UWIND, VWIND, WWIND,
-                                UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
-                                BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                                PHI, PVTF, PVTFVB,
-                                dPOTTdt_RAD, dPOTTdt_MIC,
-                                QV, dQVdt, QC, dQCdt, dQVdt_MIC, dQCdt_MIC)
-        set_equal2D[GR.griddim_xy, GR.blockdim_xy, stream](COLP, COLP_NEW)
-        stream.synchronize()
+        set_equal2D[GR.griddim_xy, GR.blockdim_xy, GR.stream](F.COLP, F.COLP_NEW)
+        GR.stream.synchronize()
     ##############################
     ##############################
 
@@ -104,29 +67,34 @@ def step_matsuno(GR, subgrids,
     ##############################
     t_start = time.time()
     if comp_mode == 0:
-        UWIND, VWIND, COLP, POTT, QV, QC \
-                    = proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND, 
-                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+        F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
+                    = proceed_timestep_jacobson(GR,
+                            F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND, 
+                            F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
+                            F.QV_OLD, F.QV, F.QC_OLD, F.QC,
+                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt)
 
     elif comp_mode == 1:
-        UWIND, VWIND, COLP, POTT, QV, QC \
-                     = proceed_timestep_jacobson_c(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
-                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-        UWIND = np.asarray(UWIND)
-        VWIND = np.asarray(VWIND)
-        COLP = np.asarray(COLP)
-        POTT = np.asarray(POTT)
-        QV = np.asarray(QV)
-        QC = np.asarray(QC)
+        F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
+                     = proceed_timestep_jacobson_c(GR,
+                            F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
+                            F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
+                            F.QV_OLD, F.QV, F.QC_OLD, F.QC,
+                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt)
+        F.UWIND = np.asarray(F.UWIND)
+        F.VWIND = np.asarray(F.VWIND)
+        F.COLP = np.asarray(F.COLP)
+        F.POTT = np.asarray(F.POTT)
+        F.QV = np.asarray(F.QV)
+        F.QC = np.asarray(F.QC)
 
     elif comp_mode == 2:
-        UWIND, VWIND, COLP, POTT, QV, QC \
-                     = proceed_timestep_jacobson_gpu(GR, stream,
-                            UWIND_OLD, UWIND, VWIND_OLD, VWIND,
-                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt, GR.Ad)
+        F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
+                     = proceed_timestep_jacobson_gpu(GR, GR.stream,
+                            F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
+                            F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
+                            F.QV_OLD, F.QV, F.QC_OLD, F.QC,
+                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt, GR.Ad)
 
     t_end = time.time()
     GR.step_comp_time += t_end - t_start
@@ -137,9 +105,7 @@ def step_matsuno(GR, subgrids,
     ##############################
     ##############################
     t_start = time.time()
-    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-                diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, \
-                                        HSURF, PVTF, PVTFVB, POTTVB)
+    diagnose_fields_jacobson(GR, F)
     t_end = time.time()
     GR.diag_comp_time += t_end - t_start
     ##############################
@@ -154,34 +120,12 @@ def step_matsuno(GR, subgrids,
 
     ##############################
     ##############################
+    tendencies_jacobson(GR, F, subgrids)
     if comp_mode in [0,1]:
-        COLP_NEW, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND, \
-        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids, stream,
-                                COLP_OLD, COLP, COLP_NEW, dCOLPdt,
-                                POTT, dPOTTdt, POTTVB,
-                                UWIND, VWIND, WWIND,
-                                UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
-                                BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                                PHI, PVTF, PVTFVB,
-                                dPOTTdt_RAD, dPOTTdt_MIC,
-                                QV, dQVdt, QC, dQCdt, dQVdt_MIC, dQCdt_MIC)
-        COLP[:] = COLP_NEW[:]
-
+        F.COLP[:] = F.COLP_NEW[:]
     elif comp_mode == 2:
-        COLP_NEW, dUFLXdt, dVFLXdt, \
-        dPOTTdt, WWIND,\
-        dQVdt, dQCdt = tendencies_jacobson(GR, subgrids, stream,
-                                COLP_OLD, COLP, COLP_NEW, dCOLPdt,
-                                POTT, dPOTTdt, POTTVB,
-                                UWIND, VWIND, WWIND,
-                                UFLX, dUFLXdt, VFLX, dVFLXdt, FLXDIV,
-                                BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
-                                PHI, PVTF, PVTFVB,
-                                dPOTTdt_RAD, dPOTTdt_MIC,
-                                QV, dQVdt, QC, dQCdt, dQVdt_MIC, dQCdt_MIC)
-        set_equal2D[GR.griddim_xy, GR.blockdim_xy, stream](COLP, COLP_NEW)
-        stream.synchronize()
+        set_equal2D[GR.griddim_xy, GR.blockdim_xy, GR.stream](F.COLP, F.COLP_NEW)
+        GR.stream.synchronize()
     ##############################
     ##############################
 
@@ -190,28 +134,33 @@ def step_matsuno(GR, subgrids,
     ##############################
     t_start = time.time()
     if comp_mode == 0:
-        UWIND, VWIND, COLP, POTT, QV, QC \
-                     = proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
-                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-                           dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
+        F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
+                     = proceed_timestep_jacobson(GR,
+                            F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
+                            F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
+                            F.QV_OLD, F.QV, F.QC_OLD, F.QC,
+                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt)
     elif comp_mode == 1:
-        UWIND, VWIND, COLP, POTT, QV, QC \
-                     = proceed_timestep_jacobson_c(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
-                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt)
-        UWIND = np.asarray(UWIND)
-        VWIND = np.asarray(VWIND)
-        COLP = np.asarray(COLP)
-        POTT = np.asarray(POTT)
-        QV = np.asarray(QV)
-        QC = np.asarray(QC)
+        F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
+                     = proceed_timestep_jacobson_c(GR,
+                            F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
+                            F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
+                            F.QV_OLD, F.QV, F.QC_OLD, F.QC,
+                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt)
+        F.UWIND = np.asarray(F.UWIND)
+        F.VWIND = np.asarray(F.VWIND)
+        F.COLP = np.asarray(F.COLP)
+        F.POTT = np.asarray(F.POTT)
+        F.QV = np.asarray(F.QV)
+        F.QC = np.asarray(F.QC)
 
     elif comp_mode == 2:
-        UWIND, VWIND, COLP, POTT, QV, QC \
-                     = proceed_timestep_jacobson_gpu(GR, stream,
-                            UWIND_OLD, UWIND, VWIND_OLD, VWIND,
-                            COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-                            dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt, GR.Ad)
+        F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
+                     = proceed_timestep_jacobson_gpu(GR, GR.stream,
+                            F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
+                            F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
+                            F.QV_OLD, F.QV, F.QC_OLD, F.QC,
+                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt, GR.Ad)
 
     t_end = time.time()
     GR.step_comp_time += t_end - t_start
@@ -222,19 +171,13 @@ def step_matsuno(GR, subgrids,
     ##############################
     ##############################
     t_start = time.time()
-    PHI, PHIVB, PVTF, PVTFVB, POTTVB = \
-                diagnose_fields_jacobson(GR, stream, PHI, PHIVB, COLP, POTT, \
-                                        HSURF, PVTF, PVTFVB, POTTVB)
+    diagnose_fields_jacobson(GR, F)
     t_end = time.time()
     GR.diag_comp_time += t_end - t_start
     ##############################
     ##############################
 
     
-    return(COLP, PHI, PHIVB, POTT, POTTVB,
-            UWIND, VWIND, WWIND,
-            UFLX, VFLX, QV, QC)
-
 
 
 

@@ -190,8 +190,8 @@ def load_restart_fields(GR):
                 POTTVB, PVTF, PVTFVB,
                 RAD, SOIL, MIC, TURB)
 
-def load_topo(GR):
-    HSURF = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
+def load_topo(GR, HSURF):
+    #HSURF = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
     filename = '../elevation/elev.1-deg.nc'
     ncf = Dataset(filename, 'r', format='NETCDF4')
     lon_inp = ncf['lon'][:]
