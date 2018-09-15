@@ -9,10 +9,6 @@ GMT_initialization = datetime(2018,6,1,0,0,0)
 nz = 8 # must be nz = 2**x (x = 0,1,2,3,4...)
 lon0_deg = 0
 lon1_deg = 360
-lat0_deg = -80
-lat1_deg = 80
-dlat_deg = 2
-dlon_deg = 2
 
 # should earth be spherical like real earth (--> 1)
 # or should it be cylindrical without meridians converging at the poles (--> 0)
