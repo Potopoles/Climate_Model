@@ -6,6 +6,11 @@ from IO import load_restart_grid
 
 from numba import cuda
 
+# FIXED GPU SETTINGS (have to here in code to be able to import them in another module)
+tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
+tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)
+tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
+
 class Grid:
 
     def __init__(self, i_subgrid=0, specs=None):
@@ -70,7 +75,7 @@ class Grid:
             self.nxs = self.nx + 1
             self.ny = int((self.lat1_deg - self.lat0_deg)/self.dlat_deg)
             self.nys = self.ny + 1
-            self.nb = nb
+            self.nb = 1
 
             # INDEX ARRAYS
             self.kk  = np.arange(0,self.nz)
@@ -144,7 +149,6 @@ class Grid:
                 self.latis_deg[i_s,self.jj] = self.lat0_deg + \
                                         (self.jj-self.nb+0.5)*self.dlat_deg
 
-            print(self.lon_deg.shape)
 
             # 2D MATRIX OF LONGITUDES AND LATITUDES IN RADIANS
             self.lon_rad = self.lon_deg/180*np.pi
@@ -176,18 +180,18 @@ class Grid:
                                         self.dlon_rad, self.dlat_rad, i_curved_earth)
             self.A = exchange_BC(self, self.A)
 
-            print('fraction of earth covered: ' + \
-                    str(np.round(np.sum(self.A[self.iijj])/(4*np.pi*con_rE**2),2)))
-            #print('fraction of cylinder covered: ' + \
-            #        str(np.round(np.sum(self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
+            if i_curved_earth:
+                print('fraction of earth covered: ' + \
+                        str(np.round(np.sum(self.A[self.iijj])/(4*np.pi*con_rE**2),2)))
+            else:
+                print('fraction of cylinder covered: ' + \
+                        str(np.round(np.sum(self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
 
             # CORIOLIS FORCE
             self.corf    = np.full( (self.nx +2*self.nb, self.ny +2*self.nb), np.nan)
             self.corf_is = np.full( (self.nxs+2*self.nb, self.ny +2*self.nb), np.nan)
-            #self.corf_js = np.full( (self.nx +2*self.nb, self.nys+2*self.nb), np.nan)
             self.corf[self.iijj] = 2*con_omega*np.sin(self.lat_rad[self.iijj])
             self.corf_is[self.iisjj] = 2*con_omega*np.sin(self.latis_rad[self.iisjj])
-            #self.corf_js[self.iijjs] = 2*con_omega*np.sin(self.latjs_rad[self.iijjs])
 
             # SIGMA LEVELS
             self.level = np.arange(0,self.nz)
@@ -197,11 +201,11 @@ class Grid:
             self.dsigma = np.full( self.nz, np.nan)
 
 
-            #if not i_subgrid:
             # TIME STEP
             mindx = np.nanmin(self.dx)
             self.CFL = CFL
             self.i_out_nth_hour = i_out_nth_hour
+            self.nc_output_count = 0
             self.i_sim_n_days = i_sim_n_days
             self.dt = int(self.CFL*mindx/340)
             while i_out_nth_hour*3600 % self.dt > 0:
@@ -215,14 +219,15 @@ class Grid:
             self.sim_time_sec = 0
             self.GMT = GMT_initialization
 
-            # GPU
+            # GPU RELEVANT PART OF GRID
             # TODO THIS IS VERY COMPLICATED. SIMPLIFY (e.g. fix blockdim)
-            # LOAD GRID FIELDS TO GPU
             if comp_mode == 2:
                 self.stream = cuda.stream()
 
                 if tpbh > 1:
-                    raise NotImplementedError('tpbh > 1 not yet possible see below (I guess)')
+                    raise NotImplementedError('tpbh > 1 not yet possible see below')
+                elif tpbv != self.nz:
+                    raise NotImplementedError('tpbv != nz not yet possible see below')
                 self.blockdim      = (tpbh, tpbh, tpbv)
                 self.blockdim_ks   = (tpbh, tpbh, tpbv+1)
                 self.blockdim_xy   = (tpbh, tpbh, 1)
@@ -271,7 +276,7 @@ class Grid:
                 self.corf_isd      = cuda.to_device(self.corf_is, self.stream)
                 self.lat_radd      = cuda.to_device(self.lat_rad, self.stream)
                 self.latis_radd    = cuda.to_device(self.latis_rad, self.stream)
-                # dsigma and sigma_vb are copied in fields
+                # dsigma and sigma_vb are copied in fields (not very nice... TODO)
 
 
 

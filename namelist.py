@@ -1,28 +1,137 @@
 import numpy as np
 from datetime import datetime
 
+####################################################################
 # GRID PARAMS
-nb = 1
-if nb > 1:
-    raise NotImplementedError('parallel routines do not support nb > 1')
-
+####################################################################
 GMT_initialization = datetime(2018,6,1,0,0,0)
 
+nz = 8 # must be nz = 2**x (x = 0,1,2,3,4...)
 lon0_deg = 0
 lon1_deg = 360
+lat0_deg = -80
+lat1_deg = 80
+dlat_deg = 2
+dlon_deg = 2
 
+# should earth be spherical like real earth (--> 1)
+# or should it be cylindrical without meridians converging at the poles (--> 0)
 i_curved_earth = 1
 
+####################################################################
+# INITIAL CONDITIONS
+####################################################################
+# SURFACE
+i_use_topo = 1
+n_topo_smooth = 20
+tau_topo_smooth = 0.1
 
+# VERTICAL PROFILE
+pTop = 10000
+pSurf = 101350
+
+# ATMOSPHERIC PERTURBATIONS
+gaussian_dlon = np.pi/10
+gaussian_dlat = np.pi/10
+u0 = 0
+UWIND_gaussian_pert = 10
+UWIND_random_pert = 0
+v0 = 0
+VWIND_gaussian_pert = 10
+VWIND_random_pert = 0
+COLP_gaussian_pert = -10000
+COLP_random_pert = 000
+POTT_gaussian_pert = 10
+POTT_random_pert = 0.0
+
+####################################################################
+# SIMULATION SETTINGS
+####################################################################
+# DYNAMICS
+i_wind_tendency = 1
+i_temperature_tendency = 1
+i_colp_tendency = 1
+
+# PHYSICS
+i_radiation = 0
+i_microphysics = 0
+i_turbulence = 0
+
+# ADDITIONAL MODEL COMPONENTS
+i_soil = 0
+
+# NUMERICAL DIFFUSION
+i_diffusion_on = 1
+
+# TIME DISCRETIZATION: MATSUNO, RK4 
+i_time_stepping = 'MATSUNO'
+CFL = 0.7
+if i_time_stepping == 'RK4':
+    raise NotImplementedError()
+
+# DURATION (days)
+i_sim_n_days = 0.5
+
+####################################################################
+# IO SETTINGS
+####################################################################
+# NC OUTPUT
+i_out_nth_hour = 0.25
+output_path = '../output_run'
+output_fields = {
+                # 2D FIELDS
+                ####################################################
+                # pressure fields
+                'PSURF'     : 1,
+
+                # 3D FIELDS
+                ####################################################
+                # - For certain variables flags > 1 enable zonally averaged
+                #   vertical profile output
+                #   These flags are marked with #vp
+                # flux fields
+                'UWIND'     : 1,                    #vp
+                'VWIND'     : 1,                    #vp
+                'WIND'      : 0,                    #vp
+                'WWIND'     : 1,
+                'VORT'      : 1,
+                # velocity fields
+                # temperature fields
+                'POTT'      : 0,                    #vp
+                'TAIR'      : 1,
+                # primary diagnostic fields
+                'PHI'       : 0,
+                # secondary diagnostic fields
+                'PAIR'      : 0,
+                'RHO'       : 0,
+                # constant fields
+                # radiation fields
+                # microphysics fields
+                'QV'        : 0,                    #vp
+                'QC'        : 0,                    #vp
+                'WVP'       : 0,
+                'CWP'       : 0,
+                }
+
+# RESTART FILES
+i_load_from_restart = 0
+i_save_to_restart = 0
+i_restart_nth_day = 0.10
+
+####################################################################
 # PARALLEL AND DEVICE
+####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
-comp_mode = 2
+comp_mode = 1
 # general
 wp = 'float64'
 # cython
 njobs = 4
 
-
+####################################################################
+# SIMULATION MODES (how to run the model - default suggestions)
+# (default suggestions partially overwrite settings above)
+####################################################################
 # 0: testsuite equality
 # 1: benchmark experiment
 i_simulation_mode = 0
@@ -53,93 +162,17 @@ elif i_simulation_mode == 1:
     output_path = '../output_run'
     i_sim_n_days = 0.5
     i_out_nth_hour = 0.25
-    i_radiation = 3
-    i_microphysics = 1
+    i_radiation = 0
+    i_microphysics = 0
     i_turbulence = 0
     i_soil = 0
 
 
-### BENCHMARK EXPERIMENT heavy
-#nz = 16
-#lat0_deg = -78
-#lat1_deg = 78
-#dlat_deg = 1.0
-#dlon_deg = 1.0
-#output_path = '../output'
-#i_sim_n_days = 0.02
-#i_out_nth_hour = 3
-#njobs = 4
-#i_radiation = 0
-#i_microphysics = 0
-#i_turbulence = 0
-#i_soil = 0
 
 
-### TODO : CURRENT CHANGES
-#i_out_nth_hour = 2.0
-#i_curved_earth = 0
-i_radiation = 0
-i_microphysics = 0
-i_turbulence = 0
-i_soil = 0
-
-
-
-# gpu settings
-tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
-tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)
-tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
-
-
-i_load_from_restart = 0
-i_save_to_restart = 0
-i_restart_nth_day = 0.10
-
-i_diffusion_on = 1
-
-i_wind_tendency = 1
-i_temperature_tendency = 1
-i_colp_tendency = 1
-
-# TIME DISCRETIZATION
-i_time_stepping = 'MATSUNO'
-#i_time_stepping = 'RK4'
-if i_time_stepping != 'RK4':
-    CFL = 0.7
-else:
-    raise NotImplementedError()
-    CFL = 1.0
-
-# INITIAL CONDITIONS
-gaussian_dlon = np.pi/10
-gaussian_dlat = np.pi/10
-#gaussian_dlon = 1000
-#gaussian_dlat = 1000
-u0 = 0
-UWIND_gaussian_pert = 10
-UWIND_random_pert = 0
-v0 = 0
-VWIND_gaussian_pert = 10
-VWIND_random_pert = 0
-pTop = 10000
-pSurf = 101350
-COLP_gaussian_pert = -10000
-COLP_random_pert = 000
-POTT_gaussian_pert = 10
-POTT_random_pert = 0.0
-
-
-
-
-# SURFACE
-i_use_topo = 1
-n_topo_smooth = 20
-tau_topo_smooth = 0.1
-
-
-
-
+####################################################################
 # DIFFUSION
+####################################################################
 WIND_hor_dif_tau = 0 # important
 POTT_hor_dif_tau = 0 # creates instabilities and acceleration in steep terrain
 COLP_hor_dif_tau = 0 # not tested
@@ -174,8 +207,6 @@ if i_diffusion_on:
         #POTT_hor_dif_tau = 1E-4
 
 #QV_hor_dif_tau = POTT_hor_dif_tau
-
-
 
 
 

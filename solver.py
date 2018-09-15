@@ -18,37 +18,51 @@ if i_time_stepping == 'MATSUNO':
 elif i_time_stepping == 'RK4':
     from RK4 import step_RK4 as time_stepper
 
-from numba import cuda
-
+####################################################################
+# CREATE MODEL GRID
+####################################################################
+# main grid
 GR = Grid()
+# optional subgrids for domain decomposition (not completly implemented)
 #GR, subgrids = create_subgrids(GR, njobs)
-subgrids = {}
+subgrids = {} # option
 
-# INITIALIZE FIELDS ON CPU
+####################################################################
+# CREATE MODEL FIELDS
+####################################################################
 CF = CPU_Fields(GR, subgrids)
 RAD, SOIL, MIC, TURB = initialize_fields(GR, subgrids, CF)
 if comp_mode == 2:
     GF = GPU_Fields(GR, subgrids, CF)
 
-# OUTPUT CONSTANT FIELDS
-constant_fields_to_NC(GR, CF.HSURF, RAD, SOIL)
+####################################################################
+# OUTPUT AT TIMESTEP 0 (before start of simulation)
+####################################################################
+constant_fields_to_NC(GR, CF, RAD, SOIL)
 
 
-if i_load_from_restart:
-    outCounter = GR.outCounter
-else:
-    outCounter = 0
-
-
+####################################################################
+####################################################################
+####################################################################
+# TIME LOOP START
 while GR.ts < GR.nts:
+    ####################################################################
+    # SIMULATION STATUS
+    ####################################################################
+    # test for crash
+    #for k in range(0,GR.nz):
+    #    if (np.sum(np.isnan(UWIND[:,:,k][GR.iisjj])) > 0) | \
+    #            (np.max(UWIND[:,:,k][GR.iisjj]) > 500):
+    #        quit()
     real_time_ts_start = time.time()
     GR.ts += 1
     GR.sim_time_sec = GR.ts*GR.dt
     GR.GMT += timedelta(seconds=GR.dt)
-
     print_ts_info(GR, CF.WIND, CF.UWIND, CF.VWIND, CF.COLP, CF.POTT)
 
-    ########## DIAGNOSTICS (not related to dynamics)
+    ####################################################################
+    # SECONDARY DIAGNOSTICS (not related to dynamics)
+    ####################################################################
     #if i_radiation or i_microphysics or i_soil:
     #    t_start = time.time()
     #    PAIR, TAIR, TAIRVB, RHO, WIND = \
@@ -66,9 +80,10 @@ while GR.ts < GR.nts:
     #    #WIND = np.asarray(WIND)
     #    t_end = time.time()
     #    GR.diag_comp_time += t_end - t_start
-    ##########
 
-    ########## RADIATION
+    ####################################################################
+    # RADIATION
+    ####################################################################
     #if i_radiation:
     #    t_start = time.time()
     #    RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC)
@@ -76,73 +91,78 @@ while GR.ts < GR.nts:
     #    GR.rad_comp_time += t_end - t_start
     ##########
 
-    ########## MICROPHYSICS
+    ####################################################################
+    # MICROPHYSICS
+    ####################################################################
     #if i_microphysics:
     #    t_start = time.time()
     #    MIC.calc_microphysics(GR, WIND, SOIL, TAIR, PAIR, RHO, PHIVB)
     #    t_end = time.time()
     #    GR.mic_comp_time += t_end - t_start
-    ##########
 
-    ########## SOIL
+    ####################################################################
+    # SOIL
+    ####################################################################
     #if i_soil:
     #    t_start = time.time()
     #    SOIL.advance_timestep(GR, RAD, MIC)
     #    t_end = time.time()
     #    GR.soil_comp_time += t_end - t_start
-    ##########
 
-    ######## DYNAMICS
+    ####################################################################
+    # DYNAMICS
+    ####################################################################
     t_dyn_start = time.time()
-
     if comp_mode in [0,1]:
         time_stepper(GR, subgrids, CF)
     elif comp_mode == 2:
         time_stepper(GR, subgrids, GF)
-
     t_dyn_end = time.time()
     GR.dyn_comp_time += t_dyn_end - t_dyn_start
-    ########
 
-    ## TEST FOR CRASH
-    #for k in range(0,GR.nz):
-    #    if (np.sum(np.isnan(UWIND[:,:,k][GR.iisjj])) > 0) | \
-    #            (np.max(UWIND[:,:,k][GR.iisjj]) > 500):
-    #        quit()
-
-
-    # WRITE NC FILE
+    ####################################################################
+    # WRITE NC OUTPUT
+    ####################################################################
     if GR.ts % GR.i_out_nth_ts == 0:
-
+        # copy GPU fields to CPU
         if comp_mode == 2:
-            ##############################
             t_start = time.time()
             GF.copy_fields_to_host(GR)
             t_end = time.time()
             GR.copy_time += t_end - t_start
-            ##############################
 
+        # write file
         t_start = time.time()
-        outCounter += 1
+        GR.nc_output_count += 1
         #WIND, vmax, mean_wind, mean_temp, mean_colp = diagnostics(GR, \
         #                                WIND, UWIND, VWIND, COLP, POTT)
-        output_to_NC(GR, CF, outCounter, CF.COLP, CF.PAIR, CF.PHI, CF.PHIVB, CF.UWIND, CF.VWIND, CF.WIND, CF.WWIND,
-                    CF.POTT, CF.TAIR, CF.RHO, CF.PVTF, CF.PVTFVB,
-                    RAD, SOIL, MIC)
+        output_to_NC(GR, CF, RAD, SOIL, MIC)
         t_end = time.time()
         GR.IO_time += t_end - t_start
 
+    ####################################################################
     # WRITE RESTART FILE
+    ####################################################################
     if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
-        GR.outCounter = outCounter
-        write_restart(GR, CF.COLP, CF.PAIR, CF.PHI, CF.PHIVB, CF.UWIND, CF.VWIND, CF.WIND, CF.WWIND,\
-                        CF.UFLX, CF.VFLX, \
-                        CF.HSURF, CF.POTT, CF.TAIR, CF.TAIRVB, CF.RHO, CF.POTTVB, CF.PVTF, CF.PVTFVB, \
+        write_restart(GR, CF.COLP, CF.PAIR, CF.PHI, CF.PHIVB, CF.UWIND,
+                        CF.VWIND, CF.WIND, CF.WWIND,
+                        CF.UFLX, CF.VFLX,
+                        CF.HSURF, CF.POTT, CF.TAIR, CF.TAIRVB, CF.RHO,
+                        CF.POTTVB, CF.PVTF, CF.PVTFVB,
                         RAD, SOIL, MIC, TURB)
 
 
     GR.total_comp_time += time.time() - real_time_ts_start
+# TIME LOOP STOP
+####################################################################
+####################################################################
+####################################################################
 
+
+
+####################################################################
+# FINALIZE SIMULATION
+####################################################################
 print_computation_time_info(GR)
 
 

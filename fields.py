@@ -4,7 +4,8 @@ from namelist import *
 from boundaries import exchange_BC
 from IO import load_topo, load_restart_fields, load_profile
 from diagnostics import diagnose_secondary_fields, diagnose_POTTVB_jacobson
-#from geopotential import diag_geopotential_jacobson
+from geopotential import diag_geopotential_jacobson, diag_pvt_factor
+from jacobson import diagnose_fields_jacobson
 from radiation.org_radiation import radiation
 from soil_model import soil
 from org_microphysics import microphysics
@@ -19,8 +20,8 @@ from numba import cuda
 # flux fields
 # velocity fields
 # temperature fields
-# primary diagnostic fields
-# secondary diagnostic fields
+# primary diagnostic fields (relevant for dynamics)
+# secondary diagnostic fields (not relevant for dynamics)
 # constant fields
 # radiation fields
 # microphysics fields
@@ -40,6 +41,7 @@ class CPU_Fields:
         self.PSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
         # constant fields
         self.HSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        self.OCEANMSK    = np.full( ( GR.nx         , GR.ny                  ), np.nan)
 
         ##############################################################################
         # 3D FIELDS
@@ -110,6 +112,7 @@ class GPU_Fields:
         self.PSURF            = cuda.to_device(CF.PSURF,        GR.stream)
         # constant fields
         self.HSURF            = cuda.to_device(CF.HSURF,        GR.stream)
+        #self.OCEANMSK         = cuda.to_device(CF.HSURF,        GR.stream) 
 
         ##############################################################################
         # 3D FIELDS
@@ -200,21 +203,33 @@ def initialize_fields(GR, subgrids, F):
         #POTTVB, PVTF, PVTFVB, \
         #RAD, SOIL, MIC, TURB = load_restart_fields(GR)
     else:
+
+        ####################################################################
+        # SET INITIAL FIELD VALUES
+        ####################################################################
+
+        # need to have non-nan-values because values from half-level 0 and GR.nzs
+        # are used in calculation.
         F.POTTVB[:] = 0
         F.WWIND[:] = 0
 
-        # vertical profile
-
-        # surface height
+        #  LOAD TOPOGRAPHY (HSURF)
         F.HSURF = load_topo(GR, F.HSURF) 
         if not i_use_topo:
             F.HSURF[GR.iijj] = 0.
             F.HSURF = exchange_BC(GR, F.HSURF)
-        
-        # INITIAL CONDITIONS
+
+        # INITIALIZE PROFILE
         GR, F.COLP, F.PSURF, F.POTT, F.TAIR \
                 = load_profile(GR, subgrids, F.COLP, F.HSURF, F.PSURF, F.PVTF, \
                                 F.PVTFVB, F.POTT, F.TAIR)
+
+        # LOAD PROFILE TO GPU
+        if comp_mode == 2:
+            GR.dsigmad       = cuda.to_device(GR.dsigma, GR.stream)
+            GR.sigma_vbd     = cuda.to_device(GR.sigma_vb, GR.stream)
+
+        # INITIAL CONDITIONS
         F.COLP = gaussian2D(GR, F.COLP, COLP_gaussian_pert, np.pi*3/4, 0, \
                             gaussian_dlon, gaussian_dlat)
         F.COLP = random2D(GR, F.COLP, COLP_random_pert)
@@ -233,39 +248,55 @@ def initialize_fields(GR, subgrids, F):
                             np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
             F.POTT[:,:,k] = random2D(GR, F.POTT[:,:,k], POTT_random_pert)
 
-        # BOUNDARY CONDITIONS
+        # BOUNDARY EXCHANGE OF INITIAL CONDITIONS
         F.COLP  = exchange_BC(GR, F.COLP)
         F.UWIND  = exchange_BC(GR, F.UWIND)
         F.VWIND  = exchange_BC(GR, F.VWIND)
         F.POTT  = exchange_BC(GR, F.POTT)
 
+        # PRIMARY DIAGNOSTIC FIELDS
+        diagnose_fields_jacobson(GR, F)
 
-        # TURBULENCE 
-        TURB = turbulence(GR, i_turbulence) 
-
-        F.PHI, F.PHIVB, F.PVTF, F.PVTFVB, F.POTTVB \
-                    = diagnose_fields_first_time(GR, F.PHI, F.PHIVB, F.COLP, F.POTT, \
-                                            F.HSURF, F.PVTF, F.PVTFVB, F.POTTVB)
-
+        # SECONDARY DIAGNOSTIC FIELDS
         F.PAIR, F.TAIR, F.TAIRVB, F.RHO, F.WIND = \
                 diagnose_secondary_fields(GR, F.COLP, F.PAIR, F.PHI, F.POTT, F.POTTVB,
                                         F.TAIR, F.TAIRVB, F.RHO,\
                                         F.PVTF, F.PVTFVB, F.UWIND, F.VWIND, F.WIND)
 
-        # SOIL MODEL
-        SOIL = soil(GR, F.HSURF)
+        ####################################################################
+        # INITIALIZE PROCESSES
+        ####################################################################
 
         # MOISTURE & MICROPHYSICS
-        MIC = microphysics(GR, F, i_microphysics, F.TAIR, F.PAIR) 
+        if i_microphysics:
+            MIC = microphysics(GR, F, i_microphysics, F.TAIR, F.PAIR) 
+        else:
+            MIC = None
 
         # RADIATION
-        RAD = radiation(GR, i_radiation, F.dPOTTdt_RAD)
-        RAD.calc_radiation(GR, F.TAIR, F.TAIRVB, F.RHO, F.PHIVB, SOIL, MIC)
+        if i_radiation:
+            RAD = radiation(GR, i_radiation, F.dPOTTdt_RAD)
+            RAD.calc_radiation(GR, F.TAIR, F.TAIRVB, F.RHO, F.PHIVB, SOIL, MIC)
+        else:
+            RAD = None
 
-        # LOAD CONSTANT FIELDS TO GPU
-        if comp_mode == 2:
-            GR.dsigmad       = cuda.to_device(GR.dsigma, GR.stream)
-            GR.sigma_vbd     = cuda.to_device(GR.sigma_vb, GR.stream)
+        # TURBULENCE 
+        if i_turbulence:
+            raise NotImplementedError('Baustelle')
+            TURB = turbulence(GR, i_turbulence) 
+        else:
+            TURB = None
+
+        ####################################################################
+        # INITIALIZE NON-ATMOSPHERIC COMPONENTS
+        ####################################################################
+
+        # SOIL MODEL
+        if i_soil:
+            SOIL = soil(GR, F.HSURF)
+        else:
+            SOIL = None
+
 
 
     return(RAD, SOIL, MIC, TURB)
@@ -301,75 +332,3 @@ def gaussian2D(GR, FIELD, pert, lon0_rad, lat0_rad, lonSig_rad, latSig_rad):
     return(FIELD)
 
 
-
-def diagnose_fields_first_time(GR, PHI, PHIVB, COLP, POTT, HSURF, PVTF, PVTFVB, POTTVB):
-
-    PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, 
-                                                    POTT, COLP, PVTF, PVTFVB)
-    PHI = np.asarray(PHI)
-    PHIVB = np.asarray(PHIVB)
-    PVTF = np.asarray(PVTF)
-    PVTFVB = np.asarray(PVTFVB)
-
-    POTTVB = diagnose_POTTVB_jacobson(GR, POTTVB, POTT, PVTF, PVTFVB)
-    POTTVB = np.asarray(POTTVB)
-
-    return(PHI, PHIVB, PVTF, PVTFVB, POTTVB)
-
-
-
-def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
-    PAIRVB = np.full( (GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs), np.nan )
-
-    # TODO: WHY IS PAIRVB NOT FILLED AT UPPERMOST AND LOWER MOST HALFLEVEL??? 
-    for ks in range(0,GR.nzs):
-        PAIRVB[:,:,ks][GR.iijj] = pTop + GR.sigma_vb[ks] * COLP[GR.iijj]
-    
-    PVTFVB = np.power(PAIRVB/100000, con_kappa)
-
-    for k in range(0,GR.nz):
-        kp1 = k + 1
-        PVTF[:,:,k][GR.iijj] = 1/(1+con_kappa) * \
-                    ( PVTFVB[:,:,kp1][GR.iijj] * PAIRVB[:,:,kp1][GR.iijj] - \
-                      PVTFVB[:,:,k  ][GR.iijj] * PAIRVB[:,:,k  ][GR.iijj] ) / \
-                    ( PAIRVB[:,:,kp1][GR.iijj] - PAIRVB[:,:,k  ][GR.iijj] )
-
-    return(PVTF, PVTFVB)
-
-
-
-def diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, POTT, COLP,
-                               PVTF, PVTFVB):
-
-    PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
-
-    #phi_vb = HSURF[GR.iijj]*con_g
-    PHIVB[:,:,GR.nzs-1][GR.iijj] = HSURF[GR.iijj]*con_g
-    PHI[:,:,GR.nz-1][GR.iijj] = PHIVB[:,:,GR.nzs-1][GR.iijj] - con_cp*  \
-                                ( POTT[:,:,GR.nz-1][GR.iijj] * \
-                                    (   PVTF  [:,:,GR.nz-1 ][GR.iijj]  \
-                                      - PVTFVB[:,:,GR.nzs-1][GR.iijj]  ) )
-    for k in range(GR.nz-2,-1,-1):
-        kp1 = k + 1
-
-        dphi = con_cp * POTT[:,:,kp1][GR.iijj] * \
-                        (PVTFVB[:,:,kp1][GR.iijj] - PVTF[:,:,kp1][GR.iijj])
-        #phi_vb = PHI[:,:,kp1][GR.iijj] - dphi
-        PHIVB[:,:,kp1][GR.iijj] = PHI[:,:,kp1][GR.iijj] - dphi
-
-        # phi_k
-        dphi = con_cp * POTT[:,:,k][GR.iijj] * \
-                            (PVTF[:,:,k][GR.iijj] - PVTFVB[:,:,kp1][GR.iijj])
-        #PHI[:,:,k][GR.iijj] = phi_vb - dphi
-        PHI[:,:,k][GR.iijj] = PHIVB[:,:,kp1][GR.iijj] - dphi
-
-    dphi = con_cp * POTT[:,:,0][GR.iijj] * \
-                    (PVTFVB[:,:,0][GR.iijj] - PVTF[:,:,0][GR.iijj])
-    PHIVB[:,:,0][GR.iijj] = PHI[:,:,0][GR.iijj] - dphi
-
-    # TODO 5 NECESSARY
-    PVTF = exchange_BC(GR, PVTF)
-    PVTFVB = exchange_BC(GR, PVTFVB)
-    PHI = exchange_BC(GR, PHI)
-
-    return(PHI, PHIVB, PVTF, PVTFVB)

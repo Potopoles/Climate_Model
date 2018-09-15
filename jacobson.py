@@ -246,27 +246,28 @@ def proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
 
 
 
-def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF,
-                                PVTF, PVTFVB, POTTVB):
+def diagnose_fields_jacobson(GR, F):
 
     ##############################
     ##############################
     if comp_mode == 0:
-        PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, 
-                                                    POTT, COLP, PVTF, PVTFVB)
+        F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
+                     diag_geopotential_jacobson(GR, F.PHI, F.PHIVB, F.HSURF, 
+                                                    F.POTT, F.COLP, F.PVTF, F.PVTFVB)
 
     elif comp_mode == 1:
-        PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson_c(GR, njobs, PHI, PHIVB, HSURF, 
-                                                        POTT, COLP, PVTF, PVTFVB)
-        PHI = np.asarray(PHI)
-        PHIVB = np.asarray(PHIVB)
-        PVTF = np.asarray(PVTF)
-        PVTFVB = np.asarray(PVTFVB)
+        F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
+                    diag_geopotential_jacobson_c(GR, njobs, F.PHI, F.PHIVB, F.HSURF, 
+                                                    F.POTT, F.COLP, F.PVTF, F.PVTFVB)
+        F.PHI = np.asarray(F.PHI)
+        F.PHIVB = np.asarray(F.PHIVB)
+        F.PVTF = np.asarray(F.PVTF)
+        F.PVTFVB = np.asarray(F.PVTFVB)
 
     elif comp_mode == 2:
-        PHI, PHIVB, PVTF, PVTFVB = \
-                 diag_geopotential_jacobson_gpu(GR, GR.stream, PHI, PHIVB, HSURF, 
-                                                    POTT, COLP, PVTF, PVTFVB)
+        F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
+                 diag_geopotential_jacobson_gpu(GR, GR.stream, F.PHI, F.PHIVB, F.HSURF, 
+                                                    F.POTT, F.COLP, F.PVTF, F.PVTFVB)
     ##############################
     ##############################
 
@@ -275,15 +276,15 @@ def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF,
     ##############################
     ##############################
     if comp_mode == 0:
-        POTTVB = diagnose_POTTVB_jacobson(GR, POTTVB, POTT, PVTF, PVTFVB)
+        F.POTTVB = diagnose_POTTVB_jacobson(GR, F.POTTVB, F.POTT, F.PVTF, F.PVTFVB)
 
     elif comp_mode == 1:
-        POTTVB = diagnose_POTTVB_jacobson_c(GR, njobs, POTTVB, POTT, PVTF, PVTFVB)
-        POTTVB = np.asarray(POTTVB)
+        F.POTTVB = diagnose_POTTVB_jacobson_c(GR, njobs, F.POTTVB, F.POTT, F.PVTF, F.PVTFVB)
+        F.POTTVB = np.asarray(F.POTTVB)
 
     elif comp_mode == 2:
         diagnose_POTTVB_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, GR.stream] \
-                                        (POTTVB, POTT, PVTF, PVTFVB)
+                                        (F.POTTVB, F.POTT, F.PVTF, F.PVTFVB)
         GR.stream.synchronize()
     ##############################
     ##############################
@@ -293,28 +294,27 @@ def diagnose_fields_jacobson(GR, PHI, PHIVB, COLP, POTT, HSURF,
     #TURB.diag_dz(GR, PHI, PHIVB)
 
 
-    return(PHI, PHIVB, PVTF, PVTFVB, POTTVB)
 
 
 
 
-    ##var = PHIVB
-    ##var_orig = PHIVB_orig
-    #var = PVTF
-    #var_orig = PVTF_orig
-    #print('###################')
-    #nan_here = np.isnan(var)
-    #nan_orig = np.isnan(var_orig)
-    #diff = var - var_orig
-    #nan_diff = nan_here != nan_orig 
-    #print('values ' + str(np.nansum(np.abs(diff))))
-    #print('  nans ' + str(np.sum(nan_diff)))
-    #print('###################')
+##var = PHIVB
+##var_orig = PHIVB_orig
+#var = PVTF
+#var_orig = PVTF_orig
+#print('###################')
+#nan_here = np.isnan(var)
+#nan_orig = np.isnan(var_orig)
+#diff = var - var_orig
+#nan_diff = nan_here != nan_orig 
+#print('values ' + str(np.nansum(np.abs(diff))))
+#print('  nans ' + str(np.sum(nan_diff)))
+#print('###################')
 
-    ##quit()
-    ##plt.contourf(var_orig[:,:,0].T)
-    ##plt.contourf(var[:,:,0].T)
-    #plt.contourf(diff[:,:,0].T)
-    #plt.colorbar()
-    #plt.show()
-    #quit()
+##quit()
+##plt.contourf(var_orig[:,:,0].T)
+##plt.contourf(var[:,:,0].T)
+#plt.contourf(diff[:,:,0].T)
+#plt.colorbar()
+#plt.show()
+#quit()

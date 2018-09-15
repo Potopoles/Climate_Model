@@ -1,15 +1,13 @@
 import numpy as np
 import time
 from netCDF4 import Dataset
-from namelist import output_path, pTop
+from namelist import output_path, output_fields, pTop
 from namelist import i_radiation, \
                      i_microphysics, i_soil
 from IO_helper_functions import NC_output_diagnostics
 
 
-def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,
-                POTT, TAIR, RHO, PVTF, PVTFVB,
-                RAD, SOIL, MIC):
+def output_to_NC(GR, F, RAD, SOIL, MIC):
 
     print('###########################################')
     print('###########################################')
@@ -17,21 +15,23 @@ def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, 
     print('###########################################')
     print('###########################################')
 
-    VORT, PAIR, TAIR, WWIND_ms,\
-    WVP, CWP                 = NC_output_diagnostics(GR, F, UWIND, 
-                        VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
-                        PHI, PHIVB, RHO, MIC)
+    # PREPARATIONS
+    ####################################################################
+    F.VORT, F.PAIR, F.TAIR, WWIND_ms,\
+    WVP, CWP                 = NC_output_diagnostics(GR, F, F.UWIND, 
+                        F.VWIND, F.WWIND, F.POTT, F.COLP, F.PVTF, F.PVTFVB,
+                        F.PHI, F.PHIVB, F.RHO, MIC)
 
-    filename = output_path+'/out'+str(outCounter).zfill(4)+'.nc'
-
+    # CREATE AND OPEN FILE
+    ####################################################################
+    filename = output_path+'/out'+str(GR.nc_output_count).zfill(4)+'.nc'
     ncf = Dataset(filename, 'w', format='NETCDF4')
     ncf.close()
-
     ncf = Dataset(filename, 'a', format='NETCDF4')
 
     # DIMENSIONS
+    ####################################################################
     time_dim = ncf.createDimension('time', None)
-    #bnds_dim = ncf.createDimension('bnds', 2)
     bnds_dim = ncf.createDimension('bnds', 1)
     lon_dim = ncf.createDimension('lon', GR.nx)
     lons_dim = ncf.createDimension('lons', GR.nxs)
@@ -41,6 +41,7 @@ def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, 
     levels_dim = ncf.createDimension('levels', GR.nzs)
 
     # DIMENSION VARIABLES
+    ####################################################################
     dtime = ncf.createVariable('time', 'f8', ('time',) )
     bnds = ncf.createVariable('bnds', 'f8', ('bnds',) )
     lon = ncf.createVariable('lon', 'f4', ('lon',) )
@@ -51,7 +52,6 @@ def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, 
     levels = ncf.createVariable('levels', 'f4', ('levels',) )
 
     dtime[:] = GR.sim_time_sec/3600/24
-    #bnds[:] = [0,1]
     bnds[:] = [0]
     lon[:] = GR.lon_rad[GR.ii,GR.nb+1]
     lons[:] = GR.lonis_rad[GR.iis,GR.nb+1]
@@ -60,18 +60,160 @@ def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, 
     level[:] = GR.level
     levels[:] = GR.levels
 
-    # VARIABLES
-    PSURF_out = ncf.createVariable('PSURF', 'f4', ('time', 'lat', 'lon',) )
-    #PAIR_out = ncf.createVariable('PAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
-    PHI_out = ncf.createVariable('PHI', 'f4', ('time', 'level', 'lat', 'lon',) )
-    UWIND_out = ncf.createVariable('UWIND', 'f4', ('time', 'level', 'lat', 'lons',) )
-    VWIND_out = ncf.createVariable('VWIND', 'f4', ('time', 'level', 'lats', 'lon',) )
-    WIND_out = ncf.createVariable('WIND', 'f4', ('time', 'level', 'lat', 'lon',) )
-    VORT_out = ncf.createVariable('VORT', 'f4', ('time', 'level', 'lat', 'lon',) )
-    WWIND_out = ncf.createVariable('WWIND', 'f4', ('time', 'levels', 'lat', 'lon',) )
-    POTT_out = ncf.createVariable('POTT', 'f4', ('time', 'level', 'lat', 'lon',) )
-    TAIR_out = ncf.createVariable('TAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
-    #RHO_out = ncf.createVariable('RHO', 'f4', ('time', 'level', 'lat', 'lon',) )
+    ####################################################################
+    ##############################################################################
+    # 2D FIELDS
+    ##############################################################################
+    ####################################################################
+
+    # pressure fields
+    ##############################################################################
+    if output_fields['PSURF']:
+        PSURF_out = ncf.createVariable('PSURF', 'f4', ('time', 'lat', 'lon',) )
+        PSURF_out[-1,:,:] = F.COLP[GR.iijj].T + pTop
+
+    # flux fields
+    ##############################################################################
+
+    # velocity fields
+    ##############################################################################
+
+    # temperature fields
+    ##############################################################################
+
+    # primary diagnostic fields (relevant for dynamics)
+    ##############################################################################
+
+    # secondary diagnostic fields (not relevant for dynamics)
+    ##############################################################################
+
+    # constant fields
+    ##############################################################################
+
+    # radiation fields
+    ##############################################################################
+
+    # microphysics fields
+    ##############################################################################
+
+
+
+    ####################################################################
+    ##############################################################################
+    # 3D FIELDS
+    ##############################################################################
+    ####################################################################
+
+
+
+    # pressure fields
+    ##############################################################################
+
+    # flux fields
+    ##############################################################################
+ 
+    # velocity fields
+    ##############################################################################
+    if output_fields['UWIND']:
+        UWIND_out = ncf.createVariable('UWIND', 'f4', ('time', 'level', 'lat', 'lons',) )
+        UWIND_out[-1,:,:,:] = F.UWIND[:,:,:][GR.iisjj].T
+    if output_fields['VWIND']:
+        VWIND_out = ncf.createVariable('VWIND', 'f4', ('time', 'level', 'lats', 'lon',) )
+        VWIND_out[-1,:,:,:] = F.VWIND[:,:,:][GR.iijjs].T
+    if output_fields['WIND']:
+        WIND_out = ncf.createVariable('WIND', 'f4', ('time', 'level', 'lat', 'lon',) )
+        WIND_out[-1,:,:,:] = F.WIND[:,:,:][GR.iijj].T
+    if output_fields['WWIND']:
+        WWIND_out = ncf.createVariable('WWIND', 'f4', ('time', 'levels', 'lat', 'lon',) )
+        for ks in range(0,GR.nzs):
+            WWIND_out[-1,ks,:,:] = (F.WWIND[:,:,ks][GR.iijj]*F.COLP[GR.iijj]).T
+        #WWIND_out[-1,ks,:,:] = WWIND_ms[:,:,ks][GR.iijj].T
+    if output_fields['VORT']:
+        VORT_out = ncf.createVariable('VORT', 'f4', ('time', 'level', 'lat', 'lon',) )
+        VORT_out[-1,:,:,:] = F.VORT[:,:,:][GR.iijj].T
+
+    # temperature fields
+    ##############################################################################
+    if output_fields['POTT']:
+        POTT_out = ncf.createVariable('POTT', 'f4', ('time', 'level', 'lat', 'lon',) )
+        POTT_out[-1,:,:,:] = F.POTT[:,:,:][GR.iijj].T
+    if output_fields['TAIR']:
+        TAIR_out = ncf.createVariable('TAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
+        TAIR_out[-1,:,:,:] = F.TAIR[:,:,:][GR.iijj].T
+
+    # primary diagnostic fields (relevant for dynamics)
+    ##############################################################################
+    if output_fields['PHI']:
+        PHI_out = ncf.createVariable('PHI', 'f4', ('time', 'level', 'lat', 'lon',) )
+        PHI_out[-1,:,:,:] = F.PHI[:,:,:][GR.iijj].T
+
+    # secondary diagnostic fields (not relevant for dynamics)
+    ##############################################################################
+    if output_fields['PAIR']:
+        PAIR_out = ncf.createVariable('PAIR', 'f4', ('time', 'level', 'lat', 'lon',) )
+        PAIR_out[-1,:,:,:] = F.PAIR[:,:,:][GR.iijj].T
+    if output_fields['RHO']:
+        RHO_out = ncf.createVariable('RHO', 'f4', ('time', 'level', 'lat', 'lon',) )
+        RHO_out[-1,:,:,:] = F.RHO[:,:,:][GR.iijj].T
+
+    # constant fields
+    ##############################################################################
+
+    # radiation fields
+    ##############################################################################
+
+    # microphysics fields
+    ##############################################################################
+    if output_fields['QV']:
+        QV_out = ncf.createVariable('QV', 'f4', ('time', 'level', 'lat', 'lon',) )
+        QV_out[-1,:,:,:] = F.QV[:,:,:][GR.iijj].T
+    if output_fields['QC']:
+        QC_out = ncf.createVariable('QC', 'f4', ('time', 'level', 'lat', 'lon',) )
+        QC_out[-1,:,:,:] = F.QC[:,:,:][GR.iijj].T
+    if output_fields['WVP']:
+        WVP_out = ncf.createVariable('WVP', 'f4', ('time', 'lat', 'lon',) )
+        WVP_out[-1,:,:] = WVP.T
+    if output_fields['CWP']:
+        CWP_out = ncf.createVariable('CWP', 'f4', ('time', 'lat', 'lon',) )
+        CWP_out[-1,:,:] = CWP.T
+
+
+
+    ####################################################################
+    ##############################################################################
+    # PROFILES OF CERTAIN FIELDS
+    ##############################################################################
+    ####################################################################
+    if output_fields['UWIND'] > 1:
+        UWINDprof_out = ncf.createVariable('UWINDprof', 'f4', ('time', 'level', 'lat',) )
+    if output_fields['VWIND'] > 1:
+        VWINDprof_out = ncf.createVariable('VWINDprof', 'f4', ('time', 'level', 'lats',) )
+    if output_fields['VORT'] > 1:
+        VORTprof_out = ncf.createVariable('VORTprof', 'f4', ('time', 'level', 'lat',) )
+    if output_fields['POTT'] > 1:
+        POTTprof_out = ncf.createVariable('POTTprof', 'f4', ('time', 'level', 'lat',) )
+    if output_fields['QV'] > 1:
+        QVprof_out = ncf.createVariable('QVprof', 'f4', ('time', 'level', 'lat',) )
+    if output_fields['QC'] > 1:
+        QCprof_out = ncf.createVariable('QCprof', 'f4', ('time', 'level', 'lat',) )
+    for k in range(0,GR.nz):
+        if output_fields['UWIND'] > 1:
+            UWINDprof_out[-1,GR.nz-k-1,:] = np.mean(F.UWIND[:,:,k][GR.iijj],axis=0)
+        if output_fields['VWIND'] > 1:
+            VWINDprof_out[-1,GR.nz-k-1,:] = np.mean(F.VWIND[:,:,k][GR.iijjs],axis=0)
+        if output_fields['VORT'] > 1:
+            VORTprof_out[-1,GR.nz-k-1,:] = np.mean(F.VORT[:,:,k][GR.iijj],axis=0)
+        if output_fields['POTT'] > 1:
+            POTTprof_out[-1,GR.nz-k-1,:] = np.mean(F.POTT[:,:,k][GR.iijj],axis=0)
+        if output_fields['QV'] > 1:
+            QVprof_out[-1,GR.nz-k-1,:] = np.mean(F.QV[:,:,k][GR.iijj],axis=0)
+        if output_fields['QC'] > 1:
+            QCprof_out[-1,GR.nz-k-1,:] = np.mean(F.QC[:,:,k][GR.iijj],axis=0)
+
+
+
+
+
 
 
     # RADIATION VARIABLES
@@ -89,10 +231,6 @@ def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, 
         #LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # MICROPHYSICS VARIABLES
-    QV_out = ncf.createVariable('QV', 'f4', ('time', 'level', 'lat', 'lon',) )
-    QC_out = ncf.createVariable('QC', 'f4', ('time', 'level', 'lat', 'lon',) )
-    WVP_out = ncf.createVariable('WVP', 'f4', ('time', 'lat', 'lon',) )
-    CWP_out = ncf.createVariable('CWP', 'f4', ('time', 'lat', 'lon',) )
     if i_microphysics:
         RH_out = ncf.createVariable('RH', 'f4', ('time', 'level', 'lat', 'lon',) )
         dQVdt_MIC_out = ncf.createVariable('dQVdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
@@ -110,20 +248,11 @@ def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, 
         if i_radiation:
             ALBSFCSW_out = ncf.createVariable('ALBSFCSW', 'f4', ('time', 'lat', 'lon',) )
 
-    # VERTICAL PROFILES
-    POTTprof_out = ncf.createVariable('POTTprof', 'f4', ('time', 'level', 'lat',) )
-    UWINDprof_out = ncf.createVariable('UWINDprof', 'f4', ('time', 'level', 'lat',) )
-    VWINDprof_out = ncf.createVariable('VWINDprof', 'f4', ('time', 'level', 'lats',) )
-    WWINDprof_out = ncf.createVariable('WWINDprof', 'f4', ('time', 'levels', 'lat',) )
-    VORTprof_out = ncf.createVariable('VORTprof', 'f4', ('time', 'level', 'lat',) )
-    QVprof_out = ncf.createVariable('QVprof', 'f4', ('time', 'level', 'lat',) )
-    QCprof_out = ncf.createVariable('QCprof', 'f4', ('time', 'level', 'lat',) )
 
     ################################################################################
     ################################################################################
     ################################################################################
 
-    PSURF_out[-1,:,:] = COLP[GR.iijj].T + pTop
     if i_soil:
         TSURF_out[-1,:,:] = SOIL.TSOIL[:,:,0].T
         if i_microphysics:
@@ -134,20 +263,8 @@ def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, 
         if i_radiation:
             ALBSFCSW_out[0,:,:] = SOIL.ALBEDOSW.T
 
-    WVP_out[-1,:,:] = WVP.T
-    CWP_out[-1,:,:] = CWP.T
 
     for k in range(0,GR.nz):
-        # DYNAMIC VARIABLES
-        #PAIR_out[-1,k,:,:] = PAIR[:,:,k][GR.iijj].T
-        PHI_out[-1,k,:,:] = PHI[:,:,k][GR.iijj].T
-        UWIND_out[-1,k,:,:] = UWIND[:,:,k][GR.iisjj].T
-        VWIND_out[-1,k,:,:] = VWIND[:,:,k][GR.iijjs].T
-        WIND_out[-1,k,:,:] = WIND[:,:,k][GR.iijj].T
-        VORT_out[-1,k,:,:] = VORT[:,:,k][GR.iijj].T
-        POTT_out[-1,k,:,:] = POTT[:,:,k][GR.iijj].T
-        TAIR_out[-1,k,:,:] = TAIR[:,:,k][GR.iijj].T
-        #RHO_out[-1,k,:,:] = RHO[:,:,k][GR.iijj].T
 
         # RADIATION VARIABLES
         if i_radiation > 0:
@@ -156,31 +273,19 @@ def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, 
             #LWFLXDIV_out[-1,k,:,:] = RAD.LWFLXDIV[:,:,k].T 
 
         # MICROPHYSICS VARIABLES
-        QV_out[-1,k,:,:] = F.QV[:,:,k][GR.iijj].T
-        QC_out[-1,k,:,:] = F.QC[:,:,k][GR.iijj].T
         if i_microphysics:
             RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
             dQVdt_MIC_out[-1,k,:,:] = F.dQVdt_MIC[:,:,k].T * 3600
             dQCdt_MIC_out[-1,k,:,:] = F.dQCdt_MIC[:,:,k].T * 3600
             dPOTTdt_MIC_out[-1,k,:,:] = F.dPOTTdt_MIC[:,:,k].T * 3600
 
-        # VERTICAL PROFILES
-        POTTprof_out[-1,GR.nz-k-1,:] = np.mean(POTT[:,:,k][GR.iijj],axis=0)
-        UWINDprof_out[-1,GR.nz-k-1,:] = np.mean(UWIND[:,:,k][GR.iijj],axis=0)
-        VWINDprof_out[-1,GR.nz-k-1,:] = np.mean(VWIND[:,:,k][GR.iijjs],axis=0)
-        VORTprof_out[-1,GR.nz-k-1,:] = np.mean(VORT[:,:,k][GR.iijj],axis=0)
-        QVprof_out[-1,GR.nz-k-1,:] = np.mean(F.QV[:,:,k][GR.iijj],axis=0)
-        QCprof_out[-1,GR.nz-k-1,:] = np.mean(F.QC[:,:,k][GR.iijj],axis=0)
 
 
     for ks in range(0,GR.nzs):
-        # DYNAMIC VARIABLES
-        #WWIND_out[-1,ks,:,:] = WWIND_ms[:,:,ks][GR.iijj].T
-        WWIND_out[-1,ks,:,:] = (WWIND[:,:,ks][GR.iijj]*COLP[GR.iijj]).T
 
 
         # RADIATION VARIABLES
-        if RAD.i_radiation > 0:
+        if i_radiation > 0:
             SWDIFFLXDO_out[-1,ks,:,:] = RAD.SWDIFFLXDO[:,:,ks].T
             SWDIRFLXDO_out[-1,ks,:,:] = RAD.SWDIRFLXDO[:,:,ks].T
             SWFLXUP_out[-1,ks,:,:] = RAD.SWFLXUP[:,:,ks].T
@@ -190,15 +295,13 @@ def output_to_NC(GR, F, outCounter, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, 
             LWFLXDO_out[-1,ks,:,:] = RAD.LWFLXDO[:,:,ks].T
             LWFLXNET_out[-1,ks,:,:] = RAD.LWFLXNET[:,:,ks].T
 
-        # VERTICAL PROFILES
-        WWINDprof_out[-1,GR.nzs-ks-1,:] = np.mean(WWIND_ms[:,:,ks][GR.iijj],axis=0)
 
     ncf.close()
 
 
 
 
-def constant_fields_to_NC(GR, HSURF, RAD, SOIL):
+def constant_fields_to_NC(GR, F, RAD, SOIL):
 
     print('###########################################')
     print('###########################################')
@@ -244,8 +347,8 @@ def constant_fields_to_NC(GR, HSURF, RAD, SOIL):
     # SOIL VARIABLES
     OCEANMSK_out = ncf.createVariable('OCEANMSK', 'f4', ('lat', 'lon',) )
 
-    HSURF_out[:,:] = SOIL.HSURF[GR.iijj].T
-    OCEANMSK_out[:,:] = SOIL.OCEANMSK.T
+    HSURF_out[:,:] = F.HSURF[GR.iijj].T
+    OCEANMSK_out[:,:] = F.OCEANMSK.T
     for k in range(0,GR.nz):
         pass
 

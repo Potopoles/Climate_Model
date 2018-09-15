@@ -105,9 +105,7 @@ def step_matsuno(GR, subgrids, F):
     ##############################
     ##############################
     t_start = time.time()
-    F.PHI, F.PHIVB, F.PVTF, F.PVTFVB, F.POTTVB = \
-                diagnose_fields_jacobson(GR, F.PHI, F.PHIVB, F.COLP, F.POTT, \
-                                        F.HSURF, F.PVTF, F.PVTFVB, F.POTTVB)
+    diagnose_fields_jacobson(GR, F)
     t_end = time.time()
     GR.diag_comp_time += t_end - t_start
     ##############################
@@ -173,9 +171,7 @@ def step_matsuno(GR, subgrids, F):
     ##############################
     ##############################
     t_start = time.time()
-    F.PHI, F.PHIVB, F.PVTF, F.PVTFVB, F.POTTVB = \
-                diagnose_fields_jacobson(GR, F.PHI, F.PHIVB, F.COLP, F.POTT, \
-                                        F.HSURF, F.PVTF, F.PVTFVB, F.POTTVB)
+    diagnose_fields_jacobson(GR, F)
     t_end = time.time()
     GR.diag_comp_time += t_end - t_start
     ##############################
