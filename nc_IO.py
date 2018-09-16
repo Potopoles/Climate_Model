@@ -17,10 +17,10 @@ def output_to_NC(GR, F, RAD, SOIL, MIC):
 
     # PREPARATIONS
     ####################################################################
-    F.VORT, F.PAIR, F.TAIR, WWIND_ms,\
-    WVP, CWP                 = NC_output_diagnostics(GR, F, F.UWIND, 
-                        F.VWIND, F.WWIND, F.POTT, F.COLP, F.PVTF, F.PVTFVB,
-                        F.PHI, F.PHIVB, F.RHO, MIC)
+    #VORT, F.PAIR, F.TAIR, WWIND_ms,\
+    VORT, WWIND_ms, WVP, CWP = NC_output_diagnostics(GR, F, F.UWIND, 
+                            F.VWIND, F.WWIND, F.POTT, F.COLP, F.PVTF, F.PVTFVB,
+                            F.PHI, F.PHIVB, F.RHO, MIC)
 
     # CREATE AND OPEN FILE
     ####################################################################
@@ -130,7 +130,7 @@ def output_to_NC(GR, F, RAD, SOIL, MIC):
         #WWIND_out[-1,ks,:,:] = WWIND_ms[:,:,ks][GR.iijj].T
     if output_fields['VORT']:
         VORT_out = ncf.createVariable('VORT', 'f4', ('time', 'level', 'lat', 'lon',) )
-        VORT_out[-1,:,:,:] = F.VORT[:,:,:][GR.iijj].T
+        VORT_out[-1,:,:,:] = VORT[:,:,:][GR.iijj].T
 
     # temperature fields
     ##############################################################################
@@ -202,7 +202,7 @@ def output_to_NC(GR, F, RAD, SOIL, MIC):
         if output_fields['VWIND'] > 1:
             VWINDprof_out[-1,GR.nz-k-1,:] = np.mean(F.VWIND[:,:,k][GR.iijjs],axis=0)
         if output_fields['VORT'] > 1:
-            VORTprof_out[-1,GR.nz-k-1,:] = np.mean(F.VORT[:,:,k][GR.iijj],axis=0)
+            VORTprof_out[-1,GR.nz-k-1,:] = np.mean(VORT[:,:,k][GR.iijj],axis=0)
         if output_fields['POTT'] > 1:
             POTTprof_out[-1,GR.nz-k-1,:] = np.mean(F.POTT[:,:,k][GR.iijj],axis=0)
         if output_fields['QV'] > 1:

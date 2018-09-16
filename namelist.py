@@ -89,12 +89,12 @@ output_fields = {
                 'UWIND'     : 1,                    #vp
                 'VWIND'     : 1,                    #vp
                 'WIND'      : 0,                    #vp
-                'WWIND'     : 1,
-                'VORT'      : 1,
+                'WWIND'     : 0,
+                'VORT'      : 0,
                 # velocity fields
                 # temperature fields
-                'POTT'      : 0,                    #vp
-                'TAIR'      : 1,
+                'POTT'      : 1,                    #vp
+                'TAIR'      : 0,
                 # primary diagnostic fields
                 'PHI'       : 0,
                 # secondary diagnostic fields
@@ -110,15 +110,15 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 1
+i_load_from_restart = 0
 i_save_to_restart = 1
-i_restart_nth_day = 0.01
+i_restart_nth_day = 1.00
 
 ####################################################################
 # PARALLEL AND DEVICE
 ####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
-comp_mode = 2
+comp_mode = 1
 # working precision (float64 or float32)
 wp = 'float32'
 # cython
@@ -131,7 +131,7 @@ njobs = 4
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
-i_simulation_mode = 1
+i_simulation_mode = 0
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 0:

@@ -16,7 +16,7 @@ def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
     for ks in range(0,GR.nzs):
         PAIRVB[:,:,ks][GR.iijj] = pTop + GR.sigma_vb[ks] * COLP[GR.iijj]
     
-    PVTFVB = np.power(PAIRVB/100000, con_kappa)
+    PVTFVB[:] = np.power(PAIRVB/100000, con_kappa)
 
     for k in range(0,GR.nz):
         kp1 = k + 1

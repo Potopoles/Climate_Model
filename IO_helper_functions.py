@@ -37,7 +37,6 @@ def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
 def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                     PHI, PHIVB, RHO, MIC):
 
-
     # VORTICITY
     VORT = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
     for k in range(0,GR.nz):
@@ -55,10 +54,10 @@ def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                                ) / (2*GR.dy) \
 
 
-    # PRESSURE AND EFFECTIVE TEMPERATURE
-    PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
-    PAIR = 100000*np.power(PVTF, 1/con_kappa)
-    TAIR = POTT*PVTF
+    ## PRESSURE AND EFFECTIVE TEMPERATURE
+    #PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
+    #PAIR = 100000*np.power(PVTF, 1/con_kappa)
+    #TAIR = POTT*PVTF
 
     WWIND_ms = copy.deepcopy(WWIND)
     for ks in range(1,GR.nzs-1):
@@ -73,7 +72,7 @@ def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
     CWP = np.sum(F.QC[GR.iijj]*dz*RHO[GR.iijj],2)
 
 
-    return(VORT, PAIR, TAIR, WWIND_ms, WVP, CWP)
+    return(VORT, WWIND_ms, WVP, CWP)
 
 
 

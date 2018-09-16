@@ -197,8 +197,10 @@ class Grid:
                         str(np.round(np.sum(self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
 
             # CORIOLIS FORCE
-            self.corf    = np.full( (self.nx +2*self.nb, self.ny +2*self.nb), np.nan, dtype=wp_np)
-            self.corf_is = np.full( (self.nxs+2*self.nb, self.ny +2*self.nb), np.nan, dtype=wp_np)
+            self.corf    = np.full( (self.nx +2*self.nb, self.ny +2*self.nb), 
+                                    np.nan, dtype=wp_np)
+            self.corf_is = np.full( (self.nxs+2*self.nb, self.ny +2*self.nb),
+                                    np.nan, dtype=wp_np)
             self.corf[self.iijj] = 2*con_omega*np.sin(self.lat_rad[self.iijj])
             self.corf_is[self.iisjj] = 2*con_omega*np.sin(self.latis_rad[self.iisjj])
 
