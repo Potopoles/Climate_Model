@@ -3,6 +3,11 @@ import time
 import copy
 from geopotential import diag_pvt_factor
 from constants import con_kappa, con_g 
+from namelist import wp
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
 
 def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
     t_start = time.time()
@@ -34,7 +39,7 @@ def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
 
 
     # VORTICITY
-    VORT = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+    VORT = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
     for k in range(0,GR.nz):
         VORT[:,:,k][GR.iijj] = (   \
                                 + ( VWIND[:,:,k][GR.iijj_ip1    ] + \

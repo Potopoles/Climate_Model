@@ -1,9 +1,17 @@
 import numpy as np
-from namelist import QV_hor_dif_tau
+from namelist import wp, QV_hor_dif_tau
 
 cimport numpy as np
 import cython
 from cython.parallel import prange 
+
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
+ctypedef fused wp_cy:
+    double
+    float
 
 cdef int i_hor_adv      = 1
 cdef int i_vert_adv     = 1
@@ -14,14 +22,14 @@ cdef int i_microphysics = 1
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef water_vapor_tendency_c( GR, njobs,\
-        double[:,:, ::1] dQVdt,
-        double[:,:, ::1] QV,
-        double[:,   ::1] COLP,
-        double[:,   ::1] COLP_NEW,
-        double[:,:, ::1] UFLX,
-        double[:,:, ::1] VFLX,
-        double[:,:, ::1] WWIND,
-        double[:,:, ::1] dQVdt_MIC):
+        wp_cy[:,:, ::1] dQVdt,
+        wp_cy[:,:, ::1] QV,
+        wp_cy[:,   ::1] COLP,
+        wp_cy[:,   ::1] COLP_NEW,
+        wp_cy[:,:, ::1] UFLX,
+        wp_cy[:,:, ::1] VFLX,
+        wp_cy[:,:, ::1] WWIND,
+        wp_cy[:,:, ::1] dQVdt_MIC):
 
     cdef int c_njobs = njobs
    
@@ -30,15 +38,15 @@ cpdef water_vapor_tendency_c( GR, njobs,\
     cdef int ny  = GR.ny
     cdef int nz  = GR.nz
     cdef int nzs = GR.nzs
-    cdef double[   ::1] dsigma    = GR.dsigma
-    cdef double[:, ::1] A         = GR.A
+    cdef wp_cy[   ::1] dsigma    = GR.dsigma
+    cdef wp_cy[:, ::1] A         = GR.A
 
     cdef int i, inb, im1, ip1, j, jnb, jm1, jp1, k, kp1, ks
-    cdef double hor_adv, vert_adv, num_diff
+    cdef wp_cy hor_adv, vert_adv, num_diff
 
-    cdef double c_QV_hor_dif_tau = QV_hor_dif_tau
+    cdef wp_cy c_QV_hor_dif_tau = QV_hor_dif_tau
 
-    cdef double[:,:, ::1] QVVB  = np.zeros( (nx ,ny ,nzs) )
+    cdef wp_cy[:,:, ::1] QVVB  = np.zeros( (nx ,ny ,nzs), dtype=wp_np)
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):
@@ -122,14 +130,14 @@ cpdef water_vapor_tendency_c( GR, njobs,\
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef cloud_water_tendency_c( GR, njobs,\
-        double[:,:, ::1] dQCdt,
-        double[:,:, ::1] QC,
-        double[:,   ::1] COLP,
-        double[:,   ::1] COLP_NEW,
-        double[:,:, ::1] UFLX,
-        double[:,:, ::1] VFLX,
-        double[:,:, ::1] WWIND,
-        double[:,:, ::1] dQCdt_MIC):
+        wp_cy[:,:, ::1] dQCdt,
+        wp_cy[:,:, ::1] QC,
+        wp_cy[:,   ::1] COLP,
+        wp_cy[:,   ::1] COLP_NEW,
+        wp_cy[:,:, ::1] UFLX,
+        wp_cy[:,:, ::1] VFLX,
+        wp_cy[:,:, ::1] WWIND,
+        wp_cy[:,:, ::1] dQCdt_MIC):
 
     cdef int c_njobs = njobs
    
@@ -138,15 +146,15 @@ cpdef cloud_water_tendency_c( GR, njobs,\
     cdef int ny  = GR.ny
     cdef int nz  = GR.nz
     cdef int nzs = GR.nzs
-    cdef double[   ::1] dsigma    = GR.dsigma
-    cdef double[:, ::1] A         = GR.A
+    cdef wp_cy[   ::1] dsigma    = GR.dsigma
+    cdef wp_cy[:, ::1] A         = GR.A
 
     cdef int i, inb, im1, ip1, j, jnb, jm1, jp1, k, kp1, ks
-    cdef double hor_adv, vert_adv, num_diff
+    cdef wp_cy hor_adv, vert_adv, num_diff
 
-    cdef double c_QC_hor_dif_tau = QV_hor_dif_tau
+    cdef wp_cy c_QC_hor_dif_tau = QV_hor_dif_tau
 
-    cdef double[:,:, ::1] QCVB  = np.zeros( (nx ,ny ,nzs) )
+    cdef wp_cy[:,:, ::1] QCVB  = np.zeros( (nx ,ny ,nzs), dtype=wp_np)
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):

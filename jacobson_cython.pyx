@@ -1,33 +1,40 @@
 import numpy as np
 from boundaries import exchange_BC
-from namelist import njobs
+from namelist import wp, njobs
 from diagnostics_cython import interp_COLPA_c
 
 cimport numpy as np
 import cython
 from cython.parallel import prange 
 
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
+ctypedef fused wp_cy:
+    double
+    float
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef proceed_timestep_jacobson_c(GR, \
-                                double[:,:, ::1] UWIND_OLD,
-                                double[:,:, ::1] UWIND,
-                                double[:,:, ::1] VWIND_OLD,
-                                double[:,:, ::1] VWIND,
-                                double[:,   ::1] COLP_OLD,
-                                double[:,   ::1] COLP,
-                                double[:,:, ::1] POTT_OLD,
-                                double[:,:, ::1] POTT,
-                                double[:,:, ::1] QV_OLD,
-                                double[:,:, ::1] QV,
-                                double[:,:, ::1] QC_OLD,
-                                double[:,:, ::1] QC,
-                                double[:,:, ::1] dUFLXdt,
-                                double[:,:, ::1] dVFLXdt,
-                                double[:,:, ::1] dPOTTdt,
-                                double[:,:, ::1] dQVdt,
-                                double[:,:, ::1] dQCdt):
+                                wp_cy[:,:, ::1] UWIND_OLD,
+                                wp_cy[:,:, ::1] UWIND,
+                                wp_cy[:,:, ::1] VWIND_OLD,
+                                wp_cy[:,:, ::1] VWIND,
+                                wp_cy[:,   ::1] COLP_OLD,
+                                wp_cy[:,   ::1] COLP,
+                                wp_cy[:,:, ::1] POTT_OLD,
+                                wp_cy[:,:, ::1] POTT,
+                                wp_cy[:,:, ::1] QV_OLD,
+                                wp_cy[:,:, ::1] QV,
+                                wp_cy[:,:, ::1] QC_OLD,
+                                wp_cy[:,:, ::1] QC,
+                                wp_cy[:,:, ::1] dUFLXdt,
+                                wp_cy[:,:, ::1] dVFLXdt,
+                                wp_cy[:,:, ::1] dPOTTdt,
+                                wp_cy[:,:, ::1] dQVdt,
+                                wp_cy[:,:, ::1] dQCdt):
 
 
     cdef int c_njobs = njobs
@@ -40,12 +47,12 @@ cpdef proceed_timestep_jacobson_c(GR, \
     cdef int nz  = GR.nz
     cdef int i, imb, i_s, ismb, j, jmb, js, jsmb, k
 
-    cdef double dt = GR.dt
+    cdef wp_cy dt = GR.dt
 
-    cdef double[:, ::1] COLPA_is_OLD = np.zeros( (nxs,ny ) )
-    cdef double[:, ::1] COLPA_is_NEW = np.zeros( (nxs,ny ) )
-    cdef double[:, ::1] COLPA_js_OLD = np.zeros( (nx ,nys) )
-    cdef double[:, ::1] COLPA_js_NEW = np.zeros( (nx ,nys) )
+    cdef wp_cy[:, ::1] COLPA_is_OLD = np.zeros( (nxs,ny ), dtype=wp_np )
+    cdef wp_cy[:, ::1] COLPA_is_NEW = np.zeros( (nxs,ny ), dtype=wp_np )
+    cdef wp_cy[:, ::1] COLPA_js_OLD = np.zeros( (nx ,nys), dtype=wp_np )
+    cdef wp_cy[:, ::1] COLPA_js_NEW = np.zeros( (nx ,nys), dtype=wp_np )
 
 
     COLPA_is_OLD, COLPA_js_OLD = interp_COLPA_c(GR, c_njobs, COLP_OLD)

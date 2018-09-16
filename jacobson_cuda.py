@@ -1,11 +1,6 @@
 from namelist import  wp
 from boundaries_cuda import exchange_BC_gpu
-
 from numba import cuda, jit
-if wp == 'float64':
-    from numba import float64
-
-
 
 def proceed_timestep_jacobson_gpu(GR, stream, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
                     COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,

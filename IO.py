@@ -4,29 +4,15 @@ import pickle
 from netCDF4 import Dataset
 from scipy.interpolate import interp2d
 from boundaries import exchange_BC_rigid_y, exchange_BC_periodic_x
-from namelist import pTop, n_topo_smooth, tau_topo_smooth
-#from geopotential import diag_pvt_factor
+from namelist import wp, pTop, n_topo_smooth, tau_topo_smooth
+from geopotential import diag_pvt_factor
 from constants import con_kappa
 from scipy import interpolate
 from constants import con_g, con_Rd, con_kappa, con_cp
-
-def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
-    PAIRVB = np.full( (GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs), np.nan )
-
-    # TODO: WHY IS PAIRVB NOT FILLED AT UPPERMOST AND LOWER MOST HALFLEVEL??? 
-    for ks in range(0,GR.nzs):
-        PAIRVB[:,:,ks][GR.iijj] = pTop + GR.sigma_vb[ks] * COLP[GR.iijj]
-    
-    PVTFVB = np.power(PAIRVB/100000, con_kappa)
-
-    for k in range(0,GR.nz):
-        kp1 = k + 1
-        PVTF[:,:,k][GR.iijj] = 1/(1+con_kappa) * \
-                    ( PVTFVB[:,:,kp1][GR.iijj] * PAIRVB[:,:,kp1][GR.iijj] - \
-                      PVTFVB[:,:,k  ][GR.iijj] * PAIRVB[:,:,k  ][GR.iijj] ) / \
-                    ( PAIRVB[:,:,kp1][GR.iijj] - PAIRVB[:,:,k  ][GR.iijj] )
-
-    return(PVTF, PVTFVB)
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
 
 
 
@@ -41,10 +27,10 @@ def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
 
 
     ks = np.arange(0,GR.nzs)
-    z_vb_test = np.zeros(GR.nzs)
-    p_vb_test = np.zeros(GR.nzs)
-    rho_vb_test = np.zeros(GR.nzs)
-    g_vb_test = np.zeros(GR.nzs)
+    z_vb_test   = np.zeros(GR.nzs, dtype=wp_np)
+    p_vb_test   = np.zeros(GR.nzs, dtype=wp_np)
+    rho_vb_test = np.zeros(GR.nzs, dtype=wp_np)
+    g_vb_test   = np.zeros(GR.nzs, dtype=wp_np)
 
     z_vb_test[0] = ztop_test
     z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)**(2)
@@ -62,8 +48,8 @@ def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
                         rho_vb_test[ks]*g_vb_test[ks] * \
                         (z_vb_test[ks-1] - z_vb_test[ks])
     
-    GR.sigma_vb = (p_vb_test - pTop)/(p_vb_test[-1] - pTop)
-    GR.dsigma = np.diff(GR.sigma_vb)
+    GR.sigma_vb[:] = (p_vb_test - pTop)/(p_vb_test[-1] - pTop)
+    GR.dsigma[:] = np.diff(GR.sigma_vb)
     for key,subgrid in subgrids.items():
         subgrid.sigma_vb = GR.sigma_vb
         subgrid.dsigma = GR.dsigma
@@ -76,7 +62,7 @@ def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
     COLP[GR.iijj] = PSURF[GR.iijj] - pTop
     PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
 
-    PAIR =  np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan)
+    PAIR =  np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan, dtype=wp_np)
     for k in range(0,GR.nz):
         PAIR[:,:,k][GR.iijj] = 100000*np.power(PVTF[:,:,k][GR.iijj], 1/con_kappa)
 
@@ -191,7 +177,6 @@ def load_restart_fields(GR):
                 RAD, SOIL, MIC, TURB)
 
 def load_topo(GR, HSURF):
-    #HSURF = np.full( (GR.nx+2*GR.nb,GR.ny+2*GR.nb), np.nan)
     filename = '../elevation/elev.1-deg.nc'
     ncf = Dataset(filename, 'r', format='NETCDF4')
     lon_inp = ncf['lon'][:]

@@ -11,7 +11,7 @@ def output_to_NC(GR, F, RAD, SOIL, MIC):
 
     print('###########################################')
     print('###########################################')
-    print('write fields')
+    print('WRITE FIELDS '+str(GR.nc_output_count).zfill(4))
     print('###########################################')
     print('###########################################')
 

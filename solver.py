@@ -18,6 +18,7 @@ if i_time_stepping == 'MATSUNO':
 elif i_time_stepping == 'RK4':
     from RK4 import step_RK4 as time_stepper
 
+
 ####################################################################
 # CREATE MODEL GRID
 ####################################################################
@@ -120,6 +121,7 @@ while GR.ts < GR.nts:
     t_dyn_end = time.time()
     GR.dyn_comp_time += t_dyn_end - t_dyn_start
 
+
     ####################################################################
     # WRITE NC OUTPUT
     ####################################################################
@@ -139,6 +141,8 @@ while GR.ts < GR.nts:
         output_to_NC(GR, CF, RAD, SOIL, MIC)
         t_end = time.time()
         GR.IO_time += t_end - t_start
+
+    
 
     ####################################################################
     # WRITE RESTART FILE

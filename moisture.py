@@ -1,6 +1,10 @@
 import numpy as np
 import time
-from namelist import QV_hor_dif_tau
+from namelist import wp, QV_hor_dif_tau
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
 
 
 i_hor_adv      = 1
@@ -12,7 +16,7 @@ i_turb         = 0
 
 def water_vapor_tendency(GR, dQVdt, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, dQVdt_MIC):
 
-    QVVB = np.zeros( (GR.nx ,GR.ny ,GR.nzs) )
+    QVVB = np.zeros( (GR.nx ,GR.ny ,GR.nzs), dtype=wp_np)
     QVVB[:,:,1:(GR.nzs-1)] = (QV[:,:,:-1][GR.iijj] + QV[:,:,1:][GR.iijj])/2
 
     if (i_turb and TURB.i_turbulence):
@@ -79,7 +83,7 @@ def water_vapor_tendency(GR, dQVdt, QV, COLP, COLP_NEW, UFLX, VFLX, WWIND, dQVdt
 
 def cloud_water_tendency(GR, dQCdt, QC, COLP, COLP_NEW, UFLX, VFLX, WWIND, dQCdt_MIC):
 
-    QCVB = np.zeros( (GR.nx ,GR.ny ,GR.nzs) )
+    QCVB = np.zeros( (GR.nx ,GR.ny ,GR.nzs), dtype=wp_np)
     QCVB[:,:,1:(GR.nzs-1)] = (QC[:,:,:-1][GR.iijj] + QC[:,:,1:][GR.iijj])/2
 
 

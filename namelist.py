@@ -4,7 +4,7 @@ from datetime import datetime
 ####################################################################
 # GRID PARAMS
 ####################################################################
-GMT_initialization = datetime(2018,6,1,0,0,0)
+GMT_initialization = datetime(2018,9,16,0,0,0)
 
 nz = 8 # must be nz = 2**x (x = 0,1,2,3,4...)
 lon0_deg = 0
@@ -23,8 +23,8 @@ n_topo_smooth = 20
 tau_topo_smooth = 0.1
 
 # VERTICAL PROFILE
-pTop = 10000
-pSurf = 101350
+pTop = 10000.
+pSurf = 101350.
 
 # ATMOSPHERIC PERTURBATIONS
 gaussian_dlon = np.pi/10
@@ -119,8 +119,8 @@ i_restart_nth_day = 0.10
 ####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
 comp_mode = 1
-# general
-wp = 'float64'
+# working precision (float64 or float32)
+wp = 'float32'
 # cython
 njobs = 4
 
@@ -130,6 +130,7 @@ njobs = 4
 ####################################################################
 # 0: testsuite equality
 # 1: benchmark experiment
+# 2: longtime run
 i_simulation_mode = 0
 
 # TESTSUITE EQUALITY
@@ -139,9 +140,9 @@ if i_simulation_mode == 0:
     lat1_deg = 80
     dlat_deg = 3
     dlon_deg = 3
-    #output_path = '../output_orig'
+    output_path = '../output_orig'
     output_path = '../output'
-    i_sim_n_days = 1.00
+    i_sim_n_days = 0.50
     i_out_nth_hour = 6
     i_radiation = 0
     i_microphysics = 0
@@ -150,19 +151,33 @@ if i_simulation_mode == 0:
 
 ## BENCHMARK EXPERIMENT
 elif i_simulation_mode == 1:
-    nz = 8
-    lat0_deg = -78
-    lat1_deg = 78
-    dlat_deg = 1.5
-    dlon_deg = 1.5
+    nz = 32
+    lat0_deg = -80
+    lat1_deg = 80
+    dlat_deg = 1.0
+    dlon_deg = 1.0
     output_path = '../output_run'
-    i_sim_n_days = 0.5
+    i_sim_n_days = 0.05
     i_out_nth_hour = 0.25
     i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0
     i_soil = 0
 
+## LONGTIME RUN
+elif i_simulation_mode == 2:
+    nz = 32
+    lat0_deg = -81
+    lat1_deg = 81
+    dlat_deg = 0.5
+    dlon_deg = 0.5
+    output_path = '../output_run'
+    i_sim_n_days = 0.10
+    i_out_nth_hour = 0.1
+    i_radiation = 0
+    i_microphysics = 0
+    i_turbulence = 0
+    i_soil = 0
 
 
 
@@ -171,38 +186,27 @@ elif i_simulation_mode == 1:
 ####################################################################
 WIND_hor_dif_tau = 0 # important
 POTT_hor_dif_tau = 0 # creates instabilities and acceleration in steep terrain
-COLP_hor_dif_tau = 0 # not tested
+COLP_hor_dif_tau = 0 # not tested (but likely not good because of same reasons as for POTT)
 QV_hor_dif_tau   = 0
 if i_diffusion_on:
     if dlat_deg == 10:
         WIND_hor_dif_tau = 1
-        #POTT_hor_dif_tau = 1E-6
     elif dlat_deg == 8:
         WIND_hor_dif_tau = 1
-        #POTT_hor_dif_tau = 1E-6
     elif dlat_deg == 6:
         WIND_hor_dif_tau = 5
-        #POTT_hor_dif_tau = 5E-6
     elif dlat_deg == 5:
         WIND_hor_dif_tau = 7.5
-        #POTT_hor_dif_tau = 7.5E-6
     elif dlat_deg == 4:
         WIND_hor_dif_tau = 10
-        #POTT_hor_dif_tau = 1E-5
     elif dlat_deg == 3:
         WIND_hor_dif_tau = 15
-        #POTT_hor_dif_tau = 2E-5
     elif dlat_deg == 2:
         WIND_hor_dif_tau = 20
-        #POTT_hor_dif_tau = 3E-5
     elif dlat_deg == 1.5:
         WIND_hor_dif_tau = 20
-        #POTT_hor_dif_tau = 1E-3
-    elif dlat_deg == 1:
+    elif dlat_deg <= 1:
         WIND_hor_dif_tau = 20
-        #POTT_hor_dif_tau = 1E-4
-
-#QV_hor_dif_tau = POTT_hor_dif_tau
 
 
 

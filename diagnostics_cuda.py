@@ -3,8 +3,6 @@ from constants import con_kappa, con_g, con_Rd
 from namelist import pTop, wp
 
 from numba import cuda, jit
-if wp == 'float64':
-    from numba import float64
 
 
 def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\

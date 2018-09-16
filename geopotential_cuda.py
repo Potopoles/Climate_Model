@@ -4,8 +4,6 @@ from namelist import pTop, wp
 from boundaries_cuda import exchange_BC_gpu
 
 from numba import cuda, jit
-if wp == 'float64':
-    from numba import float64
 from math import pow
 
 
@@ -73,6 +71,11 @@ def diag_geopotential_jacobson_gpu(GR, stream, PHI, PHIVB, HSURF, POTT, COLP,
     diag_pvt_factor[GR.griddim, GR.blockdim, stream] \
                         (COLP, PVTF, PVTFVB, GR.sigma_vbd)
     stream.synchronize()
+    #print(type(COLP))
+    #print(COLP.dtype)
+    #print(np.sum(np.isnan(COLP)))
+    #print(np.sum(np.isnan(PVTF)))
+    #quit()
 
     get_geopotential[GR.griddim_ks, GR.blockdim_ks, stream] \
                        (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 

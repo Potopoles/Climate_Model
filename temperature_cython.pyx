@@ -1,10 +1,18 @@
 import numpy as np
-from namelist import POTT_hor_dif_tau, i_temperature_tendency, \
+from namelist import wp, POTT_hor_dif_tau, i_temperature_tendency, \
                     i_radiation, i_microphysics
 
 cimport numpy as np
 import cython
 from cython.parallel import prange 
+
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
+ctypedef fused wp_cy:
+    double
+    float
 
 cdef int i_hor_adv = 1
 cdef int i_vert_adv = 1
@@ -13,15 +21,15 @@ cdef int i_num_dif = 1
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef temperature_tendency_jacobson_c( GR, njobs,\
-        double[:,:, ::1] POTT,
-        double[:,:, ::1] POTTVB,
-        double[:,   ::1] COLP,
-        double[:,   ::1] COLP_NEW,
-        double[:,:, ::1] UFLX,
-        double[:,:, ::1] VFLX,
-        double[:,:, ::1] WWIND,
-        double[:,:, ::1] dPOTTdt_RAD,
-        double[:,:, ::1] dPOTTdt_MIC):
+        wp_cy[:,:, ::1] POTT,
+        wp_cy[:,:, ::1] POTTVB,
+        wp_cy[:,   ::1] COLP,
+        wp_cy[:,   ::1] COLP_NEW,
+        wp_cy[:,:, ::1] UFLX,
+        wp_cy[:,:, ::1] VFLX,
+        wp_cy[:,:, ::1] WWIND,
+        wp_cy[:,:, ::1] dPOTTdt_RAD,
+        wp_cy[:,:, ::1] dPOTTdt_MIC):
 
     cdef int c_njobs = njobs
 
@@ -32,15 +40,15 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
     cdef int nx  = GR.nx
     cdef int ny  = GR.ny
     cdef int nz  = GR.nz
-    cdef double[   ::1] dsigma    = GR.dsigma
-    cdef double[:, ::1] A         = GR.A
+    cdef wp_cy[   ::1] dsigma    = GR.dsigma
+    cdef wp_cy[:, ::1] A         = GR.A
 
     cdef int i, inb, im1, ip1, j, jnb, jm1, jp1, k, kp1
-    cdef double hor_adv, vert_adv, num_diff
+    cdef wp_cy hor_adv, vert_adv, num_diff
 
-    cdef double c_POTT_hor_dif_tau = POTT_hor_dif_tau
+    cdef wp_cy c_POTT_hor_dif_tau = POTT_hor_dif_tau
 
-    cdef double[:,:, ::1] dPOTTdt = np.zeros( (nx+2*nb,ny+2*nb,nz) )
+    cdef wp_cy[:,:, ::1] dPOTTdt = np.zeros( (nx+2*nb,ny+2*nb,nz), dtype=wp_np)
 
     if i_temperature_tendency:
         for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):

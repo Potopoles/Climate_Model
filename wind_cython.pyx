@@ -4,12 +4,18 @@ cimport numpy as np
 from cython.parallel import prange 
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
-from namelist import WIND_hor_dif_tau, i_wind_tendency
+from namelist import wp, WIND_hor_dif_tau, i_wind_tendency
 from libc.stdio cimport printf
 from libc.math cimport cos, sin
 import cython
 
-ctypedef np.double_t cDOUBLE
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
+ctypedef fused wp_cy:
+    double
+    float
 
 cdef int i_hor_adv = 1
 cdef int i_vert_adv = 1
@@ -21,27 +27,27 @@ cdef int i_num_dif = 1
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef wind_tendency_jacobson_c( GR, njobs,\
-        double[:,:, ::1] UWIND,
-        double[:,:, ::1] VWIND,
-        double[:,:, ::1] WWIND,
-        double[:,:, ::1] UFLX,
-        double[:,:, ::1] dUFLXdt,
-        double[:,:, ::1] VFLX,
-        double[:,:, ::1] dVFLXdt,
-        double[:,:, ::1] BFLX,
-        double[:,:, ::1] CFLX,
-        double[:,:, ::1] DFLX,
-        double[:,:, ::1] EFLX,
-        double[:,:, ::1] RFLX,
-        double[:,:, ::1] QFLX,
-        double[:,:, ::1] SFLX,
-        double[:,:, ::1] TFLX,
-        double[:,   ::1] COLP,
-        double[:,   ::1] COLP_NEW,
-        double[:,:, ::1] PHI,
-        double[:,:, ::1] POTT,
-        double[:,:, ::1] PVTF,
-        double[:,:, ::1] PVTFVB):
+        wp_cy[:,:, ::1] UWIND,
+        wp_cy[:,:, ::1] VWIND,
+        wp_cy[:,:, ::1] WWIND,
+        wp_cy[:,:, ::1] UFLX,
+        wp_cy[:,:, ::1] dUFLXdt,
+        wp_cy[:,:, ::1] VFLX,
+        wp_cy[:,:, ::1] dVFLXdt,
+        wp_cy[:,:, ::1] BFLX,
+        wp_cy[:,:, ::1] CFLX,
+        wp_cy[:,:, ::1] DFLX,
+        wp_cy[:,:, ::1] EFLX,
+        wp_cy[:,:, ::1] RFLX,
+        wp_cy[:,:, ::1] QFLX,
+        wp_cy[:,:, ::1] SFLX,
+        wp_cy[:,:, ::1] TFLX,
+        wp_cy[:,   ::1] COLP,
+        wp_cy[:,   ::1] COLP_NEW,
+        wp_cy[:,:, ::1] PHI,
+        wp_cy[:,:, ::1] POTT,
+        wp_cy[:,:, ::1] PVTF,
+        wp_cy[:,:, ::1] PVTFVB):
 
     cdef int c_njobs = njobs
    
@@ -52,45 +58,45 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
     cdef int nys = GR.nys
     cdef int nzs = GR.nzs
     cdef int nz  = GR.nz
-    cdef double         dy        = GR.dy
-    cdef double         dlon_rad  = GR.dlon_rad
-    cdef double[   ::1] sigma_vb  = GR.sigma_vb
-    cdef double[   ::1] dsigma    = GR.dsigma
-    cdef double[:, ::1] dxjs      = GR.dxjs
-    cdef double[:, ::1] corf_is   = GR.corf_is
-    cdef double[:, ::1] corf      = GR.corf
-    cdef double[:, ::1] latis_rad = GR.latis_rad
-    cdef double[:, ::1] lat_rad   = GR.lat_rad
-    cdef double[:, ::1] A         = GR.A
+    cdef wp_cy         dy        = GR.dy
+    cdef wp_cy         dlon_rad  = GR.dlon_rad
+    cdef wp_cy[   ::1] sigma_vb  = GR.sigma_vb
+    cdef wp_cy[   ::1] dsigma    = GR.dsigma
+    cdef wp_cy[:, ::1] dxjs      = GR.dxjs
+    cdef wp_cy[:, ::1] corf_is   = GR.corf_is
+    cdef wp_cy[:, ::1] corf      = GR.corf
+    cdef wp_cy[:, ::1] latis_rad = GR.latis_rad
+    cdef wp_cy[:, ::1] lat_rad   = GR.lat_rad
+    cdef wp_cy[:, ::1] A         = GR.A
 
     cdef int k, kp1, ks, i, im1, ip1, i_s, ism1, isp1, j, jm1, jp1, js, jsm1, jsp1
 
-    cdef double diff_UWIND, diff_VWIND, coriolis_UWIND, coriolis_VWIND, \
+    cdef wp_cy diff_UWIND, diff_VWIND, coriolis_UWIND, coriolis_VWIND, \
                 preGrad_UWIND, preGrad_VWIND, horAdv_UWIND, horAdv_VWIND, \
                 vertAdv_UWIND, vertAdv_VWIND
 
-    cdef double c_WIND_hor_dif_tau = WIND_hor_dif_tau
-    cdef double c_con_rE = con_rE
-    cdef double c_con_cp = con_cp
+    cdef wp_cy c_WIND_hor_dif_tau = WIND_hor_dif_tau
+    cdef wp_cy c_con_rE = con_rE
+    cdef wp_cy c_con_cp = con_cp
 
-    #cdef double[:,:, ::1] dUFLXdt = np.zeros( (nxs,ny ,nz) )
-    #cdef double[:,:, ::1] dVFLXdt = np.zeros( (nx ,nys,nz) )
+    #cdef wp_cy[:,:, ::1] dUFLXdt = np.zeros( (nxs,ny ,nz) )
+    #cdef wp_cy[:,:, ::1] dVFLXdt = np.zeros( (nx ,nys,nz) )
 
-    #cdef double[:,:, ::1] BFLX = np.zeros( (nx +2*nb,ny +2*nb,nz) )
-    #cdef double[:,:, ::1] CFLX = np.zeros( (nxs+2*nb,nys+2*nb,nz) )
-    #cdef double[:,:, ::1] DFLX = np.zeros( (nx +2*nb,nys+2*nb,nz) )
-    #cdef double[:,:, ::1] EFLX = np.zeros( (nx +2*nb,nys+2*nb,nz) )
+    #cdef wp_cy[:,:, ::1] BFLX = np.zeros( (nx +2*nb,ny +2*nb,nz) )
+    #cdef wp_cy[:,:, ::1] CFLX = np.zeros( (nxs+2*nb,nys+2*nb,nz) )
+    #cdef wp_cy[:,:, ::1] DFLX = np.zeros( (nx +2*nb,nys+2*nb,nz) )
+    #cdef wp_cy[:,:, ::1] EFLX = np.zeros( (nx +2*nb,nys+2*nb,nz) )
 
-    #cdef double[:,:, ::1] RFLX = np.zeros( (nx +2*nb,ny +2*nb,nz) )
-    #cdef double[:,:, ::1] QFLX = np.zeros( (nxs+2*nb,nys+2*nb,nz) )
-    #cdef double[:,:, ::1] SFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
-    #cdef double[:,:, ::1] TFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
+    #cdef wp_cy[:,:, ::1] RFLX = np.zeros( (nx +2*nb,ny +2*nb,nz) )
+    #cdef wp_cy[:,:, ::1] QFLX = np.zeros( (nxs+2*nb,nys+2*nb,nz) )
+    #cdef wp_cy[:,:, ::1] SFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
+    #cdef wp_cy[:,:, ::1] TFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
 
-    cdef double[:,:, ::1] WWIND_UWIND_ks = np.zeros( (nxs+2*nb,ny +2*nb,nzs) )
-    cdef double[:,:, ::1] WWIND_VWIND_ks = np.zeros( (nx +2*nb,nys+2*nb,nzs) )
+    cdef wp_cy[:,:, ::1] WWIND_UWIND_ks = np.zeros( (nxs+2*nb,ny +2*nb,nzs), dtype=wp_np)
+    cdef wp_cy[:,:, ::1] WWIND_VWIND_ks = np.zeros( (nx +2*nb,nys+2*nb,nzs), dtype=wp_np)
 
-    cdef double COLPAWWIND_is_ks, UWIND_ks
-    cdef double COLPAWWIND_js_ks, VWIND_ks
+    cdef wp_cy COLPAWWIND_is_ks, UWIND_ks
+    cdef wp_cy COLPAWWIND_js_ks, VWIND_ks
 
     dUFLXdt[:] = 0.
     dVFLXdt[:] = 0.
@@ -582,7 +588,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
 
 
 
-#cdef exchange_flux_BC_periodic_x(double[:,:, ::1] FIELD, nb, nx, nxs):
+#cdef exchange_flux_BC_periodic_x(wp_cy[:,:, ::1] FIELD, nb, nx, nxs):
 #
 #    #dimx,dimy,dimz = FIELD.shape
 #    #binds = np.arange(0,nb)

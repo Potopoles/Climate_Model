@@ -11,8 +11,11 @@ from soil_model import soil
 from org_microphysics import microphysics
 from org_turbulence import turbulence
 from constants import con_g, con_Rd, con_kappa, con_cp
-
 from numba import cuda
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
 
 ##############################################################################
 # ORDER OF FIELDS
@@ -33,66 +36,66 @@ class CPU_Fields:
         ##############################################################################
         # 2D FIELDS
         # pressure fields
-        self.COLP_OLD    = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
-        self.COLP        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
-        self.COLP_NEW    = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
-        self.dCOLPdt     = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        self.COLP_OLD    = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan, dtype=wp_np)
+        self.COLP        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan, dtype=wp_np)
+        self.COLP_NEW    = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan, dtype=wp_np)
+        self.dCOLPdt     = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan, dtype=wp_np)
         # secondary diagnostic fields
-        self.PSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
+        self.PSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan, dtype=wp_np)
         # constant fields
-        self.HSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan)
-        self.OCEANMSK    = np.full( ( GR.nx         , GR.ny                  ), np.nan)
+        self.HSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), np.nan, dtype=wp_np)
+        self.OCEANMSK    = np.full( ( GR.nx         , GR.ny                  ), np.nan, dtype=wp_np)
 
         ##############################################################################
         # 3D FIELDS
         # flux fields
-        self.UFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.dUFLXdt     = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.VFLX        = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
-        self.dVFLXdt     = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
-        self.FLXDIV      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.BFLX        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.CFLX        = np.full( ( GR.nxs+2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
-        self.DFLX        = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
-        self.EFLX        = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
-        self.RFLX        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.QFLX        = np.full( ( GR.nxs+2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
-        self.SFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.TFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        # velocity fields
-        self.UWIND_OLD   = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.UWIND       = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.VWIND_OLD   = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
-        self.VWIND       = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan)
-        self.WIND        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.WWIND       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
+        self.UFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.dUFLXdt     = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.VFLX        = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.dVFLXdt     = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.FLXDIV      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.BFLX        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.CFLX        = np.full( ( GR.nxs+2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.DFLX        = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.EFLX        = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.RFLX        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.QFLX        = np.full( ( GR.nxs+2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.SFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.TFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        # velocity field
+        self.UWIND_OLD   = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.UWIND       = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.VWIND_OLD   = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.VWIND       = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.WIND        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.WWIND       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan, dtype=wp_np)
         # temperature fields
-        self.POTT_OLD    = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.POTT        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.dPOTTdt     = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.POTTVB      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
-        self.TAIR        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.TAIRVB      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
+        self.POTT_OLD    = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.POTT        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.dPOTTdt     = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.POTTVB      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan, dtype=wp_np)
+        self.TAIR        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.TAIRVB      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan, dtype=wp_np)
         # primary diagnostic fields
-        self.PHI         = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.PHIVB       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
-        self.PVTF        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.PVTFVB      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan)
+        self.PHI         = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.PHIVB       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan, dtype=wp_np)
+        self.PVTF        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.PVTFVB      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), np.nan, dtype=wp_np)
         # secondary diagnostic fields
-        self.PAIR        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
-        self.RHO         = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan)
+        self.PAIR        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+        self.RHO         = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
         # radiation fields
-        self.dPOTTdt_RAD = np.full( ( GR.nx         , GR.ny         , GR.nz  ), np.nan)
+        self.dPOTTdt_RAD = np.full( ( GR.nx         , GR.ny         , GR.nz  ), np.nan, dtype=wp_np)
         # microphysics fields
-        self.QV_OLD      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan) 
-        self.QV          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan) 
-        self.dQVdt       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan) 
-        self.QC_OLD      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan) 
-        self.QC          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan) 
-        self.dQCdt       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan) 
-        self.dQVdt_MIC   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), np.nan)
-        self.dQCdt_MIC   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), np.nan)
-        self.dPOTTdt_MIC = np.full( ( GR.nx         , GR.ny         , GR.nz  ), np.nan)
+        self.QV_OLD      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np) 
+        self.QV          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np) 
+        self.dQVdt       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np) 
+        self.QC_OLD      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np) 
+        self.QC          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np) 
+        self.dQCdt       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np) 
+        self.dQVdt_MIC   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), np.nan, dtype=wp_np)
+        self.dQCdt_MIC   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), np.nan, dtype=wp_np)
+        self.dPOTTdt_MIC = np.full( ( GR.nx         , GR.ny         , GR.nz  ), np.nan, dtype=wp_np)
 
 
 class GPU_Fields:
@@ -304,7 +307,7 @@ def initialize_fields(GR, subgrids, F):
 
 
 def random2D(GR, FIELD, pert):
-    FIELD = FIELD + pert*np.random.rand(FIELD.shape[0], FIELD.shape[1])
+    FIELD[:] = FIELD[:] + pert*np.random.rand(FIELD.shape[0], FIELD.shape[1])
     return(FIELD)
 
 def gaussian2D(GR, FIELD, pert, lon0_rad, lat0_rad, lonSig_rad, latSig_rad):

@@ -1,5 +1,10 @@
 import numpy as np
 import time
+from namelist import wp
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
 
 
 class soil:
@@ -30,37 +35,37 @@ class soil:
         self.OCEANMSK = np.zeros( ( GR.nx, GR.ny ), np.int )
         self.OCEANMSK[self.HSURF[GR.iijj] <= 100] = 1
 
-        self.DEPTH = np.full( ( GR.nx, GR.ny ), self.depth_soil )
+        self.DEPTH = np.full( ( GR.nx, GR.ny ), self.depth_soil , dtype=wp_np)
         self.DEPTH[self.OCEANMSK == 1] = self.depth_ocean
 
-        self.CP = np.full( ( GR.nx, GR.ny ), self.con_cp_soil )
+        self.CP = np.full( ( GR.nx, GR.ny ), self.con_cp_soil , dtype=wp_np)
         self.CP[self.OCEANMSK == 1] = self.con_cp_ocean
 
-        self.RHO = np.full( ( GR.nx, GR.ny ), self.rho_soil )
+        self.RHO = np.full( ( GR.nx, GR.ny ), self.rho_soil , dtype=wp_np)
         self.RHO[self.OCEANMSK == 1] = self.rho_water
 
 
         # DYNAMIC FIELDS
-        self.TSOIL = np.full( ( GR.nx, GR.ny, self.nz_soil ), np.nan)
+        self.TSOIL = np.full( ( GR.nx, GR.ny, self.nz_soil ), np.nan, dtype=wp_np)
         self.TSOIL[:,:,0] = 295 - np.sin(GR.lat_rad[GR.iijj])**2*25
 
-        self.MOIST = np.full( ( GR.nx, GR.ny ), self.moisture_soil )
+        self.MOIST = np.full( ( GR.nx, GR.ny ), self.moisture_soil , dtype=wp_np)
         self.MOIST[self.OCEANMSK == 1] = self.moisture_ocean
-        self.EVAPITY = np.zeros( ( GR.nx, GR.ny ) ) # mm
+        self.EVAPITY = np.zeros( ( GR.nx, GR.ny ) , dtype=wp_np) # mm
         self.EVAPITY[self.OCEANMSK == 1] = 1
 
-        self.ALBEDOSW = np.full( ( GR.nx, GR.ny ), np.nan) 
-        self.ALBEDOLW = np.full( ( GR.nx, GR.ny ), np.nan) 
+        self.ALBEDOSW = np.full( ( GR.nx, GR.ny ), np.nan, dtype=wp_np) 
+        self.ALBEDOLW = np.full( ( GR.nx, GR.ny ), np.nan, dtype=wp_np) 
         self.ALBEDOSW, self.ALBEDOLW = self.calc_albedo(GR, self.ALBEDOSW, self.ALBEDOLW, 
                                                             self.TSOIL, self.OCEANMSK)
 
-        self.RAINRATE = np.zeros( ( GR.nx, GR.ny ) ) # mm/s
-        self.ACCRAIN = np.zeros( ( GR.nx, GR.ny ) ) # mm
+        self.RAINRATE = np.zeros( ( GR.nx, GR.ny ) , dtype=wp_np) # mm/s
+        self.ACCRAIN = np.zeros( ( GR.nx, GR.ny ) , dtype=wp_np) # mm
 
 
     def advance_timestep(self, GR, RAD, MIC):
 
-        dTSURFdt = np.zeros( (GR.nx, GR.ny) )
+        dTSURFdt = np.zeros( (GR.nx, GR.ny) , dtype=wp_np)
 
         if RAD.i_radiation > 0:
             dTSURFdt = (RAD.LWFLXNET[:,:,GR.nzs-1] + RAD.SWFLXNET[:,:,GR.nzs-1])/ \

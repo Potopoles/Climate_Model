@@ -1,8 +1,5 @@
 from namelist import QV_hor_dif_tau, wp
-
 from numba import cuda, jit
-if wp == 'float64':
-    from numba import float64
 
 i_hor_adv      = 1
 i_vert_adv     = 1

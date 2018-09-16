@@ -2,11 +2,8 @@ import time
 import numpy as np
 from boundaries_cuda import exchange_BC_gpu
 from constants import con_cp, con_rE, con_Rd
-from namelist import WIND_hor_dif_tau, i_wind_tendency, wp
-
+from namelist import wp, WIND_hor_dif_tau, i_wind_tendency
 from numba import cuda, jit
-if wp == 'float64':
-    from numba import float64
 from math import cos, sin
 
 i_hor_adv  = 1
@@ -28,9 +25,9 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
     stream.synchronize()
 
     WWIND_UWIND_ks = cuda.device_array( (GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs), \
-                                        dtype=UWIND.dtype )
+                                        dtype=UWIND.dtype)
     WWIND_VWIND_ks = cuda.device_array( (GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs), \
-                                        dtype=VWIND.dtype )
+                                        dtype=VWIND.dtype)
 
 
     if i_wind_tendency:

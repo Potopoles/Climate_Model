@@ -6,17 +6,20 @@ cimport numpy as np
 import cython
 from cython.parallel import prange 
 
+ctypedef fused wp_cy:
+    double
+    float
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef colp_tendency_jacobson_c(GR, \
-                                double[:,   ::1] COLP,
-                                double[:,:, ::1] UWIND,
-                                double[:,:, ::1] VWIND,
-                                double[:,   ::1] dCOLPdt,
-                                double[:,:, ::1] UFLX,
-                                double[:,:, ::1] VFLX,
-                                double[:,:, ::1] FLXDIV):
+                                wp_cy[:,   ::1] COLP,
+                                wp_cy[:,:, ::1] UWIND,
+                                wp_cy[:,:, ::1] VWIND,
+                                wp_cy[:,   ::1] dCOLPdt,
+                                wp_cy[:,:, ::1] UFLX,
+                                wp_cy[:,:, ::1] VFLX,
+                                wp_cy[:,:, ::1] FLXDIV):
 
     cdef int c_njobs = njobs
 
@@ -28,14 +31,14 @@ cpdef colp_tendency_jacobson_c(GR, \
     cdef int nz  = GR.nz
     cdef int i, im1, ip1, i_s, ism1, j, jm1, jp1, js, jsm1, k, km1
 
-    cdef double dy = GR.dy
-    cdef double num_dif
-    cdef double c_COLP_hor_dif_tau = COLP_hor_dif_tau
-    cdef double flux_div_sum
+    cdef wp_cy dy = GR.dy
+    cdef wp_cy num_dif
+    cdef wp_cy c_COLP_hor_dif_tau = COLP_hor_dif_tau
+    cdef wp_cy flux_div_sum
 
-    cdef double[     ::1] dsigma  = GR.dsigma
-    cdef double[:,   ::1] dxjs    = GR.dxjs
-    cdef double[:,   ::1] A       = GR.A
+    cdef wp_cy[     ::1] dsigma  = GR.dsigma
+    cdef wp_cy[:,   ::1] dxjs    = GR.dxjs
+    cdef wp_cy[:,   ::1] A       = GR.A
 
 
     for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='guided'):
@@ -81,7 +84,7 @@ cpdef colp_tendency_jacobson_c(GR, \
 
     ## NUMERICAL DIFUSION 
     if COLP_hor_dif_tau > 0:
-        raise NotImplementedError('This part of the code is not yet tested!')
+        raise NotImplementedError('No No pressure diffusion in Cython implemented!')
     #    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #    #for i   in range(nb,nx +nb):
     #        im1 = i - 1
@@ -105,10 +108,10 @@ cpdef colp_tendency_jacobson_c(GR, \
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef vertical_wind_jacobson_c(GR, \
-                                double[:,   ::1] COLP_NEW,
-                                double[:,   ::1] dCOLPdt,
-                                double[:,:, ::1] FLXDIV,
-                                double[:,:, ::1] WWIND):
+                                wp_cy[:,   ::1] COLP_NEW,
+                                wp_cy[:,   ::1] dCOLPdt,
+                                wp_cy[:,:, ::1] FLXDIV,
+                                wp_cy[:,:, ::1] WWIND):
 
     cdef int c_njobs = njobs
 
@@ -118,9 +121,9 @@ cpdef vertical_wind_jacobson_c(GR, \
     cdef int nzs = GR.nzs
     cdef int i, j, ks, kss
 
-    cdef double flux_div_sum
+    cdef wp_cy flux_div_sum
 
-    cdef double[     ::1] sigma_vb  = GR.sigma_vb
+    cdef wp_cy[     ::1] sigma_vb  = GR.sigma_vb
 
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):

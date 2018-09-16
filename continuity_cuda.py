@@ -3,10 +3,11 @@ from namelist import  i_colp_tendency, COLP_hor_dif_tau, wp
 from grid import tpbv, tpbvs
 from boundaries_cuda import exchange_BC_gpu
 import time
-
 from numba import cuda, jit
 if wp == 'float64':
-    from numba import float64
+    from numba import float64 as wp_nb
+if wp == 'float32':
+    from numba import float32 as wp_nb
 
 @jit([wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:,:], '+wp], target='gpu')
 def calc_UFLX(UFLX, COLP, UWIND, dy):
@@ -66,7 +67,7 @@ def calc_dCOLPdt(dCOLPdt, FLXDIV):
 
         tz = cuda.threadIdx.z
 
-        vert_sum = cuda.shared.array(tpbv, dtype=float64)
+        vert_sum = cuda.shared.array(tpbv, dtype=wp_nb)
         i, j, k = cuda.grid(3)
         vert_sum[tz] = FLXDIV[i,j,k]
 
@@ -122,7 +123,7 @@ def vertical_wind_jacobson_gpu(WWIND, dCOLPdt, FLXDIV, COLP_NEW, sigma_vb):
     ny  = FLXDIV.shape[1] - 2
     nzs = FLXDIV.shape[2]
 
-    vert_sum = cuda.shared.array(tpbvs, dtype=float64)
+    vert_sum = cuda.shared.array(tpbvs, dtype=wp_nb)
 
     i, j, ks = cuda.grid(3)
     vert_sum[ks] = FLXDIV[i,j,ks]

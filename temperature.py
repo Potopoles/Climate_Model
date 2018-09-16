@@ -2,6 +2,11 @@ import numpy as np
 import time
 from namelist import POTT_hor_dif_tau, i_temperature_tendency, \
                     i_radiation, i_microphysics
+from namelist import wp
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
 
 
 i_vert_adv  = 1
@@ -12,7 +17,7 @@ i_num_dif   = 1
 def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, \
                                     UFLX, VFLX, WWIND, dPOTTdt_RAD, dPOTTdt_MIC):
 
-    dPOTTdt = np.zeros( (GR.nx+2*GR.nb ,GR.ny+2*GR.nb ,GR.nz) )
+    dPOTTdt = np.zeros( (GR.nx+2*GR.nb ,GR.ny+2*GR.nb ,GR.nz) , dtype=wp_np)
 
     if i_temperature_tendency:
 

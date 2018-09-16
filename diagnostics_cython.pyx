@@ -1,28 +1,36 @@
 import numpy as np
 from constants import con_kappa, con_g, con_Rd
-from namelist import pTop, njobs
+from namelist import wp, pTop, njobs
 
 cimport numpy as np
 import cython
 from cython.parallel import prange 
 
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
+ctypedef fused wp_cy:
+    double
+    float
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef diagnose_secondary_fields_c(GR, \
-                                double[:,   ::1] COLP,
-                                double[:,:, ::1] PAIR,
-                                double[:,:, ::1] PHI,
-                                double[:,:, ::1] POTT,
-                                double[:,:, ::1] POTTVB,
-                                double[:,:, ::1] TAIR,
-                                double[:,:, ::1] TAIRVB,
-                                double[:,:, ::1] RHO,
-                                double[:,:, ::1] PVTF,
-                                double[:,:, ::1] PVTFVB,
-                                double[:,:, ::1] UWIND,
-                                double[:,:, ::1] VWIND,
-                                double[:,:, ::1] WIND):
+                                wp_cy[:,   ::1] COLP,
+                                wp_cy[:,:, ::1] PAIR,
+                                wp_cy[:,:, ::1] PHI,
+                                wp_cy[:,:, ::1] POTT,
+                                wp_cy[:,:, ::1] POTTVB,
+                                wp_cy[:,:, ::1] TAIR,
+                                wp_cy[:,:, ::1] TAIRVB,
+                                wp_cy[:,:, ::1] RHO,
+                                wp_cy[:,:, ::1] PVTF,
+                                wp_cy[:,:, ::1] PVTFVB,
+                                wp_cy[:,:, ::1] UWIND,
+                                wp_cy[:,:, ::1] VWIND,
+                                wp_cy[:,:, ::1] WIND):
 
     cdef int c_njobs = njobs
 
@@ -32,8 +40,8 @@ cpdef diagnose_secondary_fields_c(GR, \
     cdef int nz = GR.nz
     cdef int nzs = GR.nzs
     cdef int i, j, k, ks
-    cdef double c_con_kappa = con_kappa
-    cdef double c_con_Rd = con_Rd
+    cdef wp_cy c_con_kappa = con_kappa
+    cdef wp_cy c_con_Rd = con_Rd
 
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
@@ -56,10 +64,10 @@ cpdef diagnose_secondary_fields_c(GR, \
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef diagnose_POTTVB_jacobson_c(GR, njobs,
-        double[:,:, ::1] POTTVB,
-        double[:,:, ::1] POTT,
-        double[:,:, ::1] PVTF,
-        double[:,:, ::1] PVTFVB):
+        wp_cy[:,:, ::1] POTTVB,
+        wp_cy[:,:, ::1] POTT,
+        wp_cy[:,:, ::1] PVTF,
+        wp_cy[:,:, ::1] PVTFVB):
 
     cdef int c_njobs = njobs
 
@@ -102,8 +110,7 @@ cpdef diagnose_POTTVB_jacobson_c(GR, njobs,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef interp_COLPA_c(GR, njobs, 
-    double[:, ::1] COLP):
-
+    wp_cy[:, ::1] COLP):
 
     cdef int c_njobs = njobs
 
@@ -113,12 +120,12 @@ cpdef interp_COLPA_c(GR, njobs,
     cdef int ny  = GR.ny
     cdef int nys = GR.nys
 
-    cdef double[:, ::1] A         = GR.A
+    cdef wp_cy[:, ::1] A         = GR.A
 
     cdef int i, inb, im1, ip1, i_s, isnb, ism1, j, jnb, jm1, jp1, js, jsnb, jsm1
 
-    cdef double[:, ::1] COLPA_is = np.zeros( (nxs,ny ) )
-    cdef double[:, ::1] COLPA_js = np.zeros( (nx ,nys) )
+    cdef wp_cy[:, ::1] COLPA_is = np.zeros( (nxs,ny ), dtype=wp_np )
+    cdef wp_cy[:, ::1] COLPA_js = np.zeros( (nx ,nys), dtype=wp_np )
 
     for i_s in prange(nb,nxs +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i_s in range(nb,nxs +nb):

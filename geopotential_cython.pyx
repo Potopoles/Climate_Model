@@ -1,23 +1,29 @@
 import numpy as np
 from constants import con_g, con_kappa, con_cp
-from namelist import pTop
+from namelist import wp, pTop
 from boundaries import exchange_BC
+#from geopotential import diag_pvt_factor
 
 cimport numpy as np
 import cython
 from cython.parallel import prange 
 from libc.math cimport pow
 
-from geopotential import diag_pvt_factor
-
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
+ctypedef fused wp_cy:
+    double
+    float
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 #@cython.cdivision(True)
 cpdef diag_pvt_factor_c(GR, njobs,
-        double[:,   ::1] COLP,
-        double[:,:, ::1] PVTF,
-        double[:,:, ::1] PVTFVB):
+        wp_cy[:,   ::1] COLP,
+        wp_cy[:,:, ::1] PVTF,
+        wp_cy[:,:, ::1] PVTFVB):
 
     cdef int c_njobs = njobs
 
@@ -26,14 +32,14 @@ cpdef diag_pvt_factor_c(GR, njobs,
     cdef int ny  = GR.ny
     cdef int nz  = GR.nz
     cdef int nzs = GR.nzs
-    cdef double[   ::1] sigma_vb    = GR.sigma_vb
+    cdef wp_cy[   ::1] sigma_vb    = GR.sigma_vb
 
     cdef int i, j, k, ks, kp1
 
-    cdef double c_con_kappa = con_kappa
-    cdef double c_pTop = pTop
+    cdef wp_cy c_con_kappa = con_kappa
+    cdef wp_cy c_pTop = pTop
 
-    cdef double[:,:, ::1] PAIRVB = np.full( (nx+2*nb ,ny+2*nb ,nzs), np.nan )
+    cdef wp_cy[:,:, ::1] PAIRVB = np.full( (nx+2*nb ,ny+2*nb ,nzs), np.nan, wp_np )
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):
@@ -41,12 +47,7 @@ cpdef diag_pvt_factor_c(GR, njobs,
 
             for ks in range(0,nzs):
                 PAIRVB[i,j,ks  ] = c_pTop + sigma_vb[ks] * COLP[i,j]
-                # TODO: IN THE FOLLOWING COMMAND THE RESULT GETS DIFFERENT COMPARED 
-                # TO THE PYTHON VERSION!!!!
-                #PVTFVB[i,j,ks  ] = (PAIRVB[i,j,ks ]/100000.) ** c_con_kappa
-
-    # SOLUTION (inefficient): do it outside of loop
-    PVTFVB = np.power(np.asarray(PAIRVB)/100000, con_kappa)
+                PVTFVB[i,j,ks  ] = (PAIRVB[i,j,ks ]/100000.) ** c_con_kappa
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):
@@ -66,13 +67,13 @@ cpdef diag_pvt_factor_c(GR, njobs,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef diag_geopotential_jacobson_c(GR, njobs,
-        double[:,:, ::1] PHI,
-        double[:,:, ::1] PHIVB,
-        double[:,   ::1] HSURF,
-        double[:,:, ::1] POTT,
-        double[:,   ::1] COLP,
-        double[:,:, ::1] PVTF,
-        double[:,:, ::1] PVTFVB):
+        wp_cy[:,:, ::1] PHI,
+        wp_cy[:,:, ::1] PHIVB,
+        wp_cy[:,   ::1] HSURF,
+        wp_cy[:,:, ::1] POTT,
+        wp_cy[:,   ::1] COLP,
+        wp_cy[:,:, ::1] PVTF,
+        wp_cy[:,:, ::1] PVTFVB):
 
     cdef int c_njobs = njobs
 
@@ -83,12 +84,13 @@ cpdef diag_geopotential_jacobson_c(GR, njobs,
     cdef int nzs = GR.nzs
 
     cdef int i, j, k, kp1
-    cdef double dphi
+    cdef wp_cy dphi
 
-    cdef double c_con_g = con_g
-    cdef double c_con_cp = con_cp
+    cdef wp_cy c_con_g = con_g
+    cdef wp_cy c_con_cp = con_cp
 
-    PVTF, PVTFVB = diag_pvt_factor(GR, np.asarray(COLP), np.asarray(PVTF), np.asarray(PVTFVB))
+    #PVTF, PVTFVB = diag_pvt_factor(GR, np.asarray(COLP), np.asarray(PVTF), np.asarray(PVTFVB))
+    PVTF, PVTFVB = diag_pvt_factor_c(GR, njobs, COLP, PVTF, PVTFVB)
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):
@@ -122,6 +124,7 @@ cpdef diag_geopotential_jacobson_c(GR, njobs,
     PHI = exchange_BC(GR, np.asarray(PHI))
 
     return(PHI, PHIVB, PVTF, PVTFVB)
+
 
 
 

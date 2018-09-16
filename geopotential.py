@@ -1,12 +1,16 @@
 import numpy as np
 from constants import con_g, con_Rd, con_kappa, con_cp
-from namelist import pTop
+from namelist import wp, pTop
 from boundaries import exchange_BC
+if wp == 'float64':
+    from numpy import float64 as wp_np
+elif wp == 'float32':
+    from numpy import float32 as wp_np
 
 
 
 def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
-    PAIRVB = np.full( (GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs), np.nan )
+    PAIRVB = np.full( (GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs), np.nan, dtype=wp_np)
 
     # TODO: WHY IS PAIRVB NOT FILLED AT UPPERMOST AND LOWER MOST HALFLEVEL??? 
     for ks in range(0,GR.nzs):
