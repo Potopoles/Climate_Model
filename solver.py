@@ -4,14 +4,13 @@ from datetime import timedelta
 from grid import Grid
 from fields import initialize_fields, CPU_Fields, GPU_Fields
 from nc_IO import constant_fields_to_NC, output_to_NC
+from org_diagnostics import secondary_diagnostics
 from IO import write_restart
 from multiproc import create_subgrids
 from namelist import i_time_stepping, \
                     i_load_from_restart, i_save_to_restart, \
                     i_radiation, njobs, comp_mode, \
                     i_microphysics, i_soil
-from diagnostics import diagnose_secondary_fields
-from bin.diagnostics_cython import diagnose_secondary_fields_c
 from IO_helper_functions import print_ts_info, print_computation_time_info
 if i_time_stepping == 'MATSUNO':
     from matsuno import step_matsuno as time_stepper
@@ -64,23 +63,14 @@ while GR.ts < GR.nts:
     ####################################################################
     # SECONDARY DIAGNOSTICS (not related to dynamics)
     ####################################################################
-    #if i_radiation or i_microphysics or i_soil:
-    #    t_start = time.time()
-    #    PAIR, TAIR, TAIRVB, RHO, WIND = \
-    #            diagnose_secondary_fields(GR, CF.COLP, PAIR, PHI, POTT, POTTVB,
-    #                                    TAIR, TAIRVB, RHO,\
-    #                                    PVTF, PVTFVB, UWIND, VWIND, WIND)
-    #    #PAIR, TAIR, TAIRVB, RHO, WIND = \
-    #    #        diagnose_secondary_fields_c(GR, CF.COLP, PAIR, PHI, POTT, POTTVB,
-    #    #                                TAIR, TAIRVB, RHO,\
-    #    #                                PVTF, PVTFVB, UWIND, VWIND, WIND)
-    #    #PAIR = np.asarray(PAIR)
-    #    #TAIR = np.asarray(TAIR)
-    #    #TAIRVB = np.asarray(TAIRVB)
-    #    #RHO = np.asarray(RHO)
-    #    #WIND = np.asarray(WIND)
-    #    t_end = time.time()
-    #    GR.diag_comp_time += t_end - t_start
+    raise NotImplementedError('secondary diagnostics not updating for gpu')
+    t_start = time.time()
+    if comp_mode in [0,1]:
+        secondary_diagnostics(GR, CF)
+    elif comp_mode == 2:
+        secondary_diagnostics(GR, GF)
+    t_end = time.time()
+    GR.diag_comp_time += t_end - t_start
 
     ####################################################################
     # RADIATION

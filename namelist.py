@@ -88,18 +88,18 @@ output_fields = {
                 # flux fields
                 'UWIND'     : 1,                    #vp
                 'VWIND'     : 1,                    #vp
-                'WIND'      : 0,                    #vp
+                'WIND'      : 1,                    #vp
                 'WWIND'     : 0,
                 'VORT'      : 0,
                 # velocity fields
                 # temperature fields
                 'POTT'      : 1,                    #vp
-                'TAIR'      : 0,
+                'TAIR'      : 1,
                 # primary diagnostic fields
                 'PHI'       : 0,
                 # secondary diagnostic fields
-                'PAIR'      : 0,
-                'RHO'       : 0,
+                'PAIR'      : 1,
+                'RHO'       : 1,
                 # constant fields
                 # radiation fields
                 # microphysics fields
@@ -118,7 +118,7 @@ i_restart_nth_day = 1.00
 # PARALLEL AND DEVICE
 ####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
-comp_mode = 1
+comp_mode = 2
 # working precision (float64 or float32)
 wp = 'float32'
 # cython

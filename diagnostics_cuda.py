@@ -5,20 +5,30 @@ from namelist import pTop, wp
 from numba import cuda, jit
 
 
-def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
-                                PVTF, PVTFVB, UWIND, VWIND, WIND):
+@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]'], target='gpu')
+def diagnose_secondary_fields_vb_gpu(POTTVB, TAIRVB, PVTFVB):
+    nx = POTTVB.shape[0] - 2
+    ny = POTTVB.shape[1] - 2
+    i, j, ks = cuda.grid(3)
+    if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+        TAIRVB[i,j,ks] = POTTVB[i,j,ks] * PVTFVB[i,j,ks]
 
-    TAIR[GR.iijj] = POTT[GR.iijj] * PVTF[GR.iijj]
-    TAIRVB[GR.iijj] = POTTVB[GR.iijj] * PVTFVB[GR.iijj]
-    PAIR[GR.iijj] = 100000*np.power(PVTF[GR.iijj], 1/con_kappa)
-    RHO[GR.iijj] = PAIR[GR.iijj] / (con_Rd * TAIR[GR.iijj])
+@jit([wp+'[:,:  ], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+
+      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ 
+      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]  '], target='gpu')
+def diagnose_secondary_fields_gpu(COLP, PAIR, PHI, POTT, 
+                                    TAIR, RHO, PVTF,
+                                    UWIND, VWIND, WIND):
+    nx = COLP.shape[0] - 2
+    ny = COLP.shape[1] - 2
+    i, j, k = cuda.grid(3)
+    if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+        TAIR[i,j,k] = POTT[i,j,k] * PVTF[i,j,k]
+        PAIR[i,j,k] = 100000.*(PVTF[i,j,k])**(1./con_kappa)
+        RHO [i,j,k] = PAIR[i,j,k] / (con_Rd * TAIR[i,j,k])
+        WIND[i,j,k] = ( ((UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k])/2.)**2. + \
+                        ((VWIND[i  ,j  ,k] + VWIND[i  ,j+1,k])/2.)**2. ) ** (1./2.)
 
-    for k in range(0,GR.nz):
-        WIND[:,:,k][GR.iijj] = np.sqrt( ((UWIND[:,:,k][GR.iijj] + \
-                                        UWIND[:,:,k][GR.iijj_ip1])/2)**2 + \
-                        ((VWIND[:,:,k][GR.iijj] + VWIND[:,:,k][GR.iijj_jp1])/2)**2 )
-
-    return(PAIR, TAIR, TAIRVB, RHO, WIND)
 
 
 @jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]'], target='gpu')
