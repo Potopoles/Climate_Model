@@ -110,15 +110,15 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 0
-i_save_to_restart = 0
-i_restart_nth_day = 0.10
+i_load_from_restart = 1
+i_save_to_restart = 1
+i_restart_nth_day = 0.01
 
 ####################################################################
 # PARALLEL AND DEVICE
 ####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
-comp_mode = 1
+comp_mode = 2
 # working precision (float64 or float32)
 wp = 'float32'
 # cython
@@ -131,7 +131,7 @@ njobs = 4
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
-i_simulation_mode = 0
+i_simulation_mode = 1
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 0:
@@ -166,14 +166,14 @@ elif i_simulation_mode == 1:
 
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
-    nz = 32
-    lat0_deg = -81
-    lat1_deg = 81
-    dlat_deg = 0.5
-    dlon_deg = 0.5
+    nz = 16
+    lat0_deg = -80
+    lat1_deg = 80
+    dlat_deg = 2.0
+    dlon_deg = 2.0
     output_path = '../output_run'
-    i_sim_n_days = 0.10
-    i_out_nth_hour = 0.1
+    i_sim_n_days = 40.00
+    i_out_nth_hour = 12
     i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0

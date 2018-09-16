@@ -4,7 +4,7 @@ import pickle
 from netCDF4 import Dataset
 from scipy.interpolate import interp2d
 from boundaries import exchange_BC_rigid_y, exchange_BC_periodic_x
-from namelist import wp, pTop, n_topo_smooth, tau_topo_smooth
+from namelist import wp, pTop, n_topo_smooth, tau_topo_smooth, comp_mode
 from geopotential import diag_pvt_factor
 from constants import con_kappa
 from scipy import interpolate
@@ -19,12 +19,10 @@ elif wp == 'float32':
 def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
     filename = 'verticalProfileTable.dat'
     profile = np.loadtxt(filename)
-    #print(profile)
     zsurf_test = np.mean(HSURF[GR.iijj])
     top_ind = np.argwhere(profile[:,2] >= pTop).squeeze()[-1]
     ztop_test = profile[top_ind,0] + (profile[top_ind,2] - pTop)/ \
                             (profile[top_ind,4]*profile[top_ind,1])
-
 
     ks = np.arange(0,GR.nzs)
     z_vb_test   = np.zeros(GR.nzs, dtype=wp_np)
@@ -78,56 +76,80 @@ def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
     return(GR, COLP, PSURF, POTT, TAIR)
 
 
-def write_restart(GR, COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND,\
-                        UFLX, VFLX, \
-                        HSURF, POTT, TAIR, TAIRVB, RHO,\
-                        POTTVB, PVTF, PVTFVB,
-                        RAD, SOIL, MIC, TURB):
+def write_restart(GR, CF, RAD, SOIL, MIC, TURB):
 
     print('###########################################')
     print('###########################################')
-    print('write RESTART')
+    print('WRITE RESTART')
     print('###########################################')
     print('###########################################')
  
     filename = '../restart/'+str(GR.dlat_deg).zfill(2) + '_' +\
                             str(GR.dlon_deg).zfill(2) + '_' +\
                             str(GR.nz).zfill(3)+'.pkl'
+
+    # temporarily remove unpicklable GR objects for GPU 
+    if hasattr(GR, 'stream'):
+
+        stream      =   GR.stream     
+        zonal       =   GR.zonal   
+        zonals      =   GR.zonals  
+        zonalvb     =   GR.zonalvb 
+        merid       =   GR.merid   
+        merids      =   GR.merids  
+        meridvb     =   GR.meridvb 
+        Ad          =   GR.Ad         
+        dxjsd       =   GR.dxjsd      
+        corfd       =   GR.corfd      
+        corf_isd    =   GR.corf_isd   
+        lat_radd    =   GR.lat_radd   
+        latis_radd  =   GR.latis_radd 
+        dsigmad     =   GR.dsigmad    
+        sigma_vbd   =   GR.sigma_vbd  
+
+        del GR.stream     
+        del GR.zonal   
+        del GR.zonals  
+        del GR.zonalvb 
+        del GR.merid   
+        del GR.merids  
+        del GR.meridvb 
+        del GR.Ad         
+        del GR.dxjsd      
+        del GR.corfd      
+        del GR.corf_isd   
+        del GR.lat_radd   
+        del GR.latis_radd 
+        del GR.dsigmad    
+        del GR.sigma_vbd  
+
     out = {}
-    #GR.stream  = None 
-    #GR.zonal   = None 
-    #GR.zonals  = None 
-    #GR.zonalvb = None 
-    #GR.merid   = None 
-    #GR.merids  = None 
-    #GR.meridvb = None 
-    #GR.dsigma = None 
-    #GR.sigma_vb = None 
     out['GR'] = GR
-    out['COLP'] = COLP
-    out['PAIR'] = PAIR
-    out['PHI'] = PHI
-    out['PHIVB'] = PHIVB
-    out['UWIND'] = UWIND
-    out['VWIND'] = VWIND
-    out['WIND'] = WIND
-    out['WWIND'] = WWIND
-    out['UFLX'] = UFLX
-    out['VFLX'] = VFLX
-    out['HSURF'] = HSURF
-    out['POTT'] = POTT
-    out['TAIR'] = TAIR
-    out['TAIRVB'] = TAIRVB
-    out['RHO'] = RHO
-    out['POTTVB'] = POTTVB
-    out['PVTF'] = PVTF
-    out['PVTFVB'] = PVTFVB
+    out['CF'] = CF
     out['RAD'] = RAD
     out['SOIL'] = SOIL
     out['MIC'] = MIC
     out['TURB'] = TURB
     with open(filename, 'wb') as f:
         pickle.dump(out, f)
+
+    # restore unpicklable GR objects for GPU 
+    if comp_mode == 2:
+        GR.stream      =   stream     
+        GR.zonal       =   zonal   
+        GR.zonals      =   zonals  
+        GR.zonalvb     =   zonalvb 
+        GR.merid       =   merid   
+        GR.merids      =   merids  
+        GR.meridvb     =   meridvb 
+        GR.Ad          =   Ad         
+        GR.dxjsd       =   dxjsd      
+        GR.corfd       =   corfd      
+        GR.corf_isd    =   corf_isd   
+        GR.lat_radd    =   lat_radd   
+        GR.latis_radd  =   latis_radd 
+        GR.dsigmad     =   dsigmad    
+        GR.sigma_vbd   =   sigma_vbd  
 
 def load_restart_grid(dlat_deg, dlon_deg, nz):
     filename = '../restart/'+str(dlat_deg).zfill(2) + '_' +\
@@ -148,33 +170,12 @@ def load_restart_fields(GR):
     if os.path.exists(filename):
         with open(filename, 'rb') as f:
             inp = pickle.load(f)
-    COLP = inp['COLP']
-    PAIR = inp['PAIR']
-    PHI = inp['PHI']
-    PHIVB = inp['PHIVB']
-    UWIND = inp['UWIND']
-    VWIND = inp['VWIND']
-    WIND = inp['WIND']
-    WWIND = inp['WWIND']
-    UFLX = inp['UFLX']
-    VFLX = inp['VFLX']
-    HSURF = inp['HSURF']
-    POTT = inp['POTT']
-    TAIR = inp['TAIR']
-    TAIRVB = inp['TAIRVB']
-    RHO = inp['RHO']
-    POTTVB = inp['POTTVB']
-    PVTF = inp['PVTF']
-    PVTFVB = inp['PVTFVB']
+    CF = inp['CF']
     RAD = inp['RAD']
     SOIL = inp['SOIL'] 
     MIC = inp['MIC'] 
     TURB = inp['TURB'] 
-    return(COLP, PAIR, PHI, PHIVB, UWIND, VWIND, WIND, WWIND, \
-                UFLX, VFLX, \
-                HSURF, POTT, TAIR, TAIRVB, RHO, \
-                POTTVB, PVTF, PVTFVB,
-                RAD, SOIL, MIC, TURB)
+    return(CF, RAD, SOIL, MIC, TURB)
 
 def load_topo(GR, HSURF):
     filename = '../elevation/elev.1-deg.nc'

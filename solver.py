@@ -136,24 +136,26 @@ while GR.ts < GR.nts:
         # write file
         t_start = time.time()
         GR.nc_output_count += 1
-        #WIND, vmax, mean_wind, mean_temp, mean_colp = diagnostics(GR, \
-        #                                WIND, UWIND, VWIND, COLP, POTT)
         output_to_NC(GR, CF, RAD, SOIL, MIC)
         t_end = time.time()
         GR.IO_time += t_end - t_start
 
-    
 
     ####################################################################
     # WRITE RESTART FILE
     ####################################################################
     if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
-        write_restart(GR, CF.COLP, CF.PAIR, CF.PHI, CF.PHIVB, CF.UWIND,
-                        CF.VWIND, CF.WIND, CF.WWIND,
-                        CF.UFLX, CF.VFLX,
-                        CF.HSURF, CF.POTT, CF.TAIR, CF.TAIRVB, CF.RHO,
-                        CF.POTTVB, CF.PVTF, CF.PVTFVB,
-                        RAD, SOIL, MIC, TURB)
+        # copy GPU fields to CPU
+        if comp_mode == 2:
+            t_start = time.time()
+            GF.copy_fields_to_host(GR)
+            t_end = time.time()
+            GR.copy_time += t_end - t_start
+
+        t_start = time.time()
+        write_restart(GR, CF, RAD, SOIL, MIC, TURB)
+        t_end = time.time()
+        GR.IO_time += t_end - t_start
 
 
     GR.total_comp_time += time.time() - real_time_ts_start

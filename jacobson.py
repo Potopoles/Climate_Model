@@ -246,11 +246,14 @@ def proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
 
 
 
-def diagnose_fields_jacobson(GR, F):
+def diagnose_fields_jacobson(GR, F, on_host=False):
+    # on_host forces the execution to be performed on CPU.
+    # The function is called in initialize_fields() in field.py like this
+    # for first time setup, when GPU_Fields are not yet initialized.
 
     ##############################
     ##############################
-    if comp_mode == 0:
+    if comp_mode == 0 or on_host:
         F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
                      diag_geopotential_jacobson(GR, F.PHI, F.PHIVB, F.HSURF, 
                                                     F.POTT, F.COLP, F.PVTF, F.PVTFVB)
@@ -275,7 +278,7 @@ def diagnose_fields_jacobson(GR, F):
 
     ##############################
     ##############################
-    if comp_mode == 0:
+    if comp_mode == 0 or on_host:
         F.POTTVB = diagnose_POTTVB_jacobson(GR, F.POTTVB, F.POTT, F.PVTF, F.PVTFVB)
 
     elif comp_mode == 1:
