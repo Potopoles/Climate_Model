@@ -10,13 +10,14 @@ from multiproc import create_subgrids
 from namelist import i_time_stepping, \
                     i_load_from_restart, i_save_to_restart, \
                     i_radiation, njobs, comp_mode, \
-                    i_microphysics, i_soil
+                    i_microphysics, i_surface
 from IO_helper_functions import print_ts_info, print_computation_time_info
 if i_time_stepping == 'MATSUNO':
     from matsuno import step_matsuno as time_stepper
 elif i_time_stepping == 'RK4':
     from RK4 import step_RK4 as time_stepper
 
+import _thread
 
 ####################################################################
 # CREATE MODEL GRID
@@ -31,7 +32,7 @@ subgrids = {} # option
 # CREATE MODEL FIELDS
 ####################################################################
 CF = CPU_Fields(GR, subgrids)
-RAD, SOIL, MIC, TURB = initialize_fields(GR, subgrids, CF)
+RAD, SURF, MIC, TURB = initialize_fields(GR, subgrids, CF)
 if comp_mode == 2:
     GF = GPU_Fields(GR, subgrids, CF)
 else:
@@ -40,7 +41,7 @@ else:
 ####################################################################
 # OUTPUT AT TIMESTEP 0 (before start of simulation)
 ####################################################################
-constant_fields_to_NC(GR, CF, RAD, SOIL)
+constant_fields_to_NC(GR, CF, RAD, SURF)
 
 
 
@@ -72,32 +73,41 @@ while GR.ts < GR.nts:
     GR.diag_comp_time += t_end - t_start
 
     ####################################################################
+    # EARTH SURFACE
+    ####################################################################
+    if i_surface:
+        t_start = time.time()
+        SURF.advance_timestep(GR, CF, RAD)
+        t_end = time.time()
+        GR.soil_comp_time += t_end - t_start
+
+    ####################################################################
     # RADIATION
     ####################################################################
-    #if i_radiation:
-    #    t_start = time.time()
-    #    RAD.calc_radiation(GR, TAIR, TAIRVB, RHO, PHIVB, SOIL, MIC)
-    #    t_end = time.time()
-    #    GR.rad_comp_time += t_end - t_start
-    ##########
+    if i_radiation:
+        t_start = time.time()
+        if RAD.done == 1:
+            if comp_mode == 2:
+                GF.copy_radiation_fields_to_device(GR, CF)
+                GF.copy_radiation_fields_to_host(GR)
+            #t_start = time.time()
+            RAD.done = 0
+            #RAD.calc_radiation(GR, CF)
+            _thread.start_new_thread(RAD.calc_radiation, (GR, CF))
+            #t_end = time.time()
+            #GR.rad_comp_time += t_end - t_start
+        t_end = time.time()
+        GR.rad_comp_time += t_end - t_start
 
     ####################################################################
     # MICROPHYSICS
     ####################################################################
     #if i_microphysics:
     #    t_start = time.time()
-    #    MIC.calc_microphysics(GR, WIND, SOIL, TAIR, PAIR, RHO, PHIVB)
+    #    MIC.calc_microphysics(GR, WIND, SURF, TAIR, PAIR, RHO, PHIVB)
     #    t_end = time.time()
     #    GR.mic_comp_time += t_end - t_start
 
-    ####################################################################
-    # SOIL
-    ####################################################################
-    #if i_soil:
-    #    t_start = time.time()
-    #    SOIL.advance_timestep(GR, RAD, MIC)
-    #    t_end = time.time()
-    #    GR.soil_comp_time += t_end - t_start
 
     ####################################################################
     # DYNAMICS
@@ -125,7 +135,7 @@ while GR.ts < GR.nts:
         # write file
         t_start = time.time()
         GR.nc_output_count += 1
-        output_to_NC(GR, CF, RAD, SOIL, MIC)
+        output_to_NC(GR, CF, RAD, SURF, MIC)
         t_end = time.time()
         GR.IO_time += t_end - t_start
 
@@ -142,7 +152,7 @@ while GR.ts < GR.nts:
             GR.copy_time += t_end - t_start
 
         t_start = time.time()
-        write_restart(GR, CF, RAD, SOIL, MIC, TURB)
+        write_restart(GR, CF, RAD, SURF, MIC, TURB)
         t_end = time.time()
         GR.IO_time += t_end - t_start
 

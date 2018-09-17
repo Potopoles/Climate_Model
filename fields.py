@@ -7,11 +7,12 @@ from diagnostics import diagnose_secondary_fields, diagnose_POTTVB_jacobson
 from geopotential import diag_geopotential_jacobson, diag_pvt_factor
 from jacobson import diagnose_fields_jacobson
 from radiation.org_radiation import radiation
-from soil_model import soil
+from surface_model import surface
 from grid import tpbh, tpbv, tpbvs
 from org_microphysics import microphysics
 from org_turbulence import turbulence
 from constants import con_g, con_Rd, con_kappa, con_cp
+from surface_model import nz_soil
 from numba import cuda
 if wp == 'float64':
     from numpy import float64 as wp_np
@@ -26,9 +27,6 @@ elif wp == 'float32':
 # temperature fields
 # primary diagnostic fields (relevant for dynamics)
 # secondary diagnostic fields (not relevant for dynamics)
-# constant fields
-# radiation fields
-# microphysics fields
 
 class CPU_Fields:
     
@@ -52,10 +50,10 @@ class CPU_Fields:
         ##############################################################################
         self.PSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), 
                                     np.nan, dtype=wp_np)
+
         # constant fields
+        ##############################################################################
         self.HSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), 
-                                    np.nan, dtype=wp_np)
-        self.OCEANMSK    = np.full( ( GR.nx         , GR.ny                  ), 
                                     np.nan, dtype=wp_np)
 
         ##############################################################################
@@ -139,12 +137,31 @@ class CPU_Fields:
         self.RHO         = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                             np.nan, dtype=wp_np)
 
-        # radiation fields
+        ##############################################################################
+        # SURFACE
+        ##############################################################################
+        if i_surface: 
+            self.OCEANMASK   = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np)
+            self.SOILDEPTH   = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np)
+            self.SOILCP      = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np)
+            self.SOILRHO     = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np)
+            self.SOILTEMP    = np.full( ( GR.nx, GR.ny, nz_soil ), np.nan, dtype=wp_np)
+            self.SOILMOIST   = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np)
+            self.SOILEVAPITY = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np)
+            self.SURFALBEDSW = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np) 
+            self.SURFALBEDLW = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np) 
+            self.RAINRATE    = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np) 
+
+        ##############################################################################
+        # RADIATION
         ##############################################################################
         self.dPOTTdt_RAD = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
                             np.nan, dtype=wp_np)
+        self.LWFLXNET    = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp_np)
+        self.SWFLXNET    = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp_np)
 
-        # microphysics fields
+        ##############################################################################
+        # MICROPHYSICS
         ##############################################################################
         self.QV_OLD      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                             np.nan, dtype=wp_np) 
@@ -248,7 +265,7 @@ class GPU_Fields:
         # constant fields
         ##############################################################################
         self.HSURF            = cuda.to_device(CF.HSURF,        GR.stream)
-        #self.OCEANMSK         = cuda.to_device(CF.HSURF,        GR.stream) 
+        self.OCEANMSK         = cuda.to_device(CF.HSURF,        GR.stream) 
 
         ##############################################################################
         # 3D FIELDS
@@ -300,11 +317,30 @@ class GPU_Fields:
         self.PAIR             = cuda.to_device(CF.PAIR,         GR.stream)
         self.RHO              = cuda.to_device(CF.RHO,          GR.stream)
 
-        # radiation fields
+        ##############################################################################
+        # SURFACE
+        ##############################################################################
+        if i_surface: 
+            self.OCEANMASK    = cuda.to_device(CF.OCEANMASK,    GR.stream) 
+            self.SOILDEPTH    = cuda.to_device(CF.SOILDEPTH,    GR.stream) 
+            self.SOILCP       = cuda.to_device(CF.SOILCP,       GR.stream) 
+            self.SOILRHO      = cuda.to_device(CF.SOILRHO,      GR.stream) 
+            self.SOILTEMP     = cuda.to_device(CF.SOILTEMP,     GR.stream) 
+            self.SOILMOIST    = cuda.to_device(CF.SOILMOIST,    GR.stream) 
+            self.SOILEVAPITY  = cuda.to_device(CF.SOILEVAPITY,  GR.stream) 
+            self.SURFALBEDSW  = cuda.to_device(CF.SURFALBEDSW,  GR.stream) 
+            self.SURFALBEDLW  = cuda.to_device(CF.SURFALBEDLW,  GR.stream) 
+            self.RAINRATE     = cuda.to_device(CF.RAINRATE,     GR.stream) 
+
+        ##############################################################################
+        # RADIATION
         ##############################################################################
         self.dPOTTdt_RAD      = cuda.to_device(CF.dPOTTdt_RAD,  GR.stream) 
+        self.SWFLXNET         = cuda.to_device(CF.SWFLXNET,     GR.stream) 
+        self.LWFLXNET         = cuda.to_device(CF.LWFLXNET,     GR.stream) 
 
-        # microphysics fields
+        ##############################################################################
+        # MICROPHYSICS
         ##############################################################################
         self.QV_OLD           = cuda.to_device(CF.QV_OLD,       GR.stream) 
         self.QV               = cuda.to_device(CF.QV,           GR.stream) 
@@ -320,6 +356,7 @@ class GPU_Fields:
         GR.copy_time += t_end - t_start
 
 
+
     def copy_stepDiag_fields_to_host(self, GR):
         t_start = time.time()
         self.COLP              .to_host(GR.stream)
@@ -330,6 +367,33 @@ class GPU_Fields:
 
         t_end = time.time()
         GR.copy_time += t_end - t_start
+
+
+    def copy_radiation_fields_to_device(self, GR, CF):
+        t_start = time.time()
+
+        self.dPOTTdt_RAD      = cuda.to_device(CF.dPOTTdt_RAD,  GR.stream) 
+        self.SWFLXNET         = cuda.to_device(CF.SWFLXNET,     GR.stream) 
+        self.LWFLXNET         = cuda.to_device(CF.LWFLXNET,     GR.stream) 
+
+        t_end = time.time()
+        GR.copy_time += t_end - t_start
+
+    def copy_radiation_fields_to_host(self, GR):
+        t_start = time.time()
+        self.RHO               .to_host(GR.stream)
+        self.TAIR              .to_host(GR.stream)
+        self.PHIVB             .to_host(GR.stream) 
+        self.SOILTEMP          .to_host(GR.stream) 
+        self.SURFALBEDLW       .to_host(GR.stream) 
+        self.SURFALBEDSW       .to_host(GR.stream) 
+        self.QC                .to_host(GR.stream) 
+
+        GR.stream.synchronize()
+
+        t_end = time.time()
+        GR.copy_time += t_end - t_start
+
 
     def copy_all_fields_to_host(self, GR):
         t_start = time.time()
@@ -394,7 +458,7 @@ class GPU_Fields:
 
 def initialize_fields(GR, subgrids, CF):
     if i_load_from_restart:
-        CF, RAD, SOIL, MIC, TURB = load_restart_fields(GR)
+        CF, RAD, SURF, MIC, TURB = load_restart_fields(GR)
     else:
 
         ####################################################################
@@ -453,6 +517,16 @@ def initialize_fields(GR, subgrids, CF):
                                         CF.PVTF, CF.PVTFVB, CF.UWIND, CF.VWIND, CF.WIND)
 
         ####################################################################
+        # INITIALIZE NON-ATMOSPHERIC COMPONENTS
+        ####################################################################
+
+        # SURF MODEL
+        if i_surface:
+            SURF = surface(GR, CF)
+        else:
+            SURF = None
+
+        ####################################################################
         # INITIALIZE PROCESSES
         ####################################################################
 
@@ -464,8 +538,13 @@ def initialize_fields(GR, subgrids, CF):
 
         # RADIATION
         if i_radiation:
-            RAD = radiation(GR, i_radiation, CF.dPOTTdt_RAD)
-            RAD.calc_radiation(GR, CF.TAIR, CF.TAIRVB, CF.RHO, CF.PHIVB, SOIL, MIC)
+            if SURF is None:
+                raise ValueError('Soil model must be used for i_radiation > 0')
+            RAD = radiation(GR, i_radiation)
+            #t_start = time.time()
+            RAD.calc_radiation(GR, CF)
+            #t_end = time.time()
+            #GR.rad_comp_time += t_end - t_start
         else:
             RAD = None
 
@@ -476,19 +555,10 @@ def initialize_fields(GR, subgrids, CF):
         else:
             TURB = None
 
-        ####################################################################
-        # INITIALIZE NON-ATMOSPHERIC COMPONENTS
-        ####################################################################
-
-        # SOIL MODEL
-        if i_soil:
-            SOIL = soil(GR, CF.HSURF)
-        else:
-            SOIL = None
 
 
 
-    return(RAD, SOIL, MIC, TURB)
+    return(RAD, SURF, MIC, TURB)
 
 
 

@@ -3,11 +3,11 @@ import time
 from netCDF4 import Dataset
 from namelist import output_path, output_fields, pTop
 from namelist import i_radiation, \
-                     i_microphysics, i_soil
+                     i_microphysics, i_surface
 from IO_helper_functions import NC_output_diagnostics
 
 
-def output_to_NC(GR, F, RAD, SOIL, MIC):
+def output_to_NC(GR, F, RAD, SURF, MIC):
 
     print('###########################################')
     print('###########################################')
@@ -230,45 +230,57 @@ def output_to_NC(GR, F, RAD, SOIL, MIC):
         #SWFLXDIV_out = ncf.createVariable('SWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
         #LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
 
+    # SURF VARIABLES
+    if i_surface:
+        if output_fields['SURFTEMP']:
+            SURFTEMP_out = ncf.createVariable('SURFTEMP', 'f4', ('time', 'lat', 'lon',) )
+            SURFTEMP_out[-1,:,:] = F.SOILTEMP[:,:,0].T
+        #if i_microphysics:
+        #    SOILMOIST_out = ncf.createVariable('SOILMOIST', 'f4', ('time', 'lat', 'lon',) )
+        #    RAINRATE_out = ncf.createVariable('RAINRATE', 'f4', ('time', 'lat', 'lon',) )
+        #    ACCRAIN_out = ncf.createVariable('ACCRAIN', 'f4', ('time', 'lat', 'lon',) )
+        #    SOILEVAPITY_out = ncf.createVariable('SOILEVAPITY', 'f4', ('time', 'lat', 'lon',) )
+        if i_radiation:
+            if output_fields['SURFALBEDSW']:
+                SURFALBEDSW_out = ncf.createVariable('SURFALBEDSW', 'f4',
+                                                    ('time', 'lat', 'lon',) )
+                SURFALBEDSW_out[0,:,:] = F.SURFALBEDSW.T
+            if output_fields['SURFALBEDLW']:
+                SURFALBEDLW_out = ncf.createVariable('SURFALBEDLW', 'f4',
+                                                    ('time', 'lat', 'lon',) )
+                SURFALBEDLW_out[0,:,:] = F.SURFALBEDLW.T
+
+
     # MICROPHYSICS VARIABLES
     if i_microphysics:
-        RH_out = ncf.createVariable('RH', 'f4', ('time', 'level', 'lat', 'lon',) )
-        dQVdt_MIC_out = ncf.createVariable('dQVdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
-        dQCdt_MIC_out = ncf.createVariable('dQCdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
-        dPOTTdt_MIC_out=ncf.createVariable('dPOTTdt_MIC', 'f4', ('time', 'level', 'lat', 'lon',) )
+        RH_out         = ncf.createVariable('RH', 'f4', ('time', 'level', 'lat', 'lon',) )
+        dQVdt_MIC_out  = ncf.createVariable('dQVdt_MIC', 'f4',
+                                            ('time', 'level', 'lat', 'lon',) )
+        dQCdt_MIC_out  = ncf.createVariable('dQCdt_MIC', 'f4',
+                                            ('time', 'level', 'lat', 'lon',) )
+        dPOTTdt_MIC_out=ncf.createVariable('dPOTTdt_MIC', 'f4',
+                                            ('time', 'level', 'lat', 'lon',) )
 
-    # SOIL VARIABLES
-    if i_soil:
-        TSURF_out = ncf.createVariable('TSURF', 'f4', ('time', 'lat', 'lon',) )
-        if i_microphysics:
-            SOILMOIST_out = ncf.createVariable('SOILMOIST', 'f4', ('time', 'lat', 'lon',) )
-            RAINRATE_out = ncf.createVariable('RAINRATE', 'f4', ('time', 'lat', 'lon',) )
-            ACCRAIN_out = ncf.createVariable('ACCRAIN', 'f4', ('time', 'lat', 'lon',) )
-            EVAPITY_out = ncf.createVariable('EVAPITY', 'f4', ('time', 'lat', 'lon',) )
-        if i_radiation:
-            ALBSFCSW_out = ncf.createVariable('ALBSFCSW', 'f4', ('time', 'lat', 'lon',) )
 
 
     ################################################################################
     ################################################################################
     ################################################################################
 
-    if i_soil:
-        TSURF_out[-1,:,:] = SOIL.TSOIL[:,:,0].T
-        if i_microphysics:
-            SOILMOIST_out[-1,:,:] = SOIL.MOIST.T
-            RAINRATE_out[-1,:,:] = SOIL.RAINRATE.T*3600 # mm/h
-            ACCRAIN_out[-1,:,:] = SOIL.ACCRAIN.T # mm
-            EVAPITY_out[-1,:,:] = SOIL.EVAPITY.T
-        if i_radiation:
-            ALBSFCSW_out[0,:,:] = SOIL.ALBEDOSW.T
+    if i_surface:
+        pass
+        #if i_microphysics:
+        #    SOILMOIST_out[-1,:,:] = SURF.MOIST.T
+        #    RAINRATE_out[-1,:,:] = SURF.RAINRATE.T*3600 # mm/h
+        #    ACCRAIN_out[-1,:,:] = SURF.ACCRAIN.T # mm
+        #    SOILEVAPITY_out[-1,:,:] = SURF.SOILEVAPITY.T
 
 
     for k in range(0,GR.nz):
 
         # RADIATION VARIABLES
         if i_radiation > 0:
-            dPOTTdt_RAD_out[-1,k,:,:] = RAD.dPOTTdt_RAD[:,:,k].T * 3600
+            dPOTTdt_RAD_out[-1,k,:,:] = F.dPOTTdt_RAD[:,:,k].T * 3600
             #SWFLXDIV_out[-1,k,:,:] = RAD.SWFLXDIV[:,:,k].T 
             #LWFLXDIV_out[-1,k,:,:] = RAD.LWFLXDIV[:,:,k].T 
 
@@ -290,10 +302,10 @@ def output_to_NC(GR, F, RAD, SOIL, MIC):
             SWDIRFLXDO_out[-1,ks,:,:] = RAD.SWDIRFLXDO[:,:,ks].T
             SWFLXUP_out[-1,ks,:,:] = RAD.SWFLXUP[:,:,ks].T
             SWFLXDO_out[-1,ks,:,:] = RAD.SWFLXDO[:,:,ks].T
-            SWFLXNET_out[-1,ks,:,:] = RAD.SWFLXNET[:,:,ks].T
+            SWFLXNET_out[-1,ks,:,:] = F.SWFLXNET[:,:,ks].T
             LWFLXUP_out[-1,ks,:,:] = RAD.LWFLXUP[:,:,ks].T
             LWFLXDO_out[-1,ks,:,:] = RAD.LWFLXDO[:,:,ks].T
-            LWFLXNET_out[-1,ks,:,:] = RAD.LWFLXNET[:,:,ks].T
+            LWFLXNET_out[-1,ks,:,:] = F.LWFLXNET[:,:,ks].T
 
 
     ncf.close()
@@ -301,7 +313,7 @@ def output_to_NC(GR, F, RAD, SOIL, MIC):
 
 
 
-def constant_fields_to_NC(GR, F, RAD, SOIL):
+def constant_fields_to_NC(GR, F, RAD, SURF):
 
     print('###########################################')
     print('###########################################')
@@ -339,19 +351,17 @@ def constant_fields_to_NC(GR, F, RAD, SOIL):
     level[:] = GR.level
     levels[:] = GR.levels
 
+
     # VARIABLES
     HSURF_out = ncf.createVariable('HSURF', 'f4', ('lat', 'lon',) )
+    HSURF_out[:,:] = F.HSURF[GR.iijj].T
+
+    # SURF VARIABLES
+    if i_surface:
+        OCEANMASK_out = ncf.createVariable('OCEANMASK', 'f4', ('lat', 'lon',) )
+        OCEANMASK_out[:,:] = F.OCEANMASK.T
 
     # RADIATION VARIABLES
-
-    # SOIL VARIABLES
-    OCEANMSK_out = ncf.createVariable('OCEANMSK', 'f4', ('lat', 'lon',) )
-
-    HSURF_out[:,:] = F.HSURF[GR.iijj].T
-    OCEANMSK_out[:,:] = F.OCEANMSK.T
-    for k in range(0,GR.nz):
-        pass
-
     ncf.close()
 
 

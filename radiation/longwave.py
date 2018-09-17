@@ -11,7 +11,7 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 ###################################################################################
 ###################################################################################
 
-def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
+def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
 
     # LONGWAVE
     nu0 = 50
@@ -19,15 +19,15 @@ def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
     g_a = 0.0
     #albedo_surface_LW = 1
     #qc_col = np.minimum(qc_col, 0.003)
-    sigma_abs_gas_LW = np.repeat(sigma_abs_gas_LW_in, GR.nz)
+    sigma_abs_gas_LW = np.repeat(sigma_abs_gas_LW_in, nz)
     #sigma_abs_gas_LW = sigma_abs_gas_LW + qc_col*1E-5
-    sigma_sca_gas_LW = np.repeat(sigma_sca_gas_LW_in, GR.nz)
+    sigma_sca_gas_LW = np.repeat(sigma_sca_gas_LW_in, nz)
     #sigma_sca_gas_LW = sigma_sca_gas_LW + qc_col*1E-5
     sigma_tot_LW = sigma_abs_gas_LW + sigma_sca_gas_LW
 
     # optical thickness
     dtau = sigma_tot_LW * dz * rho_col
-    taus = np.zeros(GR.nzs)
+    taus = np.zeros(nzs)
     taus[1:] = np.cumsum(dtau)
 
     # single scattering albedo
@@ -37,20 +37,20 @@ def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
     # quadrature
     my1 = 1/np.sqrt(3)
 
-    gamma1 = np.zeros(GR.nz)
+    gamma1 = np.zeros(nz)
     gamma1[:] = ( 1 - omega_s*(1+g_a)/2 ) / my1
 
-    gamma2 = np.zeros(GR.nz)
+    gamma2 = np.zeros(nz)
     gamma2[:] = omega_s*(1-g_a) / (2*my1)
 
     # emission fields
     B_air = 2*np.pi * (1 - omega_s) * \
-            calc_planck_intensity(GR, nu0, nu1, tair_col)
+            calc_planck_intensity(nu0, nu1, tair_col)
     B_surf = emissivity_surface * np.pi * \
-            calc_planck_intensity(GR, nu0, nu1, tsurf)
+            calc_planck_intensity(nu0, nu1, tsurf)
 
     # calculate radiative fluxes
-    A_mat, g_vec = rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2,
+    A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
                         B_air, B_surf, albedo_surface_LW)
     #fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
     fluxes = scipy.linalg.solve_banded((2,2), A_mat, g_vec)
@@ -63,7 +63,7 @@ def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
     #print(up_diffuse)
     #print(net_flux)
     #import matplotlib.pyplot as plt
-    #zs = range(GR.nzs,0,-1)
+    #zs = range(nzs,0,-1)
     #line1, = plt.plot(down_diffuse, zs, label='down diff')
     #line3, = plt.plot(up_diffuse, zs, label='up diff', linestyle='--')
     #line4, = plt.plot(net_flux, zs, label='net', linewidth=2)
@@ -75,10 +75,10 @@ def org_longwave(GR, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
     return(down_diffuse, up_diffuse)
 
 
-def rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2, \
+def rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2, \
                         B_air, B_surf, albedo_surface):
 
-    g_vec = np.zeros(2*GR.nz+2)
+    g_vec = np.zeros(2*nz+2)
     g_vec[1:-1] = np.repeat(dtau*B_air, 2)
     g_vec[range(2,len(g_vec),2)] = - g_vec[range(2,len(g_vec),2)]
     g_vec[-1] = B_surf
@@ -88,28 +88,28 @@ def rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2, \
 
     d0_ = np.repeat(1+C1, 2)
     d0_[range(1,len(d0_),2)] = - d0_[range(1,len(d0_),2)]
-    d0 = np.ones(2*GR.nz+2); d0[1:-1] = d0_
+    d0 = np.ones(2*nz+2); d0[1:-1] = d0_
 
     dp1_ = np.repeat(-C2, 2)
     dp1_[range(1,len(dp1_),2)] = - dp1_[range(1,len(dp1_),2)]
-    dp1 = np.zeros(2*GR.nz+2); dp1[2:] = dp1_
+    dp1 = np.zeros(2*nz+2); dp1[2:] = dp1_
 
     dp2_ = np.repeat(-(1-C1), 2)
     dp2_[range(0,len(dp2_),2)] = 0
-    dp2 = np.zeros(2*GR.nz+2); dp2[2:] = dp2_
+    dp2 = np.zeros(2*nz+2); dp2[2:] = dp2_
 
     dm1_ = np.repeat(-C2, 2)
     dm1_[range(1,len(dm1_),2)] = - dm1_[range(1,len(dm1_),2)]
-    dm1 = np.zeros(2*GR.nz+2); dm1[:-2] = dm1_; dm1[-2] = -albedo_surface
+    dm1 = np.zeros(2*nz+2); dm1[:-2] = dm1_; dm1[-2] = -albedo_surface
 
     dm2_ = np.repeat(1-C1, 2)
     dm2_[range(1,len(dm2_),2)] = 0
-    dm2 = np.zeros(2*GR.nz+2); dm2[:-2] = dm2_
+    dm2 = np.zeros(2*nz+2); dm2[:-2] = dm2_
 
     #A_mat = scipy.sparse.diags( (dm2, dm1, d0, dp1[1:], dp2[2:]),
     #                            ( -2,  -1,  0,       1,       2),
-    #                            (GR.nzs*2, GR.nzs*2), format='csr' )
-    A_mat = np.zeros( ( 5, 2*GR.nzs ) )
+    #                            (nzs*2, nzs*2), format='csr' )
+    A_mat = np.zeros( ( 5, 2*nzs ) )
     A_mat[0,:] = dp2
     A_mat[1,:] = dp1
     A_mat[2,:] = d0
@@ -323,7 +323,7 @@ def rad_calc_LW_RTE_matrix(GR, dtau, gamma1, gamma2, \
 
 
 
-def calc_planck_intensity(GR, nu0, nu1, temp):
+def calc_planck_intensity(nu0, nu1, temp):
 
     nu0 = nu0*100 # 1/m
     nu1 = nu1*100 # 1/m
@@ -335,7 +335,7 @@ def calc_planck_intensity(GR, nu0, nu1, temp):
     dlambdas = np.diff(lambdas)
 
 
-    if type(temp) == np.float64:
+    if (type(temp) == np.float64) or (type(temp) == np.float32):
         B = np.zeros( (len(nus_center), 1) )
     else:
         B = np.zeros( (len(nus_center), len(temp)) )

@@ -11,22 +11,23 @@ from radiation.namelist_radiation import solar_constant_0, \
 ###################################################################################
 ###################################################################################
 
-def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
+def org_shortwave(nz, nzs, dz, solar_constant, rho_col, swintoa, mysun,
                     albedo_surface_SW, qc_col):
+
 
     g_a = 0.0
     #mysun = 1.0
     #albedo_surface_SW = 0
     #qc_col = np.minimum(qc_col, 0.003)
-    sigma_abs_gas_SW = np.repeat(sigma_abs_gas_SW_in, GR.nz)
+    sigma_abs_gas_SW = np.repeat(sigma_abs_gas_SW_in, nz)
     #sigma_abs_gas_SW = sigma_abs_gas_SW + qc_col*1E-5
-    sigma_sca_gas_SW = np.repeat(sigma_sca_gas_SW_in, GR.nz)
+    sigma_sca_gas_SW = np.repeat(sigma_sca_gas_SW_in, nz)
     #sigma_sca_gas_SW = sigma_sca_gas_SW + qc_col*1E-5
     sigma_tot_SW = sigma_abs_gas_SW + sigma_sca_gas_SW
 
     # optical thickness
     dtau = sigma_tot_SW * dz * rho_col
-    taus = np.zeros(GR.nzs)
+    taus = np.zeros(nzs)
     taus[1:] = np.cumsum(dtau)
     tau = taus[:-1] + np.diff(taus)/2
 
@@ -37,16 +38,16 @@ def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
     # quadrature
     my1 = 1/np.sqrt(3)
 
-    gamma1 = np.zeros(GR.nz)
+    gamma1 = np.zeros(nz)
     gamma1[:] = ( 1 - omega_s*(1+g_a)/2 ) / my1
 
-    gamma2 = np.zeros(GR.nz)
+    gamma2 = np.zeros(nz)
     gamma2[:] = omega_s*(1-g_a) / (2*my1)
 
-    gamma3 = np.zeros(GR.nz)
+    gamma3 = np.zeros(nz)
     gamma3[:] = (1 - 3 * g_a * my1 * mysun) / 2
 
-    gamma4 = np.zeros(GR.nz)
+    gamma4 = np.zeros(nz)
     gamma4[:] = 1 - gamma3
 
     lamb_2str = np.sqrt(gamma1**2 - gamma2**2)
@@ -57,11 +58,11 @@ def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
                             np.exp(-taus[-1]/mysun)
 
     # calculate radiative fluxes
-    down_diffuse = np.zeros( GR.nzs )
-    up_diffuse = np.full( GR.nzs, np.nan)
-    down_direct = np.full( GR.nzs, np.nan)
+    down_diffuse = np.zeros( nzs )
+    up_diffuse = np.full( nzs, np.nan)
+    down_direct = np.full( nzs, np.nan)
     down_diffuse[1:], up_diffuse[1:], down_direct[1:] = \
-                rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
+                rad_calc_SW_fluxes_toon(nz, nzs, dtau, gamma1, gamma2,
                             gamma3, gamma4, my1, solar_constant,
                             lamb_2str, tau_2str, tau, taus, omega_s, mysun,
                             surf_reflected_SW,
@@ -77,7 +78,7 @@ def org_shortwave(GR, dz, solar_constant, rho_col, swintoa, mysun,
 
     return(down_diffuse, up_diffuse, down_direct)
 
-def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
+def rad_calc_SW_fluxes_toon(nz, nzs, dtau, gamma1, gamma2,
         gamma3, gamma4, my1, solar_constant,
         lamb_2str, tau_2str, tau, taus, omega_s, mysun,
         surf_reflected_SW, albedo_surface_SW):
@@ -87,24 +88,24 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
     e3 = tau_2str +            np.exp( - lamb_2str * dtau )
     e4 = tau_2str -            np.exp( - lamb_2str * dtau )
 
-    lodd = np.arange(3,2*GR.nz,2) - 1
-    leven = np.arange(2,2*GR.nz,2) - 1
-    ninds = np.arange(0,GR.nz-1)
-    nindsp1 = np.arange(1,GR.nz)
+    lodd = np.arange(3,2*nz,2) - 1
+    leven = np.arange(2,2*nz,2) - 1
+    ninds = np.arange(0,nz-1)
+    nindsp1 = np.arange(1,nz)
 
-    dm1 = np.full(2*GR.nz, np.nan)
+    dm1 = np.full(2*nz, np.nan)
     dm1[lodd]  = e2[ninds  ] * e3[ninds  ] - e4[ninds  ] * e1[ninds  ]
     dm1[leven] = e2[nindsp1] * e1[ninds  ] - e3[ninds  ] * e4[nindsp1]
     dm1[0] = 0
     dm1[-1] = e1[-1] - albedo_surface_SW * e3[-1]
 
-    d0 = np.full(2*GR.nz, np.nan)
+    d0 = np.full(2*nz, np.nan)
     d0[lodd]  = e1[ninds  ] * e1[nindsp1] - e3[ninds  ] * e3[nindsp1]
     d0[leven] = e2[ninds  ] * e2[nindsp1] - e4[ninds  ] * e4[nindsp1]
     d0[0] = e1[0]
     d0[-1] = e2[-1] - albedo_surface_SW * e4[-1]
 
-    dp1 = np.full(2*GR.nz, np.nan)
+    dp1 = np.full(2*nz, np.nan)
     dp1[lodd]  = e3[ninds  ] * e4[nindsp1] - e1[ninds  ] * e2[nindsp1]
     dp1[leven] = e1[nindsp1] * e4[nindsp1] - e2[nindsp1] * e3[nindsp1]
     dp1[0] = - e2[0]
@@ -124,7 +125,7 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
             ( (gamma1 + 1 / mysun) * gamma4 + gamma2 * gamma3 ) / \
             ( lamb_2str**2 - 1 / mysun**2 )
      
-    src = np.full(2*GR.nz, np.nan)
+    src = np.full(2*nz, np.nan)
     src[lodd]  = e3[ninds ]  * (Cp_0  [nindsp1] - Cp_tau[ninds  ]) + \
                  e1[ninds ]  * (Cm_tau[ninds  ] - Cm_0  [nindsp1])
     src[leven] = e2[nindsp1] * (Cp_0  [nindsp1] - Cp_tau[ninds  ]) + \
@@ -134,9 +135,9 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
 
     #A_mat = scipy.sparse.diags( (dm1[1:], d0, dp1),
     #                            ( -1,  0,   1),
-    #                            (GR.nz*2, GR.nz*2), format='csr' )
+    #                            (nz*2, nz*2), format='csr' )
     #fluxes = scipy.sparse.linalg.spsolve(A_mat, src)
-    A_mat = np.zeros( ( 3, 2*GR.nz ) )
+    A_mat = np.zeros( ( 3, 2*nz ) )
     A_mat[0,1:] = dp1[:-1]
     A_mat[1,:] = d0
     A_mat[2,:-1] = dm1[1:]
@@ -152,7 +153,7 @@ def rad_calc_SW_fluxes_toon(GR, dtau, gamma1, gamma2,
     #net_flux = + down_diffuse + down_direct + up_diffuse 
     #print(net_flux)
     #import matplotlib.pyplot as plt
-    #zs = range(GR.nz,0,-1)
+    #zs = range(nz,0,-1)
     #line1, = plt.plot(down_diffuse, zs, label='down diff')
     #line2, = plt.plot(down_direct, zs, label='down_dir')
     #line3, = plt.plot(up_diffuse, zs, label='up diff', linestyle='--')

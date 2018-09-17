@@ -3,7 +3,7 @@ import time
 import copy
 from geopotential import diag_pvt_factor
 from constants import con_kappa, con_g 
-from namelist import wp, comp_mode
+from namelist import wp, comp_mode, nth_ts_time_step_diag
 from diagnostics import console_output_diagnostics
 #from diagnostics_cython import console_output_diagnostics_c
 #from diagnostics_cuda import console_output_diagnostics_gpu
@@ -67,10 +67,8 @@ def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
 
 def print_ts_info(GR, CF, GF):
     
-    ith_out_long = 10
 
-    if GR.ts % ith_out_long == 0:
-        print('################')
+    if GR.ts % nth_ts_time_step_diag == 0:
         t_start = time.time()
         if comp_mode == 2:
             GF.copy_stepDiag_fields_to_host(GR)
@@ -87,10 +85,10 @@ def print_ts_info(GR, CF, GF):
         # test for crash
         if (np.sum(np.isnan(CF.UWIND[GR.iisjj])) > 0) | (np.max(CF.UWIND[GR.iisjj]) > 500):
             raise ValueError('MODEL CRASH')
-    else:
-        print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,3))  + '\t day' )
+    #else:
+    #    print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,3))  + '\t day' )
 
-    if GR.ts % ith_out_long == 0:
+    if GR.ts % nth_ts_time_step_diag == 0:
         try:
             faster_than_reality = int(GR.sim_time_sec/GR.total_comp_time)
             percentage_done = np.round(GR.sim_time_sec/(GR.i_sim_n_days*36*24),2)

@@ -48,13 +48,13 @@ i_wind_tendency = 1
 i_temperature_tendency = 1
 i_colp_tendency = 1
 
+# ADDITIONAL MODEL COMPONENTS
+i_surace = 0
+
 # PHYSICS
 i_radiation = 0
 i_microphysics = 0
 i_turbulence = 0
-
-# ADDITIONAL MODEL COMPONENTS
-i_soil = 0
 
 # NUMERICAL DIFFUSION
 i_diffusion_on = 1
@@ -71,6 +71,8 @@ i_sim_n_days = 0.5
 ####################################################################
 # IO SETTINGS
 ####################################################################
+# TIME STEP OUTPUT
+nth_ts_time_step_diag = 10
 # NC OUTPUT
 i_out_nth_hour = 0.25
 output_path = '../output_run'
@@ -100,7 +102,10 @@ output_fields = {
                 # secondary diagnostic fields
                 'PAIR'      : 1,
                 'RHO'       : 1,
-                # constant fields
+                # surface fields
+                'SURFTEMP'       : 1,
+                'SURFALBEDSW'    : 1,
+                'SURFALBEDLW'    : 1,
                 # radiation fields
                 # microphysics fields
                 'QV'        : 0,                    #vp
@@ -112,7 +117,7 @@ output_fields = {
 # RESTART FILES
 i_load_from_restart = 0
 i_save_to_restart = 1
-i_restart_nth_day = 1.00
+i_restart_nth_day = 2.00
 
 ####################################################################
 # PARALLEL AND DEVICE
@@ -131,7 +136,7 @@ njobs = 4
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
-i_simulation_mode = 0
+i_simulation_mode = 2
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 0:
@@ -144,10 +149,10 @@ if i_simulation_mode == 0:
     output_path = '../output'
     i_sim_n_days = 0.50
     i_out_nth_hour = 3
-    i_radiation = 0
+    i_surface = 1
+    i_radiation = 3
     i_microphysics = 0
     i_turbulence = 0
-    i_soil = 0
 
 ## BENCHMARK EXPERIMENT
 elif i_simulation_mode == 1:
@@ -159,25 +164,25 @@ elif i_simulation_mode == 1:
     output_path = '../output_run'
     i_sim_n_days = 0.05
     i_out_nth_hour = 0.25
-    i_radiation = 0
+    i_surface = 1
+    i_radiation = 3
     i_microphysics = 0
     i_turbulence = 0
-    i_soil = 0
 
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
     nz = 16
-    lat0_deg = -80
-    lat1_deg = 80
-    dlat_deg = 2.0
-    dlon_deg = 2.0
+    lat0_deg = -81
+    lat1_deg = 81
+    dlat_deg = 3.0
+    dlon_deg = 3.0
     output_path = '../output_run'
-    i_sim_n_days = 40.00
-    i_out_nth_hour = 12
-    i_radiation = 0
+    i_sim_n_days = 25.00
+    i_out_nth_hour = 3
+    i_surface = 1
+    i_radiation = 3
     i_microphysics = 0
     i_turbulence = 0
-    i_soil = 0
 
 
 
