@@ -319,30 +319,42 @@ class GPU_Fields:
         t_end = time.time()
         GR.copy_time += t_end - t_start
 
-    def copy_fields_to_host(self, GR):
+
+    def copy_stepDiag_fields_to_host(self, GR):
+        t_start = time.time()
+        self.COLP              .to_host(GR.stream)
+        self.WIND              .to_host(GR.stream) 
+        self.POTT              .to_host(GR.stream) 
+
+        GR.stream.synchronize()
+
+        t_end = time.time()
+        GR.copy_time += t_end - t_start
+
+    def copy_all_fields_to_host(self, GR):
         t_start = time.time()
 
-        self.COLP_OLD         .to_host(GR.stream)
-        self.COLP             .to_host(GR.stream)
-        self.COLP_NEW         .to_host(GR.stream)
-        self.dCOLPdt          .to_host(GR.stream)
-        self.PSURF            .to_host(GR.stream)
-        self.HSURF            .to_host(GR.stream) 
-        #self.OCEANMSK         .to_host(GR.stream) 
+        self.COLP_OLD          .to_host(GR.stream)
+        self.COLP              .to_host(GR.stream)
+        self.COLP_NEW          .to_host(GR.stream)
+        self.dCOLPdt           .to_host(GR.stream)
+        self.PSURF             .to_host(GR.stream)
+        self.HSURF             .to_host(GR.stream) 
+        #self.OCEANMSK          .to_host(GR.stream) 
 
-        #self.UFLX             .to_host(GR.stream)  
-        #self.dUFLXdt          .to_host(GR.stream)  
-        #self.VFLX             .to_host(GR.stream)  
-        #self.dVFLXdt          .to_host(GR.stream)  
-        #self.FLXDIV           .to_host(GR.stream)  
-        #self.BFLX             .to_host(GR.stream)  
-        #self.CFLX             .to_host(GR.stream) 
-        #self.DFLX             .to_host(GR.stream) 
-        #self.EFLX             .to_host(GR.stream) 
-        #self.RFLX             .to_host(GR.stream) 
-        #self.QFLX             .to_host(GR.stream) 
-        #self.SFLX             .to_host(GR.stream) 
-        #self.TFLX             .to_host(GR.stream)
+        #self.UFLX              .to_host(GR.stream)  
+        #self.dUFLXdt           .to_host(GR.stream)  
+        #self.VFLX              .to_host(GR.stream)  
+        #self.dVFLXdt           .to_host(GR.stream)  
+        #self.FLXDIV            .to_host(GR.stream)  
+        #self.BFLX              .to_host(GR.stream)  
+        #self.CFLX              .to_host(GR.stream) 
+        #self.DFLX              .to_host(GR.stream) 
+        #self.EFLX              .to_host(GR.stream) 
+        #self.RFLX              .to_host(GR.stream) 
+        #self.QFLX              .to_host(GR.stream) 
+        #self.SFLX              .to_host(GR.stream) 
+        #self.TFLX              .to_host(GR.stream)
         self.UWIND_OLD         .to_host(GR.stream) 
         self.UWIND             .to_host(GR.stream) 
         self.VWIND_OLD         .to_host(GR.stream) 

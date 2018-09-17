@@ -143,7 +143,7 @@ if i_simulation_mode == 0:
     output_path = '../output_orig'
     output_path = '../output'
     i_sim_n_days = 0.50
-    i_out_nth_hour = 6
+    i_out_nth_hour = 3
     i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0

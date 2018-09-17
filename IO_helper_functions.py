@@ -3,35 +3,17 @@ import time
 import copy
 from geopotential import diag_pvt_factor
 from constants import con_kappa, con_g 
-from namelist import wp
+from namelist import wp, comp_mode
+from diagnostics import console_output_diagnostics
+#from diagnostics_cython import console_output_diagnostics_c
+#from diagnostics_cuda import console_output_diagnostics_gpu
+
+
 if wp == 'float64':
     from numpy import float64 as wp_np
 elif wp == 'float32':
     from numpy import float32 as wp_np
 
-def console_output_diagnostics(GR, WIND, UWIND, VWIND, COLP, POTT):
-    t_start = time.time()
-    vmax = 0
-    mean_wind = 0
-    mean_temp = 0
-    for k in range(0,GR.nz):
-        WIND[:,:,k][GR.iijj] = np.sqrt( ((UWIND[:,:,k][GR.iijj] + \
-                                        UWIND[:,:,k][GR.iijj_ip1])/2)**2 + \
-                        ((VWIND[:,:,k][GR.iijj] + VWIND[:,:,k][GR.iijj_jp1])/2)**2 )
-        vmax = max(vmax, np.max(WIND[:,:,k][GR.iijj]))
-        mean_wind += np.sum( WIND[:,:,k][GR.iijj]*COLP[GR.iijj]*GR.A[GR.iijj] ) / \
-                        np.sum( COLP[GR.iijj]*GR.A[GR.iijj] )
-        mean_temp += np.sum(POTT[:,:,k][GR.iijj]*GR.A[GR.iijj]*COLP[GR.iijj])/ \
-                np.sum(GR.A[GR.iijj]*COLP[GR.iijj])
-    mean_wind = mean_wind/GR.nz
-    mean_temp = mean_temp/GR.nz
-
-    mean_colp = np.sum(COLP[GR.iijj]*GR.A[GR.iijj])/np.sum(GR.A[GR.iijj])
-
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
-
-    return(WIND, vmax, mean_wind, mean_temp, mean_colp)
 
 
 def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
@@ -76,35 +58,62 @@ def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
 
 
 
-def print_ts_info(GR, WIND, UWIND, VWIND, COLP, POTT):
+####################################################################
+####################################################################
+####################################################################
 
-    #WIND, vmax, mean_wind, mean_temp, mean_colp = console_output_diagnostics(GR, \
-    #                                WIND, UWIND, VWIND, COLP, POTT)
 
-    #print('################')
-    #print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,2)) + \
-    #        '  days  vmax: ' + str(np.round(vmax,1)) + '  m/s vmean: ' + \
-    #        str(np.round(mean_wind,3)) + ' m/s Tmean: ' + \
-    #        str(np.round(mean_temp,7)) + \
-    #        '  K  COLP: ' + str(np.round(mean_colp,2)) + ' Pa')
 
-    print('################')
-    print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,2)))
 
-    try:
-        faster_than_reality = int(GR.sim_time_sec/GR.total_comp_time)
-        percentage_done = np.round(GR.sim_time_sec/(GR.i_sim_n_days*36*24),2)
-        to_go_sec = int((100/percentage_done - 1)*GR.total_comp_time)
-        tghr = int(np.floor(to_go_sec/3600))
-        tgmin = int(np.floor(to_go_sec - tghr*3600)/60)
-        tgsec = int(to_go_sec - tghr*3600 - tgmin*60)
-        to_go_string = 'Finish in ' + str(tghr) + ' h '+ str(tgmin) \
-                            + ' m ' + str(tgsec) + ' s.'
+def print_ts_info(GR, CF, GF):
+    
+    ith_out_long = 10
 
-        print(str(percentage_done) + ' %   ' + str(faster_than_reality) + \
-                ' faster than reality. ' + to_go_string)
-    except:
-        pass
+    if GR.ts % ith_out_long == 0:
+        print('################')
+        t_start = time.time()
+        if comp_mode == 2:
+            GF.copy_stepDiag_fields_to_host(GR)
+        vmax, mean_wind, mean_temp, mean_colp = console_output_diagnostics(GR, CF)
+        t_end = time.time()
+        GR.diag_comp_time += t_end - t_start
+
+        print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,3))  + '\t day' + \
+                '  days  vmax: ' + str(np.round(vmax,1)) + '  m/s vmean: ' + \
+                str(np.round(mean_wind,3)) + ' m/s Tmean: ' + \
+                str(np.round(mean_temp,7)) + \
+                '  K  COLP: ' + str(np.round(mean_colp,2)) + ' Pa')
+
+        # test for crash
+        if (np.sum(np.isnan(CF.UWIND[GR.iisjj])) > 0) | (np.max(CF.UWIND[GR.iisjj]) > 500):
+            raise ValueError('MODEL CRASH')
+    else:
+        print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,3))  + '\t day' )
+
+    if GR.ts % ith_out_long == 0:
+        try:
+            faster_than_reality = int(GR.sim_time_sec/GR.total_comp_time)
+            percentage_done = np.round(GR.sim_time_sec/(GR.i_sim_n_days*36*24),2)
+            to_go_sec = int((100/percentage_done - 1)*GR.total_comp_time)
+            tghr = int(np.floor(to_go_sec/3600))
+            tgmin = int(np.floor(to_go_sec - tghr*3600)/60)
+            tgsec = int(to_go_sec - tghr*3600 - tgmin*60)
+            to_go_string = 'Finish in ' + str(tghr) + ' h '+ str(tgmin) \
+                                + ' m ' + str(tgsec) + ' s.'
+
+            print(str(percentage_done) + ' %   ' + str(faster_than_reality) + \
+                    ' faster than reality. ' + to_go_string)
+            print('################')
+        except:
+            pass
+
+
+
+
+####################################################################
+####################################################################
+####################################################################
+
 
 
 

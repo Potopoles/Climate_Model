@@ -15,6 +15,8 @@ ctypedef fused wp_cy:
     float
 
 
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cpdef diagnose_secondary_fields_c(GR, \

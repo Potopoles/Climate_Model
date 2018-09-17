@@ -26,9 +26,9 @@ def secondary_diagnostics(GR, F):
 
     elif comp_mode == 2:
         diagnose_secondary_fields_gpu[GR.griddim, GR.blockdim, GR.stream] \
-                                (F.COLP, F.PAIR, F.PHI, F.POTT, F.POTTVB,
-                                F.TAIR, F.RHO,
-                                F.PVTF, F.PVTFVB, F.UWIND, F.VWIND, F.WIND)
+                                (F.COLP, F.PAIR, F.PHI, F.POTT,
+                                F.TAIR, F.RHO, F.PVTF,
+                                F.UWIND, F.VWIND, F.WIND)
         diagnose_secondary_fields_vb_gpu[GR.griddim_ks, GR.blockdim_ks, GR.stream] \
                                 (F.POTTVB, F.TAIRVB, F.PVTFVB)
 

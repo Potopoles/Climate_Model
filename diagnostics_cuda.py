@@ -5,6 +5,8 @@ from namelist import pTop, wp
 from numba import cuda, jit
 
 
+
+
 @jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]'], target='gpu')
 def diagnose_secondary_fields_vb_gpu(POTTVB, TAIRVB, PVTFVB):
     nx = POTTVB.shape[0] - 2
@@ -28,6 +30,8 @@ def diagnose_secondary_fields_gpu(COLP, PAIR, PHI, POTT,
         RHO [i,j,k] = PAIR[i,j,k] / (con_Rd * TAIR[i,j,k])
         WIND[i,j,k] = ( ((UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k])/2.)**2. + \
                         ((VWIND[i  ,j  ,k] + VWIND[i  ,j+1,k])/2.)**2. ) ** (1./2.)
+
+
 
 
 

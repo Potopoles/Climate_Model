@@ -4,7 +4,7 @@ from datetime import timedelta
 from grid import Grid
 from fields import initialize_fields, CPU_Fields, GPU_Fields
 from nc_IO import constant_fields_to_NC, output_to_NC
-from org_diagnostics import secondary_diagnostics
+from org_model_physics import secondary_diagnostics
 from IO import write_restart
 from multiproc import create_subgrids
 from namelist import i_time_stepping, \
@@ -34,11 +34,14 @@ CF = CPU_Fields(GR, subgrids)
 RAD, SOIL, MIC, TURB = initialize_fields(GR, subgrids, CF)
 if comp_mode == 2:
     GF = GPU_Fields(GR, subgrids, CF)
+else:
+    GF = None
 
 ####################################################################
 # OUTPUT AT TIMESTEP 0 (before start of simulation)
 ####################################################################
 constant_fields_to_NC(GR, CF, RAD, SOIL)
+
 
 
 ####################################################################
@@ -49,21 +52,17 @@ while GR.ts < GR.nts:
     ####################################################################
     # SIMULATION STATUS
     ####################################################################
-    # test for crash
-    #for k in range(0,GR.nz):
-    #    if (np.sum(np.isnan(UWIND[:,:,k][GR.iisjj])) > 0) | \
-    #            (np.max(UWIND[:,:,k][GR.iisjj]) > 500):
-    #        quit()
     real_time_ts_start = time.time()
     GR.ts += 1
     GR.sim_time_sec = GR.ts*GR.dt
     GR.GMT += timedelta(seconds=GR.dt)
-    print_ts_info(GR, CF.WIND, CF.UWIND, CF.VWIND, CF.COLP, CF.POTT)
+    t_start = time.time()
+    print_ts_info(GR, CF, GF)
+    t_end = time.time()
 
     ####################################################################
-    # SECONDARY DIAGNOSTICS (not related to dynamics)
+    # SECONDARY DIAGNOSTICS (related to physics)
     ####################################################################
-    raise NotImplementedError('secondary diagnostics not updating for gpu')
     t_start = time.time()
     if comp_mode in [0,1]:
         secondary_diagnostics(GR, CF)
@@ -119,7 +118,7 @@ while GR.ts < GR.nts:
         # copy GPU fields to CPU
         if comp_mode == 2:
             t_start = time.time()
-            GF.copy_fields_to_host(GR)
+            GF.copy_all_fields_to_host(GR)
             t_end = time.time()
             GR.copy_time += t_end - t_start
 
@@ -138,7 +137,7 @@ while GR.ts < GR.nts:
         # copy GPU fields to CPU
         if comp_mode == 2:
             t_start = time.time()
-            GF.copy_fields_to_host(GR)
+            GF.copy_all_fields_to_host(GR)
             t_end = time.time()
             GR.copy_time += t_end - t_start
 

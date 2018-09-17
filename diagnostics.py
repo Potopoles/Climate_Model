@@ -2,6 +2,28 @@ import numpy as np
 from constants import con_kappa, con_g, con_Rd
 from namelist import pTop
 
+def console_output_diagnostics(GR, F):
+
+    max_wind = np.max(F.WIND[GR.iijj])
+    
+    mean_wind = 0
+    mean_temp = 0
+    for k in range(0,GR.nz):
+        mean_wind += np.sum( F.WIND[:,:,k][GR.iijj]*F.COLP[GR.iijj]*GR.A[GR.iijj] ) / \
+                        np.sum( F.COLP[GR.iijj]*GR.A[GR.iijj] )
+        mean_temp += np.sum(F.POTT[:,:,k][GR.iijj]*GR.A[GR.iijj]*F.COLP[GR.iijj])/ \
+                np.sum(GR.A[GR.iijj]*F.COLP[GR.iijj])
+    mean_wind = mean_wind/GR.nz
+    mean_temp = mean_temp/GR.nz
+
+    mean_colp = np.sum(F.COLP[GR.iijj]*GR.A[GR.iijj])/np.sum(GR.A[GR.iijj])
+
+    return(max_wind, mean_wind, mean_temp, mean_colp)
+
+####################################################################
+####################################################################
+####################################################################
+
 
 def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB, TAIR, TAIRVB, RHO,\
                                 PVTF, PVTFVB, UWIND, VWIND, WIND):
