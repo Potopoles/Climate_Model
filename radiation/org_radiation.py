@@ -3,7 +3,7 @@ import scipy
 import time
 from radiation.namelist_radiation import \
         pseudo_rad_inpRate, pseudo_rad_outRate, \
-        rad_nth_hour 
+        rad_nth_hour, i_async_radiation
 from constants import con_cp, con_g
 from radiation.shortwave import rad_solar_zenith_angle, \
        calc_current_solar_constant
@@ -69,6 +69,7 @@ class radiation:
         self.done = 0
 
         self.i_radiation = i_radiation
+        self.i_async_radiation = i_async_radiation
 
 
         self.rad_nth_hour = rad_nth_hour 
@@ -122,11 +123,12 @@ class radiation:
         t_end = time.time()
         sim_t_end = GR.sim_time_sec
             
-        print('###########################################')
-        print('RADIATION DONE')
-        print('took ' + str(round(t_end-t_start,0)) + ' seconds.')
-        print('took ' + str(round((sim_t_end-sim_t_start)/3600,1)) + ' simulated hours.')
-        print('###########################################')
+        if self.i_async_radiation:
+            print('###########################################')
+            print('RADIATION DONE')
+            print('took ' + str(round(t_end-t_start,0)) + ' seconds.')
+            print('took ' + str(round((sim_t_end-sim_t_start)/3600,1)) + ' simulated hours.')
+            print('###########################################')
 
 
 

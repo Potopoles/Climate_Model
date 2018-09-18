@@ -72,6 +72,31 @@ while GR.ts < GR.nts:
     t_end = time.time()
     GR.diag_comp_time += t_end - t_start
 
+
+    ####################################################################
+    # RADIATION
+    ####################################################################
+    if i_radiation:
+        t_start = time.time()
+        # Asynchroneous Radiation
+        if RAD.i_async_radiation:
+            if RAD.done == 1:
+                if comp_mode == 2:
+                    GF.copy_radiation_fields_to_device(GR, CF)
+                    GF.copy_radiation_fields_to_host(GR)
+                RAD.done = 0
+                _thread.start_new_thread(RAD.calc_radiation, (GR, CF))
+        # Synchroneous Radiation
+        else:
+            if GR.ts % RAD.rad_nth_ts == 0:
+                if comp_mode == 2:
+                    GF.copy_radiation_fields_to_host(GR)
+                RAD.calc_radiation(GR, CF)
+                if comp_mode == 2:
+                    GF.copy_radiation_fields_to_device(GR, CF)
+        t_end = time.time()
+        GR.rad_comp_time += t_end - t_start
+
     ####################################################################
     # EARTH SURFACE
     ####################################################################
@@ -81,23 +106,6 @@ while GR.ts < GR.nts:
         t_end = time.time()
         GR.soil_comp_time += t_end - t_start
 
-    ####################################################################
-    # RADIATION
-    ####################################################################
-    if i_radiation:
-        t_start = time.time()
-        if RAD.done == 1:
-            if comp_mode == 2:
-                GF.copy_radiation_fields_to_device(GR, CF)
-                GF.copy_radiation_fields_to_host(GR)
-            #t_start = time.time()
-            RAD.done = 0
-            #RAD.calc_radiation(GR, CF)
-            _thread.start_new_thread(RAD.calc_radiation, (GR, CF))
-            #t_end = time.time()
-            #GR.rad_comp_time += t_end - t_start
-        t_end = time.time()
-        GR.rad_comp_time += t_end - t_start
 
     ####################################################################
     # MICROPHYSICS

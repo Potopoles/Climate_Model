@@ -1,12 +1,21 @@
+from namelist import comp_mode
 # PSEUDO RADIATION SCHEME (not realistic but fast)
 pseudo_rad_inpRate = 0.00020
 pseudo_rad_outRate = 5.0E-7
 
 # RADIATION SCHEME
-rad_nth_hour = 2.5
-#rad_nth_hour = 1.9
+#rad_nth_hour = 2.5
+rad_nth_hour = 1.9
 
-njobs_rad = 3
+if comp_mode == 2:
+    i_async_radiation = 1
+else:
+    i_async_radiation = 0
+
+if i_async_radiation:
+    njobs_rad = 3
+else:
+    njobs_rad = 4
 
 
 solar_constant_0 = 1365

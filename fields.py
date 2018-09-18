@@ -320,17 +320,17 @@ class GPU_Fields:
         ##############################################################################
         # SURFACE
         ##############################################################################
-        if i_surface: 
-            self.OCEANMASK    = cuda.to_device(CF.OCEANMASK,    GR.stream) 
-            self.SOILDEPTH    = cuda.to_device(CF.SOILDEPTH,    GR.stream) 
-            self.SOILCP       = cuda.to_device(CF.SOILCP,       GR.stream) 
-            self.SOILRHO      = cuda.to_device(CF.SOILRHO,      GR.stream) 
-            self.SOILTEMP     = cuda.to_device(CF.SOILTEMP,     GR.stream) 
-            self.SOILMOIST    = cuda.to_device(CF.SOILMOIST,    GR.stream) 
-            self.SOILEVAPITY  = cuda.to_device(CF.SOILEVAPITY,  GR.stream) 
-            self.SURFALBEDSW  = cuda.to_device(CF.SURFALBEDSW,  GR.stream) 
-            self.SURFALBEDLW  = cuda.to_device(CF.SURFALBEDLW,  GR.stream) 
-            self.RAINRATE     = cuda.to_device(CF.RAINRATE,     GR.stream) 
+        #if i_surface: 
+        #    self.OCEANMASK    = cuda.to_device(CF.OCEANMASK,    GR.stream) 
+        #    self.SOILDEPTH    = cuda.to_device(CF.SOILDEPTH,    GR.stream) 
+        #    self.SOILCP       = cuda.to_device(CF.SOILCP,       GR.stream) 
+        #    self.SOILRHO      = cuda.to_device(CF.SOILRHO,      GR.stream) 
+        #    self.SOILTEMP     = cuda.to_device(CF.SOILTEMP,     GR.stream) 
+        #    self.SOILMOIST    = cuda.to_device(CF.SOILMOIST,    GR.stream) 
+        #    self.SOILEVAPITY  = cuda.to_device(CF.SOILEVAPITY,  GR.stream) 
+        #    self.SURFALBEDSW  = cuda.to_device(CF.SURFALBEDSW,  GR.stream) 
+        #    self.SURFALBEDLW  = cuda.to_device(CF.SURFALBEDLW,  GR.stream) 
+        #    self.RAINRATE     = cuda.to_device(CF.RAINRATE,     GR.stream) 
 
         ##############################################################################
         # RADIATION
@@ -384,9 +384,9 @@ class GPU_Fields:
         self.RHO               .to_host(GR.stream)
         self.TAIR              .to_host(GR.stream)
         self.PHIVB             .to_host(GR.stream) 
-        self.SOILTEMP          .to_host(GR.stream) 
-        self.SURFALBEDLW       .to_host(GR.stream) 
-        self.SURFALBEDSW       .to_host(GR.stream) 
+        #self.SOILTEMP          .to_host(GR.stream) 
+        #self.SURFALBEDLW       .to_host(GR.stream) 
+        #self.SURFALBEDSW       .to_host(GR.stream) 
         self.QC                .to_host(GR.stream) 
 
         GR.stream.synchronize()
@@ -447,6 +447,20 @@ class GPU_Fields:
         self.dQVdt_MIC         .to_host(GR.stream)
         self.dQCdt_MIC         .to_host(GR.stream)
         self.dPOTTdt_MIC       .to_host(GR.stream)
+        ##############################################################################
+        # SURFACE
+        ##############################################################################
+        #if i_surface: 
+        #    self.OCEANMASK     .to_host(GR.stream) 
+        #    self.SOILDEPTH     .to_host(GR.stream) 
+        #    self.SOILCP        .to_host(GR.stream) 
+        #    self.SOILRHO       .to_host(GR.stream) 
+        #    self.SOILTEMP      .to_host(GR.stream) 
+        #    self.SOILMOIST     .to_host(GR.stream) 
+        #    self.SOILEVAPITY   .to_host(GR.stream) 
+        #    self.SURFALBEDSW   .to_host(GR.stream) 
+        #    self.SURFALBEDLW   .to_host(GR.stream) 
+        #    self.RAINRATE      .to_host(GR.stream) 
 
         GR.stream.synchronize()
 

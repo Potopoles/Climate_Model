@@ -147,7 +147,7 @@ if i_simulation_mode == 0:
     dlon_deg = 3
     output_path = '../output_orig'
     output_path = '../output'
-    i_sim_n_days = 0.50
+    i_sim_n_days = 0.25
     i_out_nth_hour = 3
     i_surface = 1
     i_radiation = 3
@@ -172,13 +172,13 @@ elif i_simulation_mode == 1:
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
     nz = 16
-    lat0_deg = -81
-    lat1_deg = 81
-    dlat_deg = 3.0
-    dlon_deg = 3.0
+    lat0_deg = -82
+    lat1_deg = 82
+    dlat_deg = 2.0
+    dlon_deg = 2.0
     output_path = '../output_run'
-    i_sim_n_days = 25.00
-    i_out_nth_hour = 3
+    i_sim_n_days = 450.00
+    i_out_nth_hour = 24
     i_surface = 1
     i_radiation = 3
     i_microphysics = 0
