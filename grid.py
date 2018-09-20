@@ -289,6 +289,15 @@ class Grid:
             #    self.latis_radd    = cuda.to_device(self.latis_rad, self.stream)
             #    # dsigma and sigma_vb are copied in fields (not very nice... TODO)
 
+    
+        # STUFF THAT SHOULD HAPPEN BOTH FOR NEW GRID OR LOADED GRID
+        self.rad_1 = 0
+        self.rad_2 = 0
+        self.rad_sw = 0
+        self.rad_lw = 0
+        self.rad_lwsolv = 0
+        self.rad_swsolv = 0
+
 
 
 

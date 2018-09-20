@@ -17,6 +17,8 @@ if i_async_radiation:
 else:
     njobs_rad = 4
 
+i_async_radiation = 0
+
 
 solar_constant_0 = 1365
 
@@ -33,3 +35,7 @@ sigma_sca_gas_LW_in = 1.72E-7
 
 # surface emissivity
 emissivity_surface = 1
+
+
+# longwave
+planck_n_lw_bins = 50

@@ -1,8 +1,10 @@
 import numpy as np
+import time
 import scipy
 from radiation.namelist_radiation import con_h, con_c, con_kb, \
                             sigma_abs_gas_LW_in, sigma_sca_gas_LW_in, \
                             emissivity_surface
+from bin.longwave_cython import calc_planck_intensity_c
 
 
 ###################################################################################
@@ -11,11 +13,12 @@ from radiation.namelist_radiation import con_h, con_c, con_kb, \
 ###################################################################################
 ###################################################################################
 
-def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
+def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
 
+    # 5 %
     # LONGWAVE
-    nu0 = 50
-    nu1 = 2500
+    nu0 = 50.
+    nu1 = 2500.
     g_a = 0.0
     #albedo_surface_LW = 1
     #qc_col = np.minimum(qc_col, 0.003)
@@ -43,15 +46,25 @@ def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_co
     gamma2 = np.zeros(nz)
     gamma2[:] = omega_s*(1-g_a) / (2*my1)
 
+    # 38 %
     # emission fields
-    B_air = 2*np.pi * (1 - omega_s) * \
-            calc_planck_intensity(nu0, nu1, tair_col)
+    t0 = time.time()
+    #B_air = 2*np.pi * (1 - omega_s) * \
+    #        calc_planck_intensity(nu0, nu1, tair_col)
+    B_air = np.asarray(calc_planck_intensity_c(nu0, nu1, tair_col))
+    t1 = time.time()
+    GR.rad_lwsolv += t1 - t0
     B_surf = emissivity_surface * np.pi * \
             calc_planck_intensity(nu0, nu1, tsurf)
 
+    print(B_air)
+    quit()
+    #print(dtau)
+    # 10 %
     # calculate radiative fluxes
     A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
                         B_air, B_surf, albedo_surface_LW)
+    # 4 %
     #fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
     fluxes = scipy.linalg.solve_banded((2,2), A_mat, g_vec)
 
@@ -73,6 +86,38 @@ def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_co
     #quit()
 
     return(down_diffuse, up_diffuse)
+
+
+
+def calc_planck_intensity(nu0, nu1, temp):
+
+    nnu = 50
+    nu0 = nu0*100 # 1/m
+    nu1 = nu1*100 # 1/m
+    dnu = (nu1 - nu0)/(nnu - 1)
+    #dnu = 5000 # 1/m
+    nus = np.arange(nu0,nu1+1,dnu)
+    nus_center = nus[:-1]+dnu/2
+    lambdas = 1./nus
+    lambdas_center = 1./nus_center
+    dlambdas = np.diff(lambdas)
+
+
+    if (type(temp) == np.float64) or (type(temp) == np.float32):
+        B = np.zeros( (len(nus_center), 1) )
+    else:
+        B = np.zeros( (len(nus_center), len(temp)) )
+
+    for c in range(0,len(nus_center)):
+        spectral_radiance = \
+            2*con_h*con_c**2 / lambdas_center[c]**5 * \
+            1 / ( np.exp( con_h*con_c / (lambdas_center[c]*con_kb*temp) ) - 1 )
+        radiance = spectral_radiance * -dlambdas[c]
+        B[c,:] = radiance
+
+    B = np.sum(B,0)
+
+    return(B)
 
 
 def rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2, \
@@ -323,38 +368,3 @@ def rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2, \
 
 
 
-def calc_planck_intensity(nu0, nu1, temp):
-
-    nu0 = nu0*100 # 1/m
-    nu1 = nu1*100 # 1/m
-    dnu = 5000 # 1/m
-    nus = np.arange(nu0,nu1,dnu)
-    nus_center = nus[:-1]+dnu/2
-    lambdas = 1./nus
-    lambdas_center = 1./nus_center
-    dlambdas = np.diff(lambdas)
-
-
-    if (type(temp) == np.float64) or (type(temp) == np.float32):
-        B = np.zeros( (len(nus_center), 1) )
-    else:
-        B = np.zeros( (len(nus_center), len(temp)) )
-
-    for c in range(0,len(nus_center)):
-        #print(temp)
-        #print(
-        #    2*con_h*con_c**2 / lambdas_center[i]**5 * \
-        #    1 / ( np.exp( con_h*con_c / (lambdas_center[i]*con_kb*temp) ) - 1 )
-        #    )
-        #quit()
-        spectral_radiance = \
-            2*con_h*con_c**2 / lambdas_center[c]**5 * \
-            1 / ( np.exp( con_h*con_c / (lambdas_center[c]*con_kb*temp) ) - 1 )
-        #print(spectral_radiance)
-        radiance = spectral_radiance * -dlambdas[c]
-        #print(radiance)
-        B[c,:] = radiance
-
-    B = np.sum(B,0)
-
-    return(B)

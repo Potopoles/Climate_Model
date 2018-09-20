@@ -104,6 +104,7 @@ class radiation:
         
         t_start = time.time()
         sim_t_start = GR.sim_time_sec
+        #print('yolo')
 
         if self.i_radiation == 1:
             self.pseudo_constant_radiation(GR, TAIR)
@@ -112,8 +113,8 @@ class radiation:
         elif self.i_radiation == 3:
             #if GR.ts % self.rad_nth_ts == 0:
             print('START RADIATION')
-            #self.simple_radiation(GR, CF)
-            self.simple_radiation_par(GR, CF)
+            self.simple_radiation(GR, CF)
+            #self.simple_radiation_par(GR, CF)
         elif self.i_radiation == 0:
             pass
         else:
@@ -214,6 +215,8 @@ class radiation:
 
 
     def simple_radiation(self, GR, CF):
+        t0 = time.time()
+
         ALTVB = CF.PHIVB / con_g
         dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
 
@@ -222,6 +225,9 @@ class radiation:
         self.MYSUN[self.MYSUN < 0] = 0
         self.solar_constant = calc_current_solar_constant(GR) 
         self.SWINTOA = self.solar_constant * np.cos(self.SOLZEN)
+
+        t1 = time.time()
+        GR.rad_1 += t1 - t0
 
         for i in range(0,GR.nx):
             #i = 10
@@ -238,16 +244,20 @@ class radiation:
                 #                                TAIRVB[i_ref,j_ref,:], RHO[i_ref,j_ref], \
                 #                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
                 # self-manufactured method
+                t0 = time.time()
                 down_diffuse, up_diffuse = \
-                                    org_longwave(GR.nz, GR.nzs, dz[i,j],
+                                    org_longwave(GR, GR.nz, GR.nzs, dz[i,j],
                                                 CF.TAIR[i_ref,j_ref,:], CF.RHO[i_ref,j_ref], \
                                                 CF.SOILTEMP[i,j,0], CF.SURFALBEDLW[i,j],
                                                 CF.QC[i,j,:])
 
                 self.LWFLXDO[i,j,:] = - down_diffuse
                 self.LWFLXUP[i,j,:] =   up_diffuse
+                t1 = time.time()
+                GR.rad_lw += t1 - t0
 
                 # SHORTWAVE
+                t0 = time.time()
                 if self.MYSUN[i,j] > 0:
 
                     # toon et al 1989 method
@@ -268,8 +278,11 @@ class radiation:
                     self.SWDIRFLXDO[i,j,:] = 0
                     self.SWFLXUP   [i,j,:] = 0
                     self.SWFLXDO   [i,j,:] = 0
+                t1 = time.time()
+                GR.rad_sw += t1 - t0
 
 
+        t0 = time.time()
         CF.LWFLXNET = self.LWFLXDO - self.LWFLXUP 
         CF.SWFLXNET = self.SWFLXDO - self.SWFLXUP 
 
@@ -283,6 +296,8 @@ class radiation:
             
             CF.dPOTTdt_RAD[:,:,k] = 1/(con_cp * CF.RHO[:,:,k][GR.iijj]) * \
                                                 self.TOTFLXDIV[:,:,k]
+        t1 = time.time()
+        GR.rad_2 += t1 - t0
 
 
     def pseudo_varying_radiation(self, GR, TAIR):

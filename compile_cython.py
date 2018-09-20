@@ -25,15 +25,21 @@ all = ['wind_cython',
 
 all_par = ['wind_cython_par']
 
+all_rad = ['longwave_cython']
+
 strings = all_par
 strings = all
-strings = ['wind_cython']
+strings = all_rad
+#strings = ['wind_cython']
 #strings = ['geopotential_cython']
-strings = ['diagnostics_cython']
+#strings = ['diagnostics_cython']
 #strings = ['temperature_cython']
 #strings = ['moisture_cython']
 #strings = ['continuity_cython']
 #strings = ['jacobson_cython']
+
+folder = ''
+folder = 'radiation/'
 
 for string in strings:
     if remove_existing:
@@ -46,7 +52,7 @@ for string in strings:
         ext_modules = [
             Extension(
                     string,
-                    [string+'.pyx'],
+                    [folder + string+'.pyx'],
                     extra_compile_args=['-fopenmp'],
                     extra_link_args=['-fopenmp'],)]
 

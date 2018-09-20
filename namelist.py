@@ -115,9 +115,9 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 1
+i_load_from_restart = 0
 i_save_to_restart = 1
-i_restart_nth_day = 2.00
+i_restart_nth_day = 1.00
 
 ####################################################################
 # PARALLEL AND DEVICE
@@ -126,7 +126,7 @@ i_restart_nth_day = 2.00
 # 2 makes sense for cases comparable to dx <= 4 and nz >= 8
 comp_mode = 2
 # working precision (float64 or float32)
-wp = 'float32'
+wp = 'float64'
 # cython
 njobs = 4
 
@@ -178,7 +178,7 @@ elif i_simulation_mode == 2:
     dlat_deg = 4.0
     dlon_deg = 4.0
     output_path = '../output_run'
-    i_sim_n_days = 450.00
+    i_sim_n_days = 0.20
     i_out_nth_hour = 24
     i_surface = 1
     i_radiation = 3

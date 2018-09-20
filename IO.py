@@ -88,6 +88,9 @@ def write_restart(GR, CF, RAD, SOIL, MIC, TURB):
                             str(GR.dlon_deg).zfill(2) + '_' +\
                             str(GR.nz).zfill(3)+'.pkl'
 
+    # set values for certain variables
+    RAD.done = 1 # make sure async radiation starts to run after loading
+
     # temporarily remove unpicklable GR objects for GPU 
     if hasattr(GR, 'stream'):
 
