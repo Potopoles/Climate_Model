@@ -32,7 +32,7 @@ subgrids = {} # option
 # CREATE MODEL FIELDS
 ####################################################################
 CF = CPU_Fields(GR, subgrids)
-RAD, SURF, MIC, TURB = initialize_fields(GR, subgrids, CF)
+CF, RAD, SURF, MIC, TURB = initialize_fields(GR, subgrids, CF)
 if comp_mode == 2:
     GF = GPU_Fields(GR, subgrids, CF)
 else:
@@ -42,7 +42,6 @@ else:
 # OUTPUT AT TIMESTEP 0 (before start of simulation)
 ####################################################################
 constant_fields_to_NC(GR, CF, RAD, SURF)
-
 
 
 ####################################################################

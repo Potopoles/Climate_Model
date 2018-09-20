@@ -572,7 +572,7 @@ def initialize_fields(GR, subgrids, CF):
 
 
 
-    return(RAD, SURF, MIC, TURB)
+    return(CF, RAD, SURF, MIC, TURB)
 
 
 

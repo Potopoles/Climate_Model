@@ -115,7 +115,7 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 0
+i_load_from_restart = 1
 i_save_to_restart = 1
 i_restart_nth_day = 2.00
 
@@ -123,6 +123,7 @@ i_restart_nth_day = 2.00
 # PARALLEL AND DEVICE
 ####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
+# 2 makes sense for cases comparable to dx <= 4 and nz >= 8
 comp_mode = 2
 # working precision (float64 or float32)
 wp = 'float32'
@@ -171,11 +172,11 @@ elif i_simulation_mode == 1:
 
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
-    nz = 16
-    lat0_deg = -82
-    lat1_deg = 82
-    dlat_deg = 2.0
-    dlon_deg = 2.0
+    nz = 8
+    lat0_deg = -84
+    lat1_deg = 84
+    dlat_deg = 4.0
+    dlon_deg = 4.0
     output_path = '../output_run'
     i_sim_n_days = 450.00
     i_out_nth_hour = 24
@@ -212,6 +213,9 @@ if i_diffusion_on:
         WIND_hor_dif_tau = 20
     elif dlat_deg <= 1:
         WIND_hor_dif_tau = 20
+
+# TODO does it work like this? Can decrease even more?
+WIND_hor_dif_tau = WIND_hor_dif_tau * 0.5
 
 
 
