@@ -115,8 +115,8 @@ class radiation:
         elif self.i_radiation == 3:
             #if GR.ts % self.rad_nth_ts == 0:
             print('START RADIATION')
-            #self.simple_radiation(GR, CF)
-            self.simple_radiation_par(GR, CF)
+            self.simple_radiation(GR, CF)
+            #self.simple_radiation_par(GR, CF)
         elif self.i_radiation == 0:
             pass
         else:
@@ -247,9 +247,9 @@ class radiation:
                 #                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
                 # self-manufactured method
                 t0 = time.time()
-                                    #org_longwave(GR, GR.nz, GR.nzs, dz[i,j],
+                                    #org_longwave(GR.nz, GR.nzs, dz[i,j],
                 down_diffuse, up_diffuse = \
-                                    org_longwave(GR.nz, GR.nzs, dz[i,j],
+                                    org_longwave(GR, GR.nz, GR.nzs, dz[i,j],
                                                 CF.TAIR[i_ref,j_ref,:], CF.RHO[i_ref,j_ref], \
                                                 CF.SOILTEMP[i,j,0], CF.SURFALBEDLW[i,j],
                                                 CF.QC[i,j,:])

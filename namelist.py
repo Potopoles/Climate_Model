@@ -115,8 +115,8 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 1
-i_save_to_restart = 1
+i_load_from_restart = 0
+i_save_to_restart = 0
 i_restart_nth_day = 0.50
 
 ####################################################################
@@ -124,7 +124,7 @@ i_restart_nth_day = 0.50
 ####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
 # 2 makes sense for cases comparable to dx <= 4 and nz >= 8
-comp_mode = 2
+comp_mode = 1
 # working precision (float64 or float32)
 wp = 'float64'
 # cython
@@ -137,7 +137,7 @@ njobs = 4
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
-i_simulation_mode = 2
+i_simulation_mode = 0
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 0:
@@ -147,8 +147,8 @@ if i_simulation_mode == 0:
     dlat_deg = 3
     dlon_deg = 3
     output_path = '../output_orig'
-    output_path = '../output'
-    i_sim_n_days = 0.5
+    #output_path = '../output'
+    i_sim_n_days = 0.25
     i_out_nth_hour = 3
     i_surface = 1
     i_radiation = 3
