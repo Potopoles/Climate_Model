@@ -97,18 +97,18 @@ while GR.ts < GR.nts:
         t_end = time.time()
         GR.rad_comp_time += t_end - t_start
 
-    print('RADIATION timerstarts:')
-    try:
-        tot = GR.rad_1 + GR.rad_2 + GR.rad_lw + GR.rad_lwsolv + GR.rad_sw
-        print(tot)
-        print('rad_1     :  ' + str(int(100*GR.rad_1/tot)) + '\t\t' + str(GR.rad_1))
-        print('rad_2     :  ' + str(int(100*GR.rad_2/tot)) + '\t\t' + str(GR.rad_2))
-        print('rad_lw    :  ' + str(int(100*GR.rad_lw/tot)) + '\t\t' + str(GR.rad_lw))
-        print('rad_lwsolv:  ' + str(int(100*GR.rad_lwsolv/tot)) + '\t\t' + str(GR.rad_lwsolv))
-        print('rad_sw    :  ' + str(int(100*GR.rad_sw/tot)) + '\t\t' + str(GR.rad_sw))
-    except ZeroDivisionError:
-        pass
-    print('RADIATION timersend:')
+    #print('RADIATION timerstarts:')
+    #try:
+    #    tot = GR.rad_1 + GR.rad_2 + GR.rad_lw + GR.rad_lwsolv + GR.rad_sw
+    #    print(tot)
+    #    print('rad_1     :  ' + str(int(100*GR.rad_1/tot)) + '\t\t' + str(GR.rad_1))
+    #    print('rad_2     :  ' + str(int(100*GR.rad_2/tot)) + '\t\t' + str(GR.rad_2))
+    #    print('rad_lw    :  ' + str(int(100*GR.rad_lw/tot)) + '\t\t' + str(GR.rad_lw))
+    #    print('rad_lwsolv:  ' + str(int(100*GR.rad_lwsolv/tot)) + '\t\t' + str(GR.rad_lwsolv))
+    #    print('rad_sw    :  ' + str(int(100*GR.rad_sw/tot)) + '\t\t' + str(GR.rad_sw))
+    #except ZeroDivisionError:
+    #    pass
+    #print('RADIATION timersend:')
     
 
     ####################################################################
@@ -116,7 +116,7 @@ while GR.ts < GR.nts:
     ####################################################################
     if i_surface:
         t_start = time.time()
-        SURF.advance_timestep(GR, CF, RAD)
+        SURF.advance_timestep(GR, CF, GF, RAD)
         t_end = time.time()
         GR.soil_comp_time += t_end - t_start
 

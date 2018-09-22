@@ -71,6 +71,8 @@ class radiation:
         self.i_radiation = i_radiation
         self.i_async_radiation = i_async_radiation
 
+        self.njobs_rad = njobs_rad
+
 
         self.rad_nth_hour = rad_nth_hour 
         self.rad_nth_ts = int(self.rad_nth_hour * 3600/GR.dt)
@@ -113,8 +115,8 @@ class radiation:
         elif self.i_radiation == 3:
             #if GR.ts % self.rad_nth_ts == 0:
             print('START RADIATION')
-            self.simple_radiation(GR, CF)
-            #self.simple_radiation_par(GR, CF)
+            #self.simple_radiation(GR, CF)
+            self.simple_radiation_par(GR, CF)
         elif self.i_radiation == 0:
             pass
         else:
@@ -158,7 +160,7 @@ class radiation:
         jj_ref = np.repeat(np.arange(0,GR.ny).astype(np.int),GR.nx)+1
 
         #t1 = time.time()
-        p = mp.Pool(processes=njobs_rad)
+        p = mp.Pool(processes=self.njobs_rad)
         
         #print(type(TAIR))
         #print(type(RHO))
@@ -245,8 +247,9 @@ class radiation:
                 #                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
                 # self-manufactured method
                 t0 = time.time()
+                                    #org_longwave(GR, GR.nz, GR.nzs, dz[i,j],
                 down_diffuse, up_diffuse = \
-                                    org_longwave(GR, GR.nz, GR.nzs, dz[i,j],
+                                    org_longwave(GR.nz, GR.nzs, dz[i,j],
                                                 CF.TAIR[i_ref,j_ref,:], CF.RHO[i_ref,j_ref], \
                                                 CF.SOILTEMP[i,j,0], CF.SURFALBEDLW[i,j],
                                                 CF.QC[i,j,:])

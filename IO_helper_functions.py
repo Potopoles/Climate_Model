@@ -90,7 +90,7 @@ def print_ts_info(GR, CF, GF):
 
     if GR.ts % nth_ts_time_step_diag == 0:
         try:
-            faster_than_reality = int(GR.sim_time_sec/GR.total_comp_time)
+            faster_than_reality = np.round(GR.sim_time_sec/GR.total_comp_time,2)
             percentage_done = np.round(GR.sim_time_sec/(GR.i_sim_n_days*36*24),2)
             to_go_sec = int((100/percentage_done - 1)*GR.total_comp_time)
             tghr = int(np.floor(to_go_sec/3600))

@@ -9,6 +9,7 @@ from geopotential import diag_pvt_factor
 from constants import con_kappa
 from scipy import interpolate
 from constants import con_g, con_Rd, con_kappa, con_cp
+from radiation.namelist_radiation import njobs_rad
 if wp == 'float64':
     from numpy import float64 as wp_np
 elif wp == 'float32':
@@ -88,8 +89,8 @@ def write_restart(GR, CF, RAD, SOIL, MIC, TURB):
                             str(GR.dlon_deg).zfill(2) + '_' +\
                             str(GR.nz).zfill(3)+'.pkl'
 
-    # set values for certain variables
-    RAD.done = 1 # make sure async radiation starts to run after loading
+    ## set values for certain variables
+    #RAD.done = 1 # make sure async radiation starts to run after loading
 
     # temporarily remove unpicklable GR objects for GPU 
     if hasattr(GR, 'stream'):
@@ -154,6 +155,7 @@ def write_restart(GR, CF, RAD, SOIL, MIC, TURB):
         GR.dsigmad     =   dsigmad    
         GR.sigma_vbd   =   sigma_vbd  
 
+
 def load_restart_grid(dlat_deg, dlon_deg, nz):
     filename = '../restart/'+str(dlat_deg).zfill(2) + '_' +\
                             str(dlon_deg).zfill(2) + '_' +\
@@ -175,6 +177,8 @@ def load_restart_fields(GR):
             inp = pickle.load(f)
     CF = inp['CF']
     RAD = inp['RAD']
+    RAD.done = 1
+    RAD.njobs_rad = njobs_rad
     SOIL = inp['SOIL'] 
     MIC = inp['MIC'] 
     TURB = inp['TURB'] 

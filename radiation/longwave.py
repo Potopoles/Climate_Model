@@ -13,7 +13,8 @@ from bin.longwave_cython import calc_planck_intensity_c
 ###################################################################################
 ###################################################################################
 
-def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
+#def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
+def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
 
     # 5 %
     # LONGWAVE
@@ -48,17 +49,17 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, q
 
     # 38 %
     # emission fields
-    t0 = time.time()
-    #B_air = 2*np.pi * (1 - omega_s) * \
-    #        calc_planck_intensity(nu0, nu1, tair_col)
-    B_air = np.asarray(calc_planck_intensity_c(nu0, nu1, tair_col))
-    t1 = time.time()
-    GR.rad_lwsolv += t1 - t0
+    #t0 = time.time()
+    B_air = 2*np.pi * (1 - omega_s) * \
+            calc_planck_intensity(nu0, nu1, tair_col)
+    #B_air = np.asarray(calc_planck_intensity_c(nu0, nu1, tair_col))
+    #t1 = time.time()
+    #GR.rad_lwsolv += t1 - t0
     B_surf = emissivity_surface * np.pi * \
             calc_planck_intensity(nu0, nu1, tsurf)
 
-    print(B_air)
-    quit()
+    #print(B_air)
+    #quit()
     #print(dtau)
     # 10 %
     # calculate radiative fluxes
@@ -91,7 +92,7 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, q
 
 def calc_planck_intensity(nu0, nu1, temp):
 
-    nnu = 50
+    nnu = 10
     nu0 = nu0*100 # 1/m
     nu1 = nu1*100 # 1/m
     dnu = (nu1 - nu0)/(nnu - 1)

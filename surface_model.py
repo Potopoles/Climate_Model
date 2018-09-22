@@ -1,6 +1,9 @@
 import numpy as np
 import time
-from namelist import wp, i_radiation, i_microphysics
+from namelist import wp, comp_mode, i_radiation, i_microphysics
+from surface_model_cuda import soil_temperature_euler_forward_gpu,\
+                              calc_albedo_gpu, calc_evaporation_capacity_gpu
+from numba import cuda
 if wp == 'float64':
     from numpy import float64 as wp_np
 elif wp == 'float32':
@@ -63,26 +66,46 @@ class surface:
 
 
 
-    def advance_timestep(self, GR, CF, RAD):
+    def advance_timestep(self, GR, CF, GF, RAD):
 
-        dSOILTEMPdt = np.zeros( (GR.nx, GR.ny) , dtype=wp_np)
+        if comp_mode in [0,1]:
+            dSOILTEMPdt = np.zeros( (GR.nx, GR.ny) , dtype=wp_np)
 
-        if i_radiation > 0:
-            dSOILTEMPdt = (CF.LWFLXNET[:,:,GR.nzs-1] + CF.SWFLXNET[:,:,GR.nzs-1])/ \
-                            (CF.SOILCP * CF.SOILRHO * CF.SOILDEPTH)
+            if i_radiation > 0:
+                dSOILTEMPdt = (CF.LWFLXNET[:,:,GR.nzs-1] + CF.SWFLXNET[:,:,GR.nzs-1])/ \
+                                (CF.SOILCP * CF.SOILRHO * CF.SOILDEPTH)
 
-        if i_microphysics > 0:
-            dSOILTEMPdt = dSOILTEMPdt - ( MIC.surf_evap_flx * MIC.lh_cond_water ) / \
-                                        (CF.SOILCP * CF.SOILRHO * CF.SOILDEPTH)
+            if i_microphysics > 0:
+                dSOILTEMPdt = dSOILTEMPdt - ( MIC.surf_evap_flx * MIC.lh_cond_water ) / \
+                                            (CF.SOILCP * CF.SOILRHO * CF.SOILDEPTH)
 
-        CF.SOILTEMP[:,:,0] = CF.SOILTEMP[:,:,0] + GR.dt * dSOILTEMPdt
+            CF.SOILTEMP[:,:,0] = CF.SOILTEMP[:,:,0] + GR.dt * dSOILTEMPdt
 
-        self.calc_albedo(GR, CF)
+            self.calc_albedo(GR, CF)
 
-        # calc evaporation capacity
-        CF.SOILEVAPITY[CF.OCEANMASK == 0] = \
-                 np.minimum(np.maximum(0, CF.SOILMOIST[CF.OCEANMASK == 0] \
-                                                    / evapity_thresh), 1)
+            # calc evaporation capacity
+            CF.SOILEVAPITY[CF.OCEANMASK == 0] = \
+                     np.minimum(np.maximum(0, CF.SOILMOIST[CF.OCEANMASK == 0] \
+                                                        / evapity_thresh), 1)
+
+
+        elif comp_mode == 2:
+
+            dSOILTEMPdt = cuda.device_array( (GR.nx, GR.ny, 1), dtype=GF.SOILTEMP.dtype)
+
+            soil_temperature_euler_forward_gpu[GR.griddim_xy_in, GR.blockdim_xy, GR.stream]\
+                                (dSOILTEMPdt, GF.SOILTEMP, GF.LWFLXNET, GF.SWFLXNET,
+                                GF.SOILCP, GF.SOILRHO, GF.SOILDEPTH, GR.dt)
+            if i_microphysics > 0:
+                raise NotImplementedError()
+
+            calc_albedo_gpu[GR.griddim_xy_in, GR.blockdim_xy, GR.stream]\
+                                (GF.SURFALBEDSW, GF.SURFALBEDLW, GF.OCEANMASK, GF.SOILTEMP)
+
+            calc_evaporation_capacity_gpu[GR.griddim_xy_in, GR.blockdim_xy, GR.stream]\
+                                (GF.SOILEVAPITY, GF.SOILMOIST, GF.OCEANMASK, GF.SOILTEMP)
+
+
 
 
 

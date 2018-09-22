@@ -30,14 +30,14 @@ pSurf = 101350.
 gaussian_dlon = np.pi/10
 gaussian_dlat = np.pi/10
 u0 = 0
-UWIND_gaussian_pert = 10
+UWIND_gaussian_pert = 00
 UWIND_random_pert = 0
 v0 = 0
-VWIND_gaussian_pert = 10
+VWIND_gaussian_pert = 00
 VWIND_random_pert = 0
-COLP_gaussian_pert = -10000
+COLP_gaussian_pert = -00000
 COLP_random_pert = 000
-POTT_gaussian_pert = 10
+POTT_gaussian_pert = 00
 POTT_random_pert = 0.0
 
 ####################################################################
@@ -88,14 +88,14 @@ output_fields = {
                 #   vertical profile output
                 #   These flags are marked with #vp
                 # flux fields
-                'UWIND'     : 1,                    #vp
-                'VWIND'     : 1,                    #vp
-                'WIND'      : 1,                    #vp
-                'WWIND'     : 0,
-                'VORT'      : 0,
+                'UWIND'     : 2,                    #vp
+                'VWIND'     : 2,                    #vp
+                'WIND'      : 2,                    #vp
+                'WWIND'     : 1,
+                'VORT'      : 1,
                 # velocity fields
                 # temperature fields
-                'POTT'      : 1,                    #vp
+                'POTT'      : 2,                    #vp
                 'TAIR'      : 1,
                 # primary diagnostic fields
                 'PHI'       : 0,
@@ -115,9 +115,9 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 0
+i_load_from_restart = 1
 i_save_to_restart = 1
-i_restart_nth_day = 1.00
+i_restart_nth_day = 0.50
 
 ####################################################################
 # PARALLEL AND DEVICE
@@ -148,7 +148,7 @@ if i_simulation_mode == 0:
     dlon_deg = 3
     output_path = '../output_orig'
     output_path = '../output'
-    i_sim_n_days = 0.25
+    i_sim_n_days = 0.5
     i_out_nth_hour = 3
     i_surface = 1
     i_radiation = 3
@@ -157,14 +157,14 @@ if i_simulation_mode == 0:
 
 ## BENCHMARK EXPERIMENT
 elif i_simulation_mode == 1:
-    nz = 32
+    nz = 16
     lat0_deg = -80
     lat1_deg = 80
-    dlat_deg = 1.0
-    dlon_deg = 1.0
-    output_path = '../output_run'
-    i_sim_n_days = 0.05
-    i_out_nth_hour = 0.25
+    dlat_deg = 2.0
+    dlon_deg = 2.0
+    output_path = '../output'
+    i_sim_n_days = 1.05
+    i_out_nth_hour = 1.0
     i_surface = 1
     i_radiation = 3
     i_microphysics = 0
@@ -172,13 +172,13 @@ elif i_simulation_mode == 1:
 
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
-    nz = 8
-    lat0_deg = -84
-    lat1_deg = 84
-    dlat_deg = 4.0
-    dlon_deg = 4.0
+    nz = 32
+    lat0_deg = -81
+    lat1_deg = 81
+    dlat_deg = 1.0
+    dlon_deg = 1.0
     output_path = '../output_run'
-    i_sim_n_days = 0.20
+    i_sim_n_days = 100.00
     i_out_nth_hour = 24
     i_surface = 1
     i_radiation = 3
@@ -198,24 +198,24 @@ if i_diffusion_on:
     if dlat_deg == 10:
         WIND_hor_dif_tau = 1
     elif dlat_deg == 8:
-        WIND_hor_dif_tau = 1
+        WIND_hor_dif_tau = 1.2
     elif dlat_deg == 6:
-        WIND_hor_dif_tau = 5
+        WIND_hor_dif_tau = 1.8
     elif dlat_deg == 5:
-        WIND_hor_dif_tau = 7.5
+        WIND_hor_dif_tau = 2
     elif dlat_deg == 4:
-        WIND_hor_dif_tau = 10
+        WIND_hor_dif_tau = 2.5
     elif dlat_deg == 3:
-        WIND_hor_dif_tau = 15
+        WIND_hor_dif_tau = 3.3
     elif dlat_deg == 2:
-        WIND_hor_dif_tau = 20
+        WIND_hor_dif_tau = 5
     elif dlat_deg == 1.5:
-        WIND_hor_dif_tau = 20
+        WIND_hor_dif_tau = 7.5
     elif dlat_deg <= 1:
-        WIND_hor_dif_tau = 20
+        WIND_hor_dif_tau = 10
 
 # TODO does it work like this? Can decrease even more?
-WIND_hor_dif_tau = WIND_hor_dif_tau * 0.5
+WIND_hor_dif_tau = WIND_hor_dif_tau * 1.0
 
 
 

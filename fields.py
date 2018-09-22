@@ -151,6 +151,7 @@ class CPU_Fields:
             self.SURFALBEDSW = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np) 
             self.SURFALBEDLW = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np) 
             self.RAINRATE    = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np) 
+            self.ACCRAIN     = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp_np) 
 
         ##############################################################################
         # RADIATION
@@ -220,6 +221,9 @@ class GPU_Fields:
                                    GR.nzs//GR.blockdim_ks[2])
             GR.griddim_xy    = ((GR.nx +2*GR.nb)//GR.blockdim_xy[0], \
                                   (GR.ny +2*GR.nb)//GR.blockdim_xy[1], \
+                                   1       //GR.blockdim_xy[2])
+            GR.griddim_xy_in = ((GR.nx         )//GR.blockdim_xy[0], \
+                                  (GR.ny         )//GR.blockdim_xy[1], \
                                    1       //GR.blockdim_xy[2])
 
             zonal   = np.zeros((2,GR.ny +2*GR.nb   ,GR.nz  ), dtype=wp_np)
@@ -320,17 +324,18 @@ class GPU_Fields:
         ##############################################################################
         # SURFACE
         ##############################################################################
-        #if i_surface: 
-        #    self.OCEANMASK    = cuda.to_device(CF.OCEANMASK,    GR.stream) 
-        #    self.SOILDEPTH    = cuda.to_device(CF.SOILDEPTH,    GR.stream) 
-        #    self.SOILCP       = cuda.to_device(CF.SOILCP,       GR.stream) 
-        #    self.SOILRHO      = cuda.to_device(CF.SOILRHO,      GR.stream) 
-        #    self.SOILTEMP     = cuda.to_device(CF.SOILTEMP,     GR.stream) 
-        #    self.SOILMOIST    = cuda.to_device(CF.SOILMOIST,    GR.stream) 
-        #    self.SOILEVAPITY  = cuda.to_device(CF.SOILEVAPITY,  GR.stream) 
-        #    self.SURFALBEDSW  = cuda.to_device(CF.SURFALBEDSW,  GR.stream) 
-        #    self.SURFALBEDLW  = cuda.to_device(CF.SURFALBEDLW,  GR.stream) 
-        #    self.RAINRATE     = cuda.to_device(CF.RAINRATE,     GR.stream) 
+        if i_surface: 
+            self.OCEANMASK    = cuda.to_device(CF.OCEANMASK,    GR.stream) 
+            self.SOILDEPTH    = cuda.to_device(CF.SOILDEPTH,    GR.stream) 
+            self.SOILCP       = cuda.to_device(CF.SOILCP,       GR.stream) 
+            self.SOILRHO      = cuda.to_device(CF.SOILRHO,      GR.stream) 
+            self.SOILTEMP     = cuda.to_device(CF.SOILTEMP,     GR.stream) 
+            self.SOILMOIST    = cuda.to_device(CF.SOILMOIST,    GR.stream) 
+            self.SOILEVAPITY  = cuda.to_device(CF.SOILEVAPITY,  GR.stream) 
+            self.SURFALBEDSW  = cuda.to_device(CF.SURFALBEDSW,  GR.stream) 
+            self.SURFALBEDLW  = cuda.to_device(CF.SURFALBEDLW,  GR.stream) 
+            self.RAINRATE     = cuda.to_device(CF.RAINRATE,     GR.stream) 
+            self.ACCRAIN      = cuda.to_device(CF.RAINRATE,     GR.stream) 
 
         ##############################################################################
         # RADIATION
@@ -376,6 +381,8 @@ class GPU_Fields:
         self.SWFLXNET         = cuda.to_device(CF.SWFLXNET,     GR.stream) 
         self.LWFLXNET         = cuda.to_device(CF.LWFLXNET,     GR.stream) 
 
+        GR.stream.synchronize()
+
         t_end = time.time()
         GR.copy_time += t_end - t_start
 
@@ -384,9 +391,9 @@ class GPU_Fields:
         self.RHO               .to_host(GR.stream)
         self.TAIR              .to_host(GR.stream)
         self.PHIVB             .to_host(GR.stream) 
-        #self.SOILTEMP          .to_host(GR.stream) 
-        #self.SURFALBEDLW       .to_host(GR.stream) 
-        #self.SURFALBEDSW       .to_host(GR.stream) 
+        self.SOILTEMP          .to_host(GR.stream) 
+        self.SURFALBEDLW       .to_host(GR.stream) 
+        self.SURFALBEDSW       .to_host(GR.stream) 
         self.QC                .to_host(GR.stream) 
 
         GR.stream.synchronize()
@@ -404,7 +411,7 @@ class GPU_Fields:
         self.dCOLPdt           .to_host(GR.stream)
         self.PSURF             .to_host(GR.stream)
         self.HSURF             .to_host(GR.stream) 
-        #self.OCEANMSK          .to_host(GR.stream) 
+        self.OCEANMSK          .to_host(GR.stream) 
 
         #self.UFLX              .to_host(GR.stream)  
         #self.dUFLXdt           .to_host(GR.stream)  
@@ -450,17 +457,18 @@ class GPU_Fields:
         ##############################################################################
         # SURFACE
         ##############################################################################
-        #if i_surface: 
-        #    self.OCEANMASK     .to_host(GR.stream) 
-        #    self.SOILDEPTH     .to_host(GR.stream) 
-        #    self.SOILCP        .to_host(GR.stream) 
-        #    self.SOILRHO       .to_host(GR.stream) 
-        #    self.SOILTEMP      .to_host(GR.stream) 
-        #    self.SOILMOIST     .to_host(GR.stream) 
-        #    self.SOILEVAPITY   .to_host(GR.stream) 
-        #    self.SURFALBEDSW   .to_host(GR.stream) 
-        #    self.SURFALBEDLW   .to_host(GR.stream) 
-        #    self.RAINRATE      .to_host(GR.stream) 
+        if i_surface: 
+            self.OCEANMASK     .to_host(GR.stream) 
+            self.SOILDEPTH     .to_host(GR.stream) 
+            self.SOILCP        .to_host(GR.stream) 
+            self.SOILRHO       .to_host(GR.stream) 
+            self.SOILTEMP      .to_host(GR.stream) 
+            self.SOILMOIST     .to_host(GR.stream) 
+            self.SOILEVAPITY   .to_host(GR.stream) 
+            self.SURFALBEDSW   .to_host(GR.stream) 
+            self.SURFALBEDLW   .to_host(GR.stream) 
+            self.RAINRATE      .to_host(GR.stream) 
+            self.ACCRAIN       .to_host(GR.stream) 
 
         GR.stream.synchronize()
 
@@ -555,10 +563,13 @@ def initialize_fields(GR, subgrids, CF):
             if SURF is None:
                 raise ValueError('Soil model must be used for i_radiation > 0')
             RAD = radiation(GR, i_radiation)
+            rad_njobs_orig = RAD.njobs_rad
+            RAD.njobs_rad = 4
             #t_start = time.time()
             RAD.calc_radiation(GR, CF)
             #t_end = time.time()
             #GR.rad_comp_time += t_end - t_start
+            RAD.njobs_rad = rad_njobs_orig
         else:
             RAD = None
 

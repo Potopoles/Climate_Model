@@ -11,13 +11,14 @@ if comp_mode == 2:
     i_async_radiation = 1
 else:
     i_async_radiation = 0
+#i_async_radiation = 0
 
 if i_async_radiation:
-    njobs_rad = 3
+    #njobs_rad = 3
+    njobs_rad = 2
 else:
     njobs_rad = 4
 
-i_async_radiation = 0
 
 
 solar_constant_0 = 1365
