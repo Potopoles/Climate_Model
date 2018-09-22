@@ -109,6 +109,7 @@ while GR.ts < GR.nts:
     except ZeroDivisionError:
         pass
     print('RADIATION timersend:')
+    quit()
     
 
     ####################################################################

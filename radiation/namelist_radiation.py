@@ -21,12 +21,6 @@ else:
 
 
 
-solar_constant_0 = 1365
-
-
-con_h = 6.6256E-34 # J*s Planck's constant
-con_c = 2.9979E8 # m/s Speed of light
-con_kb = 1.38E-23 # J/K Boltzmann's constant
 
 
 sigma_abs_gas_SW_in = 1.7E-5
