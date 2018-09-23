@@ -209,6 +209,7 @@ if i_diffusion_on:
         WIND_hor_dif_tau = 3.3
     elif dlat_deg == 2:
         WIND_hor_dif_tau = 5
+        POTT_hor_dif_tau = 3E-6
     elif dlat_deg == 1.5:
         WIND_hor_dif_tau = 7.5
     elif dlat_deg <= 1:
