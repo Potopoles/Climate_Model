@@ -1,10 +1,12 @@
 import numpy as np
 import time
 import scipy
-from radiation.namelist_radiation import con_h, con_c, con_kb, \
+from constants import con_h, con_c, con_kb
+from radiation.namelist_radiation import  \
                             sigma_abs_gas_LW_in, sigma_sca_gas_LW_in, \
-                            emissivity_surface
-from bin.longwave_cython import calc_planck_intensity_c
+                            emissivity_surface, planck_n_lw_bins
+from bin.longwave_cython import calc_planck_intensity_c, calc_surface_emission_c, \
+                                rad_calc_LW_RTE_matrix_c
 
 
 ###################################################################################
@@ -13,13 +15,11 @@ from bin.longwave_cython import calc_planck_intensity_c
 ###################################################################################
 ###################################################################################
 
-#def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
-def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col):
+def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col,
+                planck_lambdas_center, planck_dlambdas):
 
     # 5 %
     # LONGWAVE
-    nu0 = 50.
-    nu1 = 2500.
     g_a = 0.0
     #albedo_surface_LW = 1
     #qc_col = np.minimum(qc_col, 0.003)
@@ -47,24 +47,32 @@ def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_co
     gamma2 = np.zeros(nz)
     gamma2[:] = omega_s*(1-g_a) / (2*my1)
 
-    # 38 %
+    # 12 %
+    t0 = time.time()
     # emission fields
-    #t0 = time.time()
-    B_air = 2*np.pi * (1 - omega_s) * \
-            calc_planck_intensity(nu0, nu1, tair_col)
-    #B_air = np.asarray(calc_planck_intensity_c(nu0, nu1, tair_col))
-    #t1 = time.time()
-    #GR.rad_lwsolv += t1 - t0
-    B_surf = emissivity_surface * np.pi * \
-            calc_planck_intensity(nu0, nu1, tsurf)
+    #B_air = 2*np.pi * (1 - omega_s) * \
+    #        calc_planck_intensity(tair_col, planck_lambdas_center, planck_dlambdas)
+    B_air = np.asarray(calc_planck_intensity_c(tair_col, omega_s, \
+                                planck_lambdas_center, planck_dlambdas))
 
-    #print(B_air)
-    #quit()
-    #print(dtau)
+    #B_surf = emissivity_surface * np.pi * \
+    #        calc_planck_intensity(tsurf, planck_lambdas_center, planck_dlambdas)
+    B_surf = calc_surface_emission_c(tsurf, \
+                    planck_lambdas_center, planck_dlambdas)
+
     # 10 %
     # calculate radiative fluxes
-    A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
+    #A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
+    #                    B_air, B_surf, albedo_surface_LW)
+    A_mat, g_vec = rad_calc_LW_RTE_matrix_c(nz, nzs, dtau, gamma1, gamma2,
                         B_air, B_surf, albedo_surface_LW)
+    A_mat = np.asarray(A_mat)
+    g_vec = np.asarray(g_vec)
+
+
+    t1 = time.time()
+    GR.rad_lwsolv += t1 - t0
+
     # 4 %
     #fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
     fluxes = scipy.linalg.solve_banded((2,2), A_mat, g_vec)
@@ -90,30 +98,28 @@ def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_co
 
 
 
-def calc_planck_intensity(nu0, nu1, temp):
+def calc_planck_intensity(temp, planck_lambdas_center, planck_dlambdas):
 
-    nnu = 10
-    nu0 = nu0*100 # 1/m
-    nu1 = nu1*100 # 1/m
-    dnu = (nu1 - nu0)/(nnu - 1)
-    #dnu = 5000 # 1/m
-    nus = np.arange(nu0,nu1+1,dnu)
-    nus_center = nus[:-1]+dnu/2
-    lambdas = 1./nus
-    lambdas_center = 1./nus_center
-    dlambdas = np.diff(lambdas)
+
+    #print(nus)
+    #print(nus_center)
+    #print(lambdas)
+    #print(lambdas_center)
+    #print(dlambdas)
+
+    nnu = planck_n_lw_bins
 
 
     if (type(temp) == np.float64) or (type(temp) == np.float32):
-        B = np.zeros( (len(nus_center), 1) )
+        B = np.zeros( (nnu, 1) )
     else:
-        B = np.zeros( (len(nus_center), len(temp)) )
+        B = np.zeros( (nnu, len(temp)) )
 
-    for c in range(0,len(nus_center)):
+    for c in range(0,nnu):
         spectral_radiance = \
-            2*con_h*con_c**2 / lambdas_center[c]**5 * \
-            1 / ( np.exp( con_h*con_c / (lambdas_center[c]*con_kb*temp) ) - 1 )
-        radiance = spectral_radiance * -dlambdas[c]
+            2*con_h*con_c**2 / planck_lambdas_center[c]**5 * \
+            1 / ( np.exp( con_h*con_c / (planck_lambdas_center[c]*con_kb*temp) ) - 1 )
+        radiance = spectral_radiance * -planck_dlambdas[c]
         B[c,:] = radiance
 
     B = np.sum(B,0)

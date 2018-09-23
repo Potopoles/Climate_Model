@@ -1,9 +1,9 @@
 import numpy as np
-#cimport numpy as np
 import cython
 from namelist import wp
-from radiation.namelist_radiation import njobs_rad, planck_n_lw_bins
-from cython.parallel import prange 
+from radiation.namelist_radiation import njobs_rad, planck_n_lw_bins, emissivity_surface
+from constants import con_c, con_h, con_kb
+from libc.math cimport exp, pi
 
 if wp == 'float64':
     from numpy import float64 as wp_np
@@ -13,112 +13,166 @@ ctypedef fused wp_cy:
     double
     float
 
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
-cpdef calc_planck_intensity_c(wp_cy nu0, wp_cy nu1, wp_cy[::1]temp):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef calc_planck_intensity_c(wp_cy[::1] temp,
+                            wp_cy[::1] omega_s,
+                            wp_cy[::1] planck_lambdas_center,
+                            wp_cy[::1] planck_dlambdas):
 
     cdef int nnu                = planck_n_lw_bins 
     cdef int c_njobs            = njobs_rad
-    cdef int c_planck_n_lw_bins = planck_n_lw_bins
+    cdef wp_cy c_con_c          = con_c
+    cdef wp_cy c_con_h          = con_h
+    cdef wp_cy c_con_kb         = con_kb
 
-    #cdef wp_cy[   ::1] dsigma    = GR.dsigma
-    cdef wp_cy[:, ::1] B         = np.zeros( (nnu, len(temp)), dtype=wp_np )
-    cdef wp_cy[:, ::1] B_sum     = np.zeros( (len(temp)), dtype=wp_np )
+    cdef wp_cy[:, ::1] B              = np.zeros( (nnu, len(temp)) , dtype=wp_np )
+    cdef wp_cy[   ::1] B_sum          = np.zeros( len(temp)        , dtype=wp_np )
 
-    #cdef int i, inb, im1, ip1, j, jnb, jm1, jp1, k, kp1
-    #cdef wp_cy hor_adv, vert_adv, num_diff
-
-    #cdef wp_cy c_POTT_hor_dif_tau = POTT_hor_dif_tau
-
-    #cdef wp_cy[:,:, ::1] dPOTTdt = np.zeros( (nx+2*nb,ny+2*nb,nz), dtype=wp_np)
-
-    nu0 = nu0*100 # 1/m
-    nu1 = nu1*100 # 1/m
-    dnu = (nu1 - nu0)/(nnu - 1)
-    #dnu = 5000 # 1/m
-    nus = np.arange(nu0,nu1+1,dnu, dtype=wp_np)
-    nus_center = nus[:-1]+dnu/2
-    lambdas = 1./nus
-    lambdas_center = 1./nus_center
-    dlambdas = np.diff(lambdas)
-
-    #B = 2*np.pi * (1 - omega_s) * 
-    for c in range(0, nnu):
-        B_sum[c] = B_sum[c] + 
-
-    return(B)
-
-    #if i_temperature_tendency:
-    #    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
-    #    #for i   in range(nb,nx +nb):
-    #        im1 = i - 1
-    #        ip1 = i + 1
-    #        inb = i - nb
-    #        for j   in range(nb,ny +nb):
-    #            jm1 = j - 1
-    #            jp1 = j + 1
-    #            jnb = j - nb
-    #            for k in range(0,nz):
-    #                kp1 = k + 1
-
-    #                # HORIZONTAL ADVECTION
-    #                if i_hor_adv:
-    #                    hor_adv = (+ UFLX[i  ,j  ,k  ] *\
-    #                                 (POTT[im1,j  ,k  ] +\
-    #                                  POTT[i  ,j  ,k  ])/2. \
-    #                              - UFLX[ip1,j  ,k  ] *\
-    #                                 (POTT[i  ,j  ,k  ] +\
-    #                                  POTT[ip1,j  ,k  ])/2. \
-    #                              + VFLX[i  ,j  ,k  ] *\
-    #                                 (POTT[i  ,jm1,k  ] +\
-    #                                  POTT[i  ,j  ,k  ])/2. \
-    #                              - VFLX[i  ,jp1,k  ] *\
-    #                                 (POTT[i  ,j  ,k  ] +\
-    #                                  POTT[i  ,jp1,k  ])/2. \
-    #                             ) / A[i  ,j  ]
-
-    #                    dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + hor_adv
+    cdef int k, nu_ind
+    cdef wp_cy dnu, spectral_radiance
 
 
-    #                # VERTICAL ADVECTION
-    #                if i_vert_adv:
-    #                    if k == 0:
-    #                        vert_adv = COLP_NEW[i  ,j  ] * (\
-    #                                - WWIND[i  ,j  ,kp1] * POTTVB[i  ,j  ,kp1] \
-    #                                                       ) / dsigma[k]
-    #                    elif k == nz:
-    #                        vert_adv = COLP_NEW[i  ,j  ] * (\
-    #                                + WWIND[i  ,j  ,k  ] * POTTVB[i  ,j  ,k  ] \
-    #                                                       ) / dsigma[k]
-    #                    else:
-    #                        vert_adv = COLP_NEW[i  ,j  ] * (\
-    #                                + WWIND[i  ,j  ,k  ] * POTTVB[i  ,j  ,k  ] \
-    #                                - WWIND[i  ,j  ,kp1] * POTTVB[i  ,j  ,kp1] \
-    #                                                       ) / dsigma[k]
+    for k in range(0, len(temp)):
+        for nu_ind in range(0,nnu):
+            spectral_radiance = \
+                2.*c_con_h*c_con_c**2. / planck_lambdas_center[nu_ind]**5. * \
+                1. / ( exp( c_con_h*c_con_c / \
+                (planck_lambdas_center[nu_ind]*c_con_kb*temp[k]) ) - 1. )
+            B[nu_ind,k] = 2.*pi * (1. - omega_s[k]) * \
+                          spectral_radiance * -planck_dlambdas[nu_ind] 
 
-    #                    dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + vert_adv
+    for k in range(0, len(temp)):
+        B_sum[k] = 0.
+        for nu_ind in range(0, nnu):
+            B_sum[k] = B_sum[k] + B[nu_ind,k]
+
+    return(B_sum)
 
 
-    #                # NUMERICAL DIFUSION 
-    #                if i_num_dif and (c_POTT_hor_dif_tau > 0):
-    #                    num_diff = c_POTT_hor_dif_tau * \
-    #                                 (+ COLP[im1,j  ] * POTT[im1,j  ,k  ] \
-    #                                  + COLP[ip1,j  ] * POTT[ip1,j  ,k  ] \
-    #                                  + COLP[i  ,jm1] * POTT[i  ,jm1,k  ]  \
-    #                                  + COLP[i  ,jp1] * POTT[i  ,jp1,k  ] \
-    #                                - 4.*COLP[i  ,j  ] * POTT[i  ,j  ,k  ] )
 
-    #                    dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + num_diff
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef calc_surface_emission_c(wp_cy tsurf,
+                            wp_cy[::1] planck_lambdas_center,
+                            wp_cy[::1] planck_dlambdas):
 
-    #                # RADIATION 
-    #                if c_i_radiation:
-    #                    dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + \
-    #                                        dPOTTdt_RAD[inb,jnb,k  ]*COLP[i  ,j  ]
-    #                # MICROPHYSICS 
-    #                if c_i_microphysics:
-    #                    dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + \
-    #                                        dPOTTdt_MIC[inb,jnb,k  ]*COLP[i  ,j  ]
+    cdef int nnu                = planck_n_lw_bins 
+    cdef int c_njobs            = njobs_rad
+    cdef wp_cy c_con_c          = con_c
+    cdef wp_cy c_con_h          = con_h
+    cdef wp_cy c_con_kb         = con_kb
+    cdef wp_cy c_emissivity_surface         = emissivity_surface
+
+    cdef wp_cy[   ::1] B              = np.zeros( nnu , dtype=wp_np )
+    cdef wp_cy         B_sum          = 0.
+
+    cdef int nu_ind
+    cdef wp_cy dnu, spectral_radiance
+
+
+    for nu_ind in range(0,nnu):
+        spectral_radiance = \
+            2.*c_con_h*c_con_c**2. / planck_lambdas_center[nu_ind]**5. * \
+            1. / ( exp( c_con_h*c_con_c / \
+            (planck_lambdas_center[nu_ind]*c_con_kb*tsurf) ) - 1. )
+        B[nu_ind] = emissivity_surface * pi *  \
+                      spectral_radiance * - planck_dlambdas[nu_ind] 
+
+    B_sum = 0.
+    for nu_ind in range(0, nnu):
+        B_sum = B_sum + B[nu_ind]
+
+    return(B_sum)
 
 
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cpdef rad_calc_LW_RTE_matrix_c(int nz, int nzs,
+                        wp_cy[::1] dtau, wp_cy[::1] gamma1, wp_cy[::1] gamma2,
+                        wp_cy[::1] B_air, wp_cy B_surf, wp_cy albedo_surface):
+
+    cdef wp_cy[   ::1] C1           = np.zeros(   nz        , dtype=wp_np )
+    cdef wp_cy[   ::1] C2           = np.zeros(   nz        , dtype=wp_np )
+    cdef wp_cy[   ::1] d0           = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[   ::1] dp1          = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[   ::1] dp2          = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[   ::1] dm1          = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[   ::1] dm2          = np.zeros( 2*nzs      , dtype=wp_np )
+
+    cdef wp_cy[   ::1] g_vec        = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[:, ::1] A_mat        = np.zeros( (5,2*nzs)  , dtype=wp_np )
+
+    cdef int k, ind
+
+
+    
+    for k in range(0,2*nz+2):
+        ind = ((k+1) - (k+1)%2)/2 - 1
+        if k == 2*nz+2-1:
+            g_vec[k] = B_surf
+        elif k > 0 and k % 2 == 0:
+            g_vec[k] = - dtau[ind] * B_air[ind]
+        elif k % 2 == 1:# k > 0 and k % 2 == 1:
+            g_vec[k] = dtau[ind] * B_air[ind]
+
+    for k in range(0,nz):
+        C1[k] = 0.5 * dtau[k] * gamma1[k]
+        C2[k] = 0.5 * dtau[k] * gamma2[k]
+
+    for k in range(0,2*nz+2):
+        ind = ((k+1) - (k+1)%2)/2 - 1
+        #print(str(k) + '  ' + str(ind))
+        if k == 0:
+            d0[k] = 1.
+        elif k == 2*nz+2-1:
+            d0[k] = 1.
+        elif k % 2 == 0:
+            d0[k] = - (1. + C1[ind])
+        elif k % 2 == 1:# k > 0 and k % 2 == 1:
+            d0[k] = + (1. + C1[ind])
+
+    for k in range(0,2*nz+2):
+        ind = (k - k%2)/2 - 1
+        #print(str(k) + '  ' + str(ind))
+        if k == 0:
+            dp1[k] = 0.
+            dp2[k] = 0.
+        elif k == 1:
+            dp1[k] = 0.
+            dp2[k] = 0.
+        elif k % 2 == 0:
+            dp1[k] = - C2[ind]
+            dp2[k] = 0.
+        elif k % 2 == 1:# k > 0 and k % 2 == 1:
+            dp1[k] = + C2[ind]
+            dp2[k] = - (1. - C1[ind])
+
+    for k in range(0,2*nz+2):
+        ind = (k - k%2)/2
+        #print(str(k) + '  ' + str(ind))
+        if k == 2*nz+2-1:
+            dm1[k] = 0.
+            dm2[k] = 0.
+        elif k == 2*nz+2-2:
+            dm1[k] = - albedo_surface
+            dm2[k] = 0.
+        elif k % 2 == 0:
+            dm1[k] = - C2[ind]
+            dm2[k] = + (1. - C1[ind])
+        elif k % 2 == 1:# k > 0 and k % 2 == 1:
+            dm1[k] = + C2[ind]
+            dm2[k] = 0.
+
+    for k in range(0,2*nz+2):
+        A_mat[0,k] = dp2[k]
+        A_mat[1,k] = dp1[k]
+        A_mat[2,k] = d0 [k]
+        A_mat[3,k] = dm1[k]
+        A_mat[4,k] = dm2[k]
+
+
+
+    return(A_mat, g_vec)

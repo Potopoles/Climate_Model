@@ -124,7 +124,7 @@ i_restart_nth_day = 5.00
 ####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
 # 2 makes sense for cases comparable to dx <= 4 and nz >= 8
-comp_mode = 2
+comp_mode = 1
 # working precision (float64 or float32)
 wp = 'float32'
 # cython
@@ -137,21 +137,21 @@ njobs = 4
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
-i_simulation_mode = 2
+i_simulation_mode = 0
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 0:
-    nz = 4
+    nz = 8
     lat0_deg = -80
     lat1_deg = 80
     dlat_deg = 3
     dlon_deg = 3
     output_path = '../output_orig'
     output_path = '../output'
-    i_sim_n_days = 0.5
+    i_sim_n_days = 0.25
     i_out_nth_hour = 3
     i_surface = 1
-    i_radiation = 3
+    i_radiation = 1
     i_microphysics = 0
     i_turbulence = 0
 
@@ -166,7 +166,7 @@ elif i_simulation_mode == 1:
     i_sim_n_days = 1.05
     i_out_nth_hour = 1.0
     i_surface = 1
-    i_radiation = 3
+    i_radiation = 1
     i_microphysics = 0
     i_turbulence = 0
 
@@ -181,7 +181,7 @@ elif i_simulation_mode == 2:
     i_sim_n_days = 100.00
     i_out_nth_hour = 24
     i_surface = 1
-    i_radiation = 3
+    i_radiation = 1
     i_microphysics = 0
     i_turbulence = 0
 
