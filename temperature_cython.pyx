@@ -2,6 +2,7 @@ import numpy as np
 from namelist import wp, POTT_hor_dif_tau, i_temperature_tendency, \
                     i_radiation, i_microphysics
 
+from libc.math cimport exp
 cimport numpy as np
 import cython
 from cython.parallel import prange 
@@ -103,12 +104,12 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
 
                     # NUMERICAL DIFUSION 
                     if i_num_dif and (c_POTT_hor_dif_tau > 0):
-                        num_diff = c_POTT_hor_dif_tau * \
-                                     (+ COLP[im1,j  ] * POTT[im1,j  ,k  ] \
+                        num_diff = c_POTT_hor_dif_tau * exp(-(nz-k-1)) *\
+                                    ( + COLP[im1,j  ] * POTT[im1,j  ,k  ] \
                                       + COLP[ip1,j  ] * POTT[ip1,j  ,k  ] \
                                       + COLP[i  ,jm1] * POTT[i  ,jm1,k  ]  \
                                       + COLP[i  ,jp1] * POTT[i  ,jp1,k  ] \
-                                    - 4.*COLP[i  ,j  ] * POTT[i  ,j  ,k  ] )
+                                   - 4.*COLP[i  ,j  ] * POTT[i  ,j  ,k  ] )
 
                         dPOTTdt[i  ,j  ,k] = dPOTTdt[i  ,j  ,k] + num_diff
 

@@ -57,12 +57,12 @@ def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, \
 
             # NUMERICAL DIFUSION 
             if i_num_dif and (POTT_hor_dif_tau > 0):
-                num_dif = POTT_hor_dif_tau * \
-                             (+ COLP[GR.iijj_im1] * POTT[:,:,k][GR.iijj_im1] \
+                num_dif = POTT_hor_dif_tau * np.exp(-(GR.nz-k-1)) *\
+                            ( + COLP[GR.iijj_im1] * POTT[:,:,k][GR.iijj_im1] \
                               + COLP[GR.iijj_ip1] * POTT[:,:,k][GR.iijj_ip1] \
                               + COLP[GR.iijj_jm1] * POTT[:,:,k][GR.iijj_jm1] \
                               + COLP[GR.iijj_jp1] * POTT[:,:,k][GR.iijj_jp1] \
-                              - 4*COLP[GR.iijj] * POTT[:,:,k][GR.iijj] )
+                            - 4*COLP[GR.iijj    ] * POTT[:,:,k][GR.iijj    ] )
                 dPOTTdt[:,:,k][GR.iijj] = dPOTTdt[:,:,k][GR.iijj] + num_dif
 
             # RADIATION 
