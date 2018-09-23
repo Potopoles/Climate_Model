@@ -88,66 +88,91 @@ cpdef calc_surface_emission_c(wp_cy tsurf,
 
 
 
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cpdef rad_calc_LW_RTE_matrix_c(int nz, int nzs,
                         wp_cy[::1] dtau, wp_cy[::1] gamma1, wp_cy[::1] gamma2,
                         wp_cy[::1] B_air, wp_cy B_surf, wp_cy albedo_surface):
 
     cdef wp_cy[   ::1] C1           = np.zeros(   nz        , dtype=wp_np )
     cdef wp_cy[   ::1] C2           = np.zeros(   nz        , dtype=wp_np )
-    cdef wp_cy[   ::1] d0           = np.zeros( 2*nz        , dtype=wp_np )
-    cdef wp_cy[   ::1] dp1          = np.zeros( 2*nz        , dtype=wp_np )
-    cdef wp_cy[   ::1] dp2          = np.zeros( 2*nz        , dtype=wp_np )
-    cdef wp_cy[   ::1] dm1          = np.zeros( 2*nz        , dtype=wp_np )
-    cdef wp_cy[   ::1] dm2          = np.zeros( 2*nz        , dtype=wp_np )
+    cdef wp_cy[   ::1] d0           = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[   ::1] dp1          = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[   ::1] dp2          = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[   ::1] dm1          = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[   ::1] dm2          = np.zeros( 2*nzs      , dtype=wp_np )
 
-    cdef wp_cy[   ::1] g_vec        = np.zeros( 2*nz+2      , dtype=wp_np )
-    cdef wp_cy[:, ::1] A_mat        = np.zeros( (5, 2*nzs)  , dtype=wp_np )
+    cdef wp_cy[   ::1] g_vec        = np.zeros( 2*nzs      , dtype=wp_np )
+    cdef wp_cy[:, ::1] A_mat        = np.zeros( (5,2*nzs)  , dtype=wp_np )
 
     cdef int k, ind
 
+
     
     for k in range(0,2*nz+2):
-        ind = k % nz
-        if k == 2*nz+2:
+        ind = ((k+1) - (k+1)%2)/2 - 1
+        if k == 2*nz+2-1:
             g_vec[k] = B_surf
         elif k > 0 and k % 2 == 0:
             g_vec[k] = - dtau[ind] * B_air[ind]
-        else:# k > 0 and k % 2 == 1:
+        elif k % 2 == 1:# k > 0 and k % 2 == 1:
             g_vec[k] = dtau[ind] * B_air[ind]
 
-    print(np.asarray(g_vec))
-    quit()
+    for k in range(0,nz):
+        C1[k] = 0.5 * dtau[k] * gamma1[k]
+        C2[k] = 0.5 * dtau[k] * gamma2[k]
 
-    #C1 = 0.5 * dtau * gamma1
-    #C2 = 0.5 * dtau * gamma2
+    for k in range(0,2*nz+2):
+        ind = ((k+1) - (k+1)%2)/2 - 1
+        #print(str(k) + '  ' + str(ind))
+        if k == 0:
+            d0[k] = 1.
+        elif k == 2*nz+2-1:
+            d0[k] = 1.
+        elif k % 2 == 0:
+            d0[k] = - (1. + C1[ind])
+        elif k % 2 == 1:# k > 0 and k % 2 == 1:
+            d0[k] = + (1. + C1[ind])
 
-    #d0_ = np.repeat(1+C1, 2)
-    #d0_[range(1,len(d0_),2)] = - d0_[range(1,len(d0_),2)]
-    #d0 = np.ones(2*nz+2); d0[1:-1] = d0_
+    for k in range(0,2*nz+2):
+        ind = (k - k%2)/2 - 1
+        #print(str(k) + '  ' + str(ind))
+        if k == 0:
+            dp1[k] = 0.
+            dp2[k] = 0.
+        elif k == 1:
+            dp1[k] = 0.
+            dp2[k] = 0.
+        elif k % 2 == 0:
+            dp1[k] = - C2[ind]
+            dp2[k] = 0.
+        elif k % 2 == 1:# k > 0 and k % 2 == 1:
+            dp1[k] = + C2[ind]
+            dp2[k] = - (1. - C1[ind])
 
-    #dp1_ = np.repeat(-C2, 2)
-    #dp1_[range(1,len(dp1_),2)] = - dp1_[range(1,len(dp1_),2)]
-    #dp1 = np.zeros(2*nz+2); dp1[2:] = dp1_
+    for k in range(0,2*nz+2):
+        ind = (k - k%2)/2
+        #print(str(k) + '  ' + str(ind))
+        if k == 2*nz+2-1:
+            dm1[k] = 0.
+            dm2[k] = 0.
+        elif k == 2*nz+2-2:
+            dm1[k] = - albedo_surface
+            dm2[k] = 0.
+        elif k % 2 == 0:
+            dm1[k] = - C2[ind]
+            dm2[k] = + (1. - C1[ind])
+        elif k % 2 == 1:# k > 0 and k % 2 == 1:
+            dm1[k] = + C2[ind]
+            dm2[k] = 0.
 
-    #dp2_ = np.repeat(-(1-C1), 2)
-    #dp2_[range(0,len(dp2_),2)] = 0
-    #dp2 = np.zeros(2*nz+2); dp2[2:] = dp2_
+    for k in range(0,2*nz+2):
+        A_mat[0,k] = dp2[k]
+        A_mat[1,k] = dp1[k]
+        A_mat[2,k] = d0 [k]
+        A_mat[3,k] = dm1[k]
+        A_mat[4,k] = dm2[k]
 
-    #dm1_ = np.repeat(-C2, 2)
-    #dm1_[range(1,len(dm1_),2)] = - dm1_[range(1,len(dm1_),2)]
-    #dm1 = np.zeros(2*nz+2); dm1[:-2] = dm1_; dm1[-2] = -albedo_surface
 
-    #dm2_ = np.repeat(1-C1, 2)
-    #dm2_[range(1,len(dm2_),2)] = 0
-    #dm2 = np.zeros(2*nz+2); dm2[:-2] = dm2_
-
-    #A_mat = np.zeros( ( 5, 2*nzs ) )
-    #A_mat[0,:] = dp2
-    #A_mat[1,:] = dp1
-    #A_mat[2,:] = d0
-    #A_mat[3,:] = dm1
-    #A_mat[4,:] = dm2
 
     return(A_mat, g_vec)

@@ -37,8 +37,6 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, q
     # single scattering albedo
     omega_s = sigma_sca_gas_LW/sigma_tot_LW
     omega_s[np.isnan(omega_s)] = 0
-    #print(omega_s)
-    #quit()
 
     # quadrature
     my1 = 1/np.sqrt(3)
@@ -50,38 +48,27 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, q
     gamma2[:] = omega_s*(1-g_a) / (2*my1)
 
     # 12 %
+    t0 = time.time()
     # emission fields
     #B_air = 2*np.pi * (1 - omega_s) * \
     #        calc_planck_intensity(tair_col, planck_lambdas_center, planck_dlambdas)
-    #print(B_air)
     B_air = np.asarray(calc_planck_intensity_c(tair_col, omega_s, \
                                 planck_lambdas_center, planck_dlambdas))
-    #print(B_air)
-    #quit()
 
     #B_surf = emissivity_surface * np.pi * \
     #        calc_planck_intensity(tsurf, planck_lambdas_center, planck_dlambdas)
     B_surf = calc_surface_emission_c(tsurf, \
                     planck_lambdas_center, planck_dlambdas)
 
-    #print(B_air)
-    #quit()
-    #print(dtau)
     # 10 %
-    t0 = time.time()
     # calculate radiative fluxes
-    A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
-                        B_air, B_surf, albedo_surface_LW)
-    #print(dtau)
-    #print(gamma1)
-    #print(gamma2)
-    #print()
-    #print(A_mat)
-    #print(g_vec)
-    #quit()
+    #A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
+    #                    B_air, B_surf, albedo_surface_LW)
     A_mat, g_vec = rad_calc_LW_RTE_matrix_c(nz, nzs, dtau, gamma1, gamma2,
                         B_air, B_surf, albedo_surface_LW)
-    quit()
+    A_mat = np.asarray(A_mat)
+    g_vec = np.asarray(g_vec)
+
 
     t1 = time.time()
     GR.rad_lwsolv += t1 - t0
@@ -147,7 +134,6 @@ def rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2, \
     g_vec[1:-1] = np.repeat(dtau*B_air, 2)
     g_vec[range(2,len(g_vec),2)] = - g_vec[range(2,len(g_vec),2)]
     g_vec[-1] = B_surf
-    print(g_vec)
 
     C1 = 0.5 * dtau * gamma1
     C2 = 0.5 * dtau * gamma2

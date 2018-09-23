@@ -147,7 +147,7 @@ if i_simulation_mode == 0:
     dlat_deg = 3
     dlon_deg = 3
     output_path = '../output_orig'
-    #output_path = '../output'
+    output_path = '../output'
     i_sim_n_days = 0.25
     i_out_nth_hour = 3
     i_surface = 1
