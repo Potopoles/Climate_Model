@@ -98,7 +98,7 @@ output_fields = {
                 'POTT'      : 2,                    #vp
                 'TAIR'      : 1,
                 # primary diagnostic fields
-                'PHI'       : 0,
+                'PHI'       : 1,
                 # secondary diagnostic fields
                 'PAIR'      : 1,
                 'RHO'       : 1,
@@ -115,9 +115,9 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 0
-i_save_to_restart = 0
-i_restart_nth_day = 0.50
+i_load_from_restart = 1
+i_save_to_restart = 1
+i_restart_nth_day = 5.00
 
 ####################################################################
 # PARALLEL AND DEVICE
@@ -126,7 +126,7 @@ i_restart_nth_day = 0.50
 # 2 makes sense for cases comparable to dx <= 4 and nz >= 8
 comp_mode = 1
 # working precision (float64 or float32)
-wp = 'float64'
+wp = 'float32'
 # cython
 njobs = 4
 
@@ -172,11 +172,11 @@ elif i_simulation_mode == 1:
 
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
-    nz = 32
-    lat0_deg = -81
-    lat1_deg = 81
-    dlat_deg = 1.0
-    dlon_deg = 1.0
+    nz = 16
+    lat0_deg = -82
+    lat1_deg = 82
+    dlat_deg = 2.0
+    dlon_deg = 2.0
     output_path = '../output_run'
     i_sim_n_days = 100.00
     i_out_nth_hour = 24
@@ -191,7 +191,7 @@ elif i_simulation_mode == 2:
 # DIFFUSION
 ####################################################################
 WIND_hor_dif_tau = 0 # important
-POTT_hor_dif_tau = 0 # creates instabilities and acceleration in steep terrain
+POTT_hor_dif_tau = 1E-6 # creates instabilities and acceleration in steep terrain
 COLP_hor_dif_tau = 0 # not tested (but likely not good because of same reasons as for POTT)
 QV_hor_dif_tau   = 0
 if i_diffusion_on:
@@ -209,6 +209,7 @@ if i_diffusion_on:
         WIND_hor_dif_tau = 3.3
     elif dlat_deg == 2:
         WIND_hor_dif_tau = 5
+        POTT_hor_dif_tau = 3E-6
     elif dlat_deg == 1.5:
         WIND_hor_dif_tau = 7.5
     elif dlat_deg <= 1:
