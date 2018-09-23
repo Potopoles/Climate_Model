@@ -4,7 +4,7 @@ from datetime import datetime
 ####################################################################
 # GRID PARAMS
 ####################################################################
-GMT_initialization = datetime(2018,9,16,0,0,0)
+GMT_initialization = datetime(2018,1,1,0,0,0)
 
 nz = 8 # must be nz = 2**x (x = 0,1,2,3,4...)
 lon0_deg = 0
@@ -124,9 +124,9 @@ i_restart_nth_day = 5.00
 ####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
 # 2 makes sense for cases comparable to dx <= 4 and nz >= 8
-comp_mode = 1
+comp_mode = 2
 # working precision (float64 or float32)
-wp = 'float32'
+wp = 'float64'
 # cython
 njobs = 4
 
@@ -137,7 +137,7 @@ njobs = 4
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
-i_simulation_mode = 0
+i_simulation_mode = 2
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 0:
@@ -173,13 +173,13 @@ elif i_simulation_mode == 1:
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
     nz = 16
-    lat0_deg = -82
-    lat1_deg = 82
+    lat0_deg = -80
+    lat1_deg = 80
     dlat_deg = 2.0
     dlon_deg = 2.0
     output_path = '../output_run'
-    i_sim_n_days = 100.00
-    i_out_nth_hour = 24
+    i_sim_n_days = 365.00
+    i_out_nth_hour = 48
     i_surface = 1
     i_radiation = 1
     i_microphysics = 0
@@ -209,7 +209,7 @@ if i_diffusion_on:
         WIND_hor_dif_tau = 3.3
     elif dlat_deg == 2:
         WIND_hor_dif_tau = 5
-        POTT_hor_dif_tau = 3E-6
+        POTT_hor_dif_tau = 4E-6
     elif dlat_deg == 1.5:
         WIND_hor_dif_tau = 7.5
     elif dlat_deg <= 1:

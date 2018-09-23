@@ -11,11 +11,10 @@ if comp_mode == 2:
     i_async_radiation = 1
 else:
     i_async_radiation = 0
-i_async_radiation = 0
+#i_async_radiation = 0
 
 if i_async_radiation:
-    #njobs_rad = 3
-    njobs_rad = 2
+    njobs_rad = 1
 else:
     njobs_rad = 4
 
@@ -33,4 +32,4 @@ emissivity_surface = 1
 
 
 # longwave
-planck_n_lw_bins = 50
+planck_n_lw_bins = 5

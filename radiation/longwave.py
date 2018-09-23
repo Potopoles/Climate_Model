@@ -15,10 +15,9 @@ from bin.longwave_cython import calc_planck_intensity_c, calc_surface_emission_c
 ###################################################################################
 ###################################################################################
 
-def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col,
+def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col,
                 planck_lambdas_center, planck_dlambdas):
 
-    # 5 %
     # LONGWAVE
     g_a = 0.0
     #albedo_surface_LW = 1
@@ -47,8 +46,6 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, q
     gamma2 = np.zeros(nz)
     gamma2[:] = omega_s*(1-g_a) / (2*my1)
 
-    # 12 %
-    t0 = time.time()
     # emission fields
     #B_air = 2*np.pi * (1 - omega_s) * \
     #        calc_planck_intensity(tair_col, planck_lambdas_center, planck_dlambdas)
@@ -60,7 +57,6 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, q
     B_surf = calc_surface_emission_c(tsurf, \
                     planck_lambdas_center, planck_dlambdas)
 
-    # 10 %
     # calculate radiative fluxes
     #A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
     #                    B_air, B_surf, albedo_surface_LW)
@@ -70,10 +66,7 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, q
     g_vec = np.asarray(g_vec)
 
 
-    t1 = time.time()
-    GR.rad_lwsolv += t1 - t0
 
-    # 4 %
     #fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
     fluxes = scipy.linalg.solve_banded((2,2), A_mat, g_vec)
 
