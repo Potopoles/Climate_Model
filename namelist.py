@@ -49,7 +49,7 @@ i_temperature_tendency = 1
 i_colp_tendency = 1
 
 # ADDITIONAL MODEL COMPONENTS
-i_surace = 0
+i_surface = 0
 
 # PHYSICS
 i_radiation = 0
@@ -100,12 +100,12 @@ output_fields = {
                 # primary diagnostic fields
                 'PHI'       : 1,
                 # secondary diagnostic fields
-                'PAIR'      : 1,
-                'RHO'       : 1,
+                'PAIR'      : 0,
+                'RHO'       : 0,
                 # surface fields
                 'SURFTEMP'       : 1,
                 'SURFALBEDSW'    : 1,
-                'SURFALBEDLW'    : 1,
+                'SURFALBEDLW'    : 0,
                 # radiation fields
                 # microphysics fields
                 'QV'        : 0,                    #vp
@@ -115,7 +115,7 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 1
+i_load_from_restart = 0
 i_save_to_restart = 1
 i_restart_nth_day = 5.00
 
@@ -144,12 +144,12 @@ if i_simulation_mode == 0:
     nz = 8
     lat0_deg = -80
     lat1_deg = 80
-    dlat_deg = 3
-    dlon_deg = 3
+    dlat_deg = 2
+    dlon_deg = 2
     output_path = '../output_orig'
     output_path = '../output'
-    i_sim_n_days = 0.25
-    i_out_nth_hour = 3
+    i_sim_n_days = 10
+    i_out_nth_hour = 12
     i_surface = 1
     i_radiation = 1
     i_microphysics = 0
@@ -172,14 +172,14 @@ elif i_simulation_mode == 1:
 
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
-    nz = 16
+    nz = 32
     lat0_deg = -80
     lat1_deg = 80
     dlat_deg = 2.0
     dlon_deg = 2.0
     output_path = '../output_run'
-    i_sim_n_days = 365.00
-    i_out_nth_hour = 48
+    i_sim_n_days = 2*365.00
+    i_out_nth_hour = 24
     i_surface = 1
     i_radiation = 1
     i_microphysics = 0
@@ -209,7 +209,7 @@ if i_diffusion_on:
         WIND_hor_dif_tau = 3.3
     elif dlat_deg == 2:
         WIND_hor_dif_tau = 5
-        POTT_hor_dif_tau = 4E-6
+        #POTT_hor_dif_tau = 4E-6
     elif dlat_deg == 1.5:
         WIND_hor_dif_tau = 7.5
     elif dlat_deg <= 1:

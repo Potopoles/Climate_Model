@@ -1,0 +1,11 @@
+*__pycache__*
+*.c
+
+nohup.out
+
+
+build
+build.unused
+bin
+
+Session.vim

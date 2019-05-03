@@ -1,0 +1,12 @@
+-   There is some overhead when calling a numba function from a python function.
+    There is very little overhead when calling a numba func from another numb. f.
+-   jit(nopython=True) raises an error when something cannot be compiled by numba
+    Else you get a slow python version but no error.
+-   64 bit is 2 times (Pascal-architecture Tesla) to 24 times (Maxwell-
+    architecture GeForce) slower than 32bit on a GPU.
+-   Decorator @numba.jit is the normal CPU decorator but can be used on
+    GPU, as well, when called from a CUDA kernel function decorated
+    with @numbe.cuda.jit. Restrictions on GPU version of function:
+    - no array allocation
+    - no array math function (use python math functions instead)
+    - do not use explicit type signatures in the @jit decorator

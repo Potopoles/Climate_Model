@@ -42,16 +42,19 @@ def calc_albedo_gpu(SURFALBEDSW, SURFALBEDLW, OCEANMASK, SOILTEMP):
     # ocean
     if OCEANMASK[i,j] == 1:
         SURFALBEDSW[i,j] = 0.05
-        SURFALBEDLW[i,j] = 0.05
+        #SURFALBEDLW[i,j] = 0.05
+        SURFALBEDLW[i,j] = 0.00
     # land
     else:
         SURFALBEDSW[i,j] = 0.2
-        SURFALBEDLW[i,j] = 0.2
+        #SURFALBEDLW[i,j] = 0.2
+        SURFALBEDLW[i,j] = 0.0
 
     # ice (land and sea)
     if SOILTEMP[i,j,0] <= 273.15:
-        SURFALBEDSW[i,j] = 0.7
-        SURFALBEDLW[i,j] = 0.3
+        SURFALBEDSW[i,j] = 0.5
+        #SURFALBEDLW[i,j] = 0.3
+        SURFALBEDLW[i,j] = 0.0
 
     cuda.syncthreads()
 

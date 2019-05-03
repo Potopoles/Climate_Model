@@ -112,11 +112,14 @@ class surface:
     def calc_albedo(self, GR, CF):
         # forest
         CF.SURFALBEDSW[:] = 0.2
-        CF.SURFALBEDLW[:] = 0.2
+        #CF.SURFALBEDLW[:] = 0.2
+        CF.SURFALBEDLW[:] = 0.0
         # ocean
         CF.SURFALBEDSW[CF.OCEANMASK == 1] = 0.05
-        CF.SURFALBEDLW[CF.OCEANMASK == 1] = 0.05
+        #CF.SURFALBEDLW[CF.OCEANMASK == 1] = 0.05
+        CF.SURFALBEDLW[CF.OCEANMASK == 1] = 0.00
         # ice (land and sea)
-        CF.SURFALBEDSW[CF.SOILTEMP[:,:,0] <= 273.15] = 0.7
-        CF.SURFALBEDLW[CF.SOILTEMP[:,:,0] <= 273.15] = 0.3
+        CF.SURFALBEDSW[CF.SOILTEMP[:,:,0] <= 273.15] = 0.5
+        #CF.SURFALBEDLW[CF.SOILTEMP[:,:,0] <= 273.15] = 0.3
+        CF.SURFALBEDLW[CF.SOILTEMP[:,:,0] <= 273.15] = 0.0
 

@@ -26,11 +26,12 @@ def water_vapor_tendency_gpu(dQVdt, QV, COLP, COLP_NEW, \
 
         # HORIZONTAL ADVECTION
         if i_hor_adv:
-            dQVdt[i,j,k] = (  + UFLX[i  ,j  ,k] * (QV[i-1,j  ,k] + QV[i  ,j  ,k])/2.\
-                              - UFLX[i+1,j  ,k] * (QV[i  ,j  ,k] + QV[i+1,j  ,k])/2.\
-                              + VFLX[i  ,j  ,k] * (QV[i  ,j-1,k] + QV[i  ,j  ,k])/2.\
-                              - VFLX[i  ,j+1,k] * (QV[i  ,j  ,k] + QV[i  ,j+1,k])/2.)\
-                              / A[i  ,j  ]
+            dQVdt[i,j,k] = \
+                (+ UFLX[i  ,j  ,k] * (QV[i-1,j  ,k] + QV[i  ,j  ,k])/2.
+                 - UFLX[i+1,j  ,k] * (QV[i  ,j  ,k] + QV[i+1,j  ,k])/2.
+                 + VFLX[i  ,j  ,k] * (QV[i  ,j-1,k] + QV[i  ,j  ,k])/2.
+                 - VFLX[i  ,j+1,k] * (QV[i  ,j  ,k] + QV[i  ,j+1,k])/2.)\
+                 / A[i  ,j  ]
 
         # VERTICAL ADVECTION
         if i_vert_adv:

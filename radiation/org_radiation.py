@@ -80,8 +80,8 @@ class radiation:
         if self.i_radiation:
             #if GR.ts % self.rad_nth_ts == 0:
             print('START RADIATION')
-            #self.simple_radiation(GR, CF)
-            self.simple_radiation_par(GR, CF)
+            self.simple_radiation(GR, CF)
+            #self.simple_radiation_par(GR, CF)
 
         self.done = 1
         t_end = time.time()
@@ -93,8 +93,6 @@ class radiation:
             print('took ' + str(round(t_end-t_start,0)) + ' seconds.')
             print('took ' + str(round((sim_t_end-sim_t_start)/3600,1)) + ' simulated hours.')
             print('###########################################')
-
-
 
 
 
