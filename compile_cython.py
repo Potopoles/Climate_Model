@@ -1,7 +1,9 @@
 from distutils.core import setup
 import numpy
 # BUGFIX for numpy stuff not found error. Run the following, and use the path for:
-# sudo cp -r PATH/numpy /usr/local/include/
+#   sudo cp -r PATH/numpy /usr/local/include/
+# BUGFIX alternative: in case of no rights to write in /usr/local/include:
+#   export CFLAGS="-I PATH $CFLAGS" 
 #print(numpy.get_include())
 #quit()
 
