@@ -115,7 +115,7 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 0
+i_load_from_restart = 1
 i_save_to_restart = 1
 i_restart_nth_day = 5.00
 
@@ -210,6 +210,7 @@ if i_diffusion_on:
     elif dlat_deg == 2:
         WIND_hor_dif_tau = 5
         #POTT_hor_dif_tau = 4E-6
+        POTT_hor_dif_tau = 1E-5
     elif dlat_deg == 1.5:
         WIND_hor_dif_tau = 7.5
     elif dlat_deg <= 1:
