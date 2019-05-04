@@ -15,7 +15,7 @@ from wind_cuda import wind_tendency_jacobson_gpu
 
 from temperature import temperature_tendency_jacobson
 from bin.temperature_cython import temperature_tendency_jacobson_c
-from temperature_cuda import temperature_tendency_jacobson_gpu
+from temperature_cuda import calc_dPOTTdt
 
 from moisture import water_vapor_tendency, cloud_water_tendency
 from bin.moisture_cython import water_vapor_tendency_c, cloud_water_tendency_c
@@ -158,10 +158,10 @@ def tendencies_jacobson(GR, F, subgrids):
         F.dPOTTdt = np.asarray(F.dPOTTdt)
 
     elif comp_mode == 2:
-        temperature_tendency_jacobson_gpu[GR.griddim, GR.blockdim, GR.stream] \
-                                            (F.dPOTTdt, 
-                                            F.POTT, F.POTTVB, F.COLP, F.COLP_NEW, 
-                                            F.UFLX, F.VFLX, F.WWIND, 
+        calc_dPOTTdt[GR.griddim, GR.blockdim, GR.stream] \
+                                    (F.dPOTTdt, 
+                                    F.POTT, F.POTTVB, F.COLP, F.COLP_NEW, 
+                                    F.UFLX, F.VFLX, F.WWIND, 
                                             F.dPOTTdt_RAD, F.dPOTTdt_MIC, 
                                             GR.Ad, GR.dsigmad)
         GR.stream.synchronize()

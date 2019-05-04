@@ -68,56 +68,6 @@ if i_time_stepping == 'RK4':
 # DURATION (days)
 i_sim_n_days = 0.5
 
-####################################################################
-# IO SETTINGS
-####################################################################
-# TIME STEP OUTPUT
-nth_ts_time_step_diag = 10
-# NC OUTPUT
-i_out_nth_hour = 0.25
-output_path = '../output_run'
-output_fields = {
-                # 2D FIELDS
-                ####################################################
-                # pressure fields
-                'PSURF'     : 1,
-
-                # 3D FIELDS
-                ####################################################
-                # - For certain variables flags > 1 enable zonally averaged
-                #   vertical profile output
-                #   These flags are marked with #vp
-                # flux fields
-                'UWIND'     : 2,                    #vp
-                'VWIND'     : 2,                    #vp
-                'WIND'      : 2,                    #vp
-                'WWIND'     : 1,
-                'VORT'      : 1,
-                # velocity fields
-                # temperature fields
-                'POTT'      : 2,                    #vp
-                'TAIR'      : 1,
-                # primary diagnostic fields
-                'PHI'       : 1,
-                # secondary diagnostic fields
-                'PAIR'      : 0,
-                'RHO'       : 0,
-                # surface fields
-                'SURFTEMP'       : 1,
-                'SURFALBEDSW'    : 1,
-                'SURFALBEDLW'    : 0,
-                # radiation fields
-                # microphysics fields
-                'QV'        : 0,                    #vp
-                'QC'        : 0,                    #vp
-                'WVP'       : 0,
-                'CWP'       : 0,
-                }
-
-# RESTART FILES
-i_load_from_restart = 1
-i_save_to_restart = 1
-i_restart_nth_day = 5.00
 
 ####################################################################
 # PARALLEL AND DEVICE
@@ -126,8 +76,8 @@ i_restart_nth_day = 5.00
 # 2 makes sense for cases comparable to dx <= 4 and nz >= 8
 comp_mode = 2
 # working precision (float64 or float32)
-wp = 'float64'
-wp = 'float32'
+#wp = 'float32'
+wp = np.float32
 # cython
 njobs = 4
 
@@ -140,52 +90,15 @@ njobs = 4
 # 2: longtime run
 i_simulation_mode = 2
 
-# TESTSUITE EQUALITY
-if i_simulation_mode == 0:
-    nz = 8
-    lat0_deg = -80
-    lat1_deg = 80
-    dlat_deg = 2
-    dlon_deg = 2
-    output_path = '../output_orig'
-    output_path = '../output'
-    i_sim_n_days = 10
-    i_out_nth_hour = 12
-    i_surface = 1
-    i_radiation = 1
-    i_microphysics = 0
-    i_turbulence = 0
-
-## BENCHMARK EXPERIMENT
-elif i_simulation_mode == 1:
-    nz = 16
-    lat0_deg = -80
-    lat1_deg = 80
-    dlat_deg = 2.0
-    dlon_deg = 2.0
-    output_path = '../output'
-    i_sim_n_days = 1.05
-    i_out_nth_hour = 1.0
-    i_surface = 1
-    i_radiation = 1
-    i_microphysics = 0
-    i_turbulence = 0
-
-## LONGTIME RUN
-elif i_simulation_mode == 2:
-    nz = 32
-    lat0_deg = -80
-    lat1_deg = 80
-    dlat_deg = 2.0
-    dlon_deg = 2.0
-    output_path = '../output_run'
-    i_sim_n_days = 2*365.00
-    i_out_nth_hour = 24
-    i_surface = 1
-    i_radiation = 1
-    i_microphysics = 0
-    i_turbulence = 0
-
+nz = 32
+lat0_deg = -80
+lat1_deg = 80
+dlat_deg = 1
+dlon_deg = 1
+i_surface = 0
+i_radiation = 0
+i_microphysics = 0
+i_turbulence = 0
 
 
 ####################################################################
