@@ -76,8 +76,14 @@ i_sim_n_days = 0.5
 # 2 makes sense for cases comparable to dx <= 4 and nz >= 8
 comp_mode = 2
 # working precision (float64 or float32)
-#wp = 'float32'
+wp_str = 'float32[:,:,:]'
 wp = np.float32
+wp_int = np.int32
+
+#wp_str = 'float64[:,:,:]'
+#wp = np.float64
+#wp_int = np.int64
+
 # cython
 njobs = 4
 

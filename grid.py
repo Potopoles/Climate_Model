@@ -9,10 +9,20 @@ if wp == 'float64':
 elif wp == 'float32':
     from numpy import float32 as wp_np
 
+from debug_namelist import wp, wp_int
+
 # FIXED GPU SETTINGS (have to here in code to be able to import them in another module)
 tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
 tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)
 tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
+
+nb = wp_int(1)
+nx = wp_int(360)
+ny = wp_int(180)
+nz = wp_int(32)
+
+nxs = nx + wp_int(1)
+nys = ny + wp_int(1)
 
 class Grid:
 
@@ -78,7 +88,7 @@ class Grid:
             self.nxs = self.nx + 1
             self.ny = int((self.lat1_deg - self.lat0_deg)/self.dlat_deg)
             self.nys = self.ny + 1
-            self.nb = 1
+            self.nb = nb
 
             # INDEX ARRAYS
             self.kk  = np.arange(0,self.nz)
