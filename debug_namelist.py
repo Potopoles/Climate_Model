@@ -79,10 +79,12 @@ comp_mode = 2
 wp_str = 'float32[:,:,:]'
 wp = np.float32
 wp_int = np.int32
+wp_old = 'float32'
 
 #wp_str = 'float64[:,:,:]'
 #wp = np.float64
 #wp_int = np.int64
+#wp_old = 'float64'
 
 # cython
 njobs = 4

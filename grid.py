@@ -23,6 +23,7 @@ nz = wp_int(32)
 
 nxs = nx + wp_int(1)
 nys = ny + wp_int(1)
+nzs = nz + wp_int(1)
 
 class Grid:
 
