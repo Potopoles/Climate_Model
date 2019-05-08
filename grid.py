@@ -25,6 +25,10 @@ nxs = nx + wp_int(1)
 nys = ny + wp_int(1)
 nzs = nz + wp_int(1)
 
+# GPU computation
+tpb  = (1,       1,      nz)
+bpg  = (int(nx/tpb[0])+1,   int(ny/tpb[1])+1,  1)
+
 class Grid:
 
     def __init__(self, i_subgrid=0, specs=None):

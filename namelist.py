@@ -126,10 +126,22 @@ i_restart_nth_day = 5.00
 # 2 makes sense for cases comparable to dx <= 4 and nz >= 8
 comp_mode = 2
 # working precision (float64 or float32)
-wp = 'float64'
-wp = 'float32'
+#wp = 'float64'
+#wp = 'float32'
+wp_3D = 'float32[:,:,:]'
+wp = np.float32
+wp_int = np.int32
+wp_old = 'float32'
+
+#wp_3D = 'float64[:,:,:]'
+#wp = np.float64
+#wp_int = np.int64
+#wp_old = 'float64'
+
 # cython
 njobs = 4
+
+
 
 ####################################################################
 # SIMULATION MODES (how to run the model - default suggestions)
@@ -192,7 +204,7 @@ elif i_simulation_mode == 2:
 # DIFFUSION
 ####################################################################
 WIND_hor_dif_tau = 0 # important
-POTT_hor_dif_tau = 1E-6 # creates instabilities and acceleration in steep terrain
+POTT_dif_coef = 1E-6 # creates instabilities and acceleration in steep terrain
 COLP_hor_dif_tau = 0 # not tested (but likely not good because of same reasons as for POTT)
 QV_hor_dif_tau   = 0
 if i_diffusion_on:
@@ -210,8 +222,7 @@ if i_diffusion_on:
         WIND_hor_dif_tau = 3.3
     elif dlat_deg == 2:
         WIND_hor_dif_tau = 5
-        #POTT_hor_dif_tau = 4E-6
-        POTT_hor_dif_tau = 1E-5
+        POTT_dif_coef = 1E-5
     elif dlat_deg == 1.5:
         WIND_hor_dif_tau = 7.5
     elif dlat_deg <= 1:
@@ -221,4 +232,15 @@ if i_diffusion_on:
 WIND_hor_dif_tau = WIND_hor_dif_tau * 1.0
 
 
+# TODO TEMPORARY
+POTT_dif_coef = wp(1E-1)
 
+
+
+## TENDENCIES
+i_POTT_main_switch = 1
+i_POTT_hor_adv   = 1
+i_POTT_vert_adv  = 1
+i_POTT_num_dif   = 1
+i_POTT_radiation = 0
+i_POTT_microphys = 0

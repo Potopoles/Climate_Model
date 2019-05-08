@@ -1,6 +1,6 @@
 import numpy as np
 from numba import cuda, jit
-from namelist import wp
+from namelist import wp_old
 
 
 def exchange_BC_gpu(FIELD, zonal, merid, griddim, blockdim, stream,
@@ -29,7 +29,7 @@ def exchange_BC_gpu(FIELD, zonal, merid, griddim, blockdim, stream,
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:],  '+wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:],  '+wp_old], target='gpu')
 def get_BCx(FIELD, zonal, stagx):
     i, j, k = cuda.grid(3)
     if stagx: # staggered in x
@@ -46,7 +46,7 @@ def get_BCx(FIELD, zonal, stagx):
             zonal[1,j,k] = FIELD[i,j,k] 
     cuda.syncthreads()
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:],  '+wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:],  '+wp_old], target='gpu')
 def get_BCy(FIELD, merid, stagy):
     i, j, k = cuda.grid(3)
     if stagy: # staggered in y
@@ -59,7 +59,7 @@ def get_BCy(FIELD, merid, stagy):
             merid[i,1,k] = FIELD[i,j,k] 
     cuda.syncthreads()
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:],  '+wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:],  '+wp_old], target='gpu')
 def set_BCx(FIELD, zonal, stagx):
     i, j, k = cuda.grid(3)
     if stagx: # staggered in x
@@ -76,7 +76,7 @@ def set_BCx(FIELD, zonal, stagx):
             FIELD[i,j,k] = zonal[0,j,k] 
     cuda.syncthreads()
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:],  '+wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:],  '+wp_old], target='gpu')
 def set_BCy(FIELD, merid, stagy):
     i, j, k = cuda.grid(3)
     if stagy: # staggered in y
@@ -96,7 +96,7 @@ def set_BCy(FIELD, merid, stagy):
 
 
 
-@jit([wp+'[:,:  ], '+wp+'[:,:,:],  '+wp], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:,:],  '+wp_old], target='gpu')
 def get_BCx2D(FIELD, zonal, stagx):
     i, j = cuda.grid(2)
     if stagx: # staggered in x
@@ -113,7 +113,7 @@ def get_BCx2D(FIELD, zonal, stagx):
             zonal[1,j,0] = FIELD[i,j] 
     cuda.syncthreads()
 
-@jit([wp+'[:,:  ], '+wp+'[:,:,:],  '+wp], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:,:],  '+wp_old], target='gpu')
 def get_BCy2D(FIELD, merid, stagy):
     i, j = cuda.grid(2)
     if stagy: # staggered in y
@@ -126,7 +126,7 @@ def get_BCy2D(FIELD, merid, stagy):
             merid[i,1,0] = FIELD[i,j] 
     cuda.syncthreads()
 
-@jit([wp+'[:,:  ], '+wp+'[:,:,:],  '+wp], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:,:],  '+wp_old], target='gpu')
 def set_BCx2D(FIELD, zonal, stagx):
     i, j = cuda.grid(2)
     if stagx: # staggered in x
@@ -143,7 +143,7 @@ def set_BCx2D(FIELD, zonal, stagx):
             FIELD[i,j] = zonal[0,j,0] 
     cuda.syncthreads()
 
-@jit([wp+'[:,:  ], '+wp+'[:,:,:],  '+wp], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:,:],  '+wp_old], target='gpu')
 def set_BCy2D(FIELD, merid, stagy):
     i, j = cuda.grid(2)
     if stagy: # staggered in y

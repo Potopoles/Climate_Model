@@ -1,15 +1,15 @@
 import numpy as np
-from namelist import  i_colp_tendency, COLP_hor_dif_tau, wp
+from namelist import  i_colp_tendency, COLP_hor_dif_tau, wp_old
 from grid import tpbv, tpbvs
 from boundaries_cuda import exchange_BC_gpu
 import time
 from numba import cuda, jit
-if wp == 'float64':
+if wp_old == 'float64':
     from numba import float64 as wp_nb
-if wp == 'float32':
+if wp_old == 'float32':
     from numba import float32 as wp_nb
 
-@jit([wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:,:], '+wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:,:,:], '+wp_old], target='gpu')
 def calc_UFLX(UFLX, COLP, UWIND, dy):
     nxs = UFLX.shape[0] - 2
     ny  = UFLX.shape[1] - 2
@@ -23,7 +23,7 @@ def calc_UFLX(UFLX, COLP, UWIND, dy):
     cuda.syncthreads()
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:,:], '+wp+'[:,:  ]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ]'], target='gpu')
 def calc_VFLX(VFLX, COLP, VWIND, dxjs):
     nx  = VFLX.shape[0] - 2
     nys = VFLX.shape[1] - 2
@@ -37,8 +37,8 @@ def calc_VFLX(VFLX, COLP, VWIND, dxjs):
     cuda.syncthreads()
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+\
-      wp+'[:    ], '+wp+'[:,:  ]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
+      wp_old+'[:    ], '+wp_old+'[:,:  ]'], target='gpu')
 def calc_FLXDIV(FLXDIV, UFLX, VFLX, dsigma, A):
     nx = FLXDIV.shape[0] - 2
     ny = FLXDIV.shape[1] - 2
@@ -58,7 +58,7 @@ def get_sum(a, b):
     return a + b
 
 
-@jit([wp+'[:,:  ], '+wp+'[:,:,:]'], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:,:]'], target='gpu')
 def calc_dCOLPdt(dCOLPdt, FLXDIV):
 
     if i_colp_tendency:
@@ -116,7 +116,7 @@ def colp_tendency_jacobson_gpu(GR, griddim, blockdim, stream,
     return(dCOLPdt, UFLX, VFLX, FLXDIV)
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:]'], target='gpu')
 def vertical_wind_jacobson_gpu(WWIND, dCOLPdt, FLXDIV, COLP_NEW, sigma_vb):
 
     nx  = FLXDIV.shape[0] - 2

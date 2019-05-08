@@ -9,3 +9,4 @@ build.unused
 bin
 
 Session.vim
+*.swp

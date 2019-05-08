@@ -2,7 +2,7 @@ import time
 import numpy as np
 from boundaries_cuda import exchange_BC_gpu
 from constants import con_cp, con_rE, con_Rd
-from namelist import wp, WIND_hor_dif_tau, i_wind_tendency
+from namelist import wp_old, WIND_hor_dif_tau, i_wind_tendency
 from numba import cuda, jit
 from math import cos, sin
 
@@ -112,11 +112,11 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
     return(dUFLXdt, dVFLXdt)
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:  ], '+ \
-      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ \
-      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ \
-      wp+'[:,:  ], '+wp+'[:,:  ], '+wp+', '+ \
-      wp+'[:    ], '+wp+'[:    ], '+wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+ \
+      wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+ \
+      wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+ \
+      wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+', '+ \
+      wp_old+'[:    ], '+wp_old+'[:    ], '+wp_old], target='gpu')
 def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
                 UFLX, BFLX, CFLX, DFLX, EFLX,
                 PHI, POTT, PVTF, PVTFVB, WWIND_UWIND_ks,
@@ -213,11 +213,11 @@ def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
     cuda.syncthreads()
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:  ], '+ \
-      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ \
-      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ \
-      wp+'[:,:  ], '+wp+'[:,:  ], '+wp+', '+ \
-      wp+'[:    ], '+wp+'[:    ], '+wp+'[:,:  ]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+ \
+      wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+ \
+      wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+ \
+      wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+', '+ \
+      wp_old+'[:    ], '+wp_old+'[:    ], '+wp_old+'[:,:  ]'], target='gpu')
 def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
                 VFLX, RFLX, QFLX, SFLX, TFLX,
                 PHI, POTT, PVTF, PVTFVB, WWIND_VWIND_ks,
@@ -316,7 +316,7 @@ def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:]'], target='gpu')
 def calc_fluxes_ij(BFLX, RFLX, UFLX, VFLX):
     nx = BFLX.shape[0] - 2
     ny = BFLX.shape[1] - 2
@@ -337,7 +337,7 @@ def calc_fluxes_ij(BFLX, RFLX, UFLX, VFLX):
                                           VFLX[i+1,j+1,k]    )
     cuda.syncthreads()
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:]'], target='gpu')
 def calc_fluxes_isj(SFLX, TFLX, UFLX, VFLX):
     nx = SFLX.shape[0] - 2
     ny = SFLX.shape[1] - 2
@@ -361,7 +361,7 @@ def calc_fluxes_isj(SFLX, TFLX, UFLX, VFLX):
     cuda.syncthreads()
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:]'], target='gpu')
 def calc_fluxes_ijs(DFLX, EFLX, UFLX, VFLX):
     nx = DFLX.shape[0] - 2
     ny = DFLX.shape[1] - 2
@@ -384,7 +384,7 @@ def calc_fluxes_ijs(DFLX, EFLX, UFLX, VFLX):
                                      - UFLX[i+1,j  ,k]    )
     cuda.syncthreads()
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:]'], target='gpu')
 def calc_fluxes_isjs(CFLX, QFLX, UFLX, VFLX):
     nx = CFLX.shape[0] - 2
     ny = CFLX.shape[1] - 2
@@ -408,8 +408,8 @@ def calc_fluxes_isjs(CFLX, QFLX, UFLX, VFLX):
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:,:], '+wp+'[:,:  ], '+ \
-      wp+'[:    ]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+ \
+      wp_old+'[:    ]'], target='gpu')
 def calc_WWIND_UWIND_ks(WWIND_UWIND_ks, UWIND, COLP_NEW, WWIND, A,
                         dsigma):
     nx = WWIND_UWIND_ks.shape[0] - 2
@@ -468,8 +468,8 @@ def calc_WWIND_UWIND_ks(WWIND_UWIND_ks, UWIND, COLP_NEW, WWIND, A,
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:,:], '+wp+'[:,:  ], '+ \
-      wp+'[:    ]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+ \
+      wp_old+'[:    ]'], target='gpu')
 def calc_WWIND_VWIND_ks(WWIND_VWIND_ks, VWIND, COLP_NEW, WWIND, A,
                         dsigma):
     nx = WWIND_VWIND_ks.shape[0] - 2
@@ -502,7 +502,7 @@ def calc_WWIND_VWIND_ks(WWIND_VWIND_ks, VWIND, COLP_NEW, WWIND, A,
     cuda.syncthreads()
 
 
-@jit([wp+'[:,:,:], '+wp],target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old],target='gpu')
 def set_to(FIELD, number):
     i, j, k = cuda.grid(3)
     FIELD[i,j,k] = number 
