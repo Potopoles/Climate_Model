@@ -1,4 +1,4 @@
-from namelist import QV_hor_dif_tau, wp
+from namelist import QV_hor_dif_tau, wp_old
 from numba import cuda, jit
 
 i_hor_adv      = 1
@@ -9,9 +9,9 @@ i_turb         = 0
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:  ], '+\
-      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+\
-      wp+'[:,:  ], '+wp+'[:    ]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+\
+      wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
+      wp_old+'[:,:  ], '+wp_old+'[:    ]'], target='gpu')
 def water_vapor_tendency_gpu(dQVdt, QV, COLP, COLP_NEW, \
                             UFLX, VFLX, WWIND, dQVdt_MIC, \
                             A, dsigma):
@@ -75,9 +75,9 @@ def water_vapor_tendency_gpu(dQVdt, QV, COLP, COLP_NEW, \
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:  ], '+wp+'[:,:  ], '+\
-      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+\
-      wp+'[:,:  ], '+wp+'[:    ]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+\
+      wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
+      wp_old+'[:,:  ], '+wp_old+'[:    ]'], target='gpu')
 def cloud_water_tendency_gpu(dQCdt, QC, COLP, COLP_NEW, \
                             UFLX, VFLX, WWIND, dQCdt_MIC, \
                             A, dsigma):

@@ -1,6 +1,6 @@
 import numpy as np
 import time
-from namelist import POTT_hor_dif_tau, i_temperature_tendency, \
+from namelist import POTT_dif_coef, i_temperature_tendency, \
                     i_radiation, i_microphysics
 from namelist import wp
 if wp == 'float64':
@@ -56,8 +56,8 @@ def temperature_tendency_jacobson(GR, POTT, POTTVB, COLP, COLP_NEW, \
 
 
             # NUMERICAL DIFUSION 
-            if i_num_dif and (POTT_hor_dif_tau > 0):
-                num_dif = POTT_hor_dif_tau * np.exp(-(GR.nz-k-1)) *\
+            if i_num_dif and (POTT_dif_coef > 0):
+                num_dif = POTT_dif_coef * np.exp(-(GR.nz-k-1)) *\
                             ( + COLP[GR.iijj_im1] * POTT[:,:,k][GR.iijj_im1] \
                               + COLP[GR.iijj_ip1] * POTT[:,:,k][GR.iijj_ip1] \
                               + COLP[GR.iijj_jm1] * POTT[:,:,k][GR.iijj_jm1] \

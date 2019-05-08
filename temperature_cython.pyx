@@ -1,5 +1,5 @@
 import numpy as np
-from namelist import wp, POTT_hor_dif_tau, i_temperature_tendency, \
+from namelist import wp, POTT_dif_coef, i_temperature_tendency, \
                     i_radiation, i_microphysics
 
 from libc.math cimport exp
@@ -48,7 +48,7 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
     cdef int i, inb, im1, ip1, j, jnb, jm1, jp1, k, kp1
     cdef wp_cy hor_adv, vert_adv, num_diff
 
-    cdef wp_cy c_POTT_hor_dif_tau = POTT_hor_dif_tau
+    cdef wp_cy c_POTT_dif_coef = POTT_dif_coef
 
     cdef wp_cy[:,:, ::1] dPOTTdt = np.zeros( (nx+2*nb,ny+2*nb,nz), dtype=wp_np)
 
@@ -104,8 +104,8 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
 
 
                     # NUMERICAL DIFUSION 
-                    if i_num_dif and (c_POTT_hor_dif_tau > 0):
-                        num_diff = c_POTT_hor_dif_tau * exp(-(nz-k-1)) *\
+                    if i_num_dif and (c_POTT_dif_coef > 0):
+                        num_diff = c_POTT_dif_coef * exp(-(nz-k-1)) *\
                                     ( + COLP[im1,j  ] * POTT[im1,j  ,k  ] \
                                       + COLP[ip1,j  ] * POTT[ip1,j  ,k  ] \
                                       + COLP[i  ,jm1] * POTT[i  ,jm1,k  ]  \

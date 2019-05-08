@@ -1,4 +1,4 @@
-from namelist import  wp
+from namelist import  wp_old
 from boundaries_cuda import exchange_BC_gpu
 from numba import cuda, jit
 
@@ -40,7 +40,7 @@ def proceed_timestep_jacobson_gpu(GR, stream, UWIND_OLD, UWIND, VWIND_OLD, VWIND
 
 
 
-@jit([wp+'[:,:  ], '+wp+'[:,:  ], '+wp+'[:,:  ], '+wp], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old], target='gpu')
 def time_step_2D(FIELD_NEW, FIELD_OLD, dFIELDdt, dt):
     nx = FIELD_NEW.shape[0] - 2
     ny = FIELD_NEW.shape[1] - 2
@@ -49,8 +49,8 @@ def time_step_2D(FIELD_NEW, FIELD_OLD, dFIELDdt, dt):
         FIELD_NEW[i,j] = FIELD_OLD[i,j] + dt*dFIELDdt[i,j]
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ \
-      wp+'[:,:  ], '+wp+'[:,:  ], '+wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+ \
+      wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old], target='gpu')
 def time_step_3D(FIELD_NEW, FIELD_OLD, dFIELDdt, \
                  COLP, COLP_OLD, dt):
     nx = FIELD_NEW.shape[0] - 2
@@ -61,7 +61,7 @@ def time_step_3D(FIELD_NEW, FIELD_OLD, dFIELDdt, \
                              dt*dFIELDdt[i,j,k] / COLP[i,j]
 
 
-@jit([wp+'[:,:,:], '+wp],target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old],target='gpu')
 def make_equal_or_larger(FIELD, number):
     i, j, k = cuda.grid(3)
     if FIELD[i,j,k] < number:
@@ -69,8 +69,8 @@ def make_equal_or_larger(FIELD, number):
     cuda.syncthreads()
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ \
-      wp+'[:,:  ], '+wp+'[:,:  ], '+wp+'[:,:  ], '+wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+ \
+      wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old], target='gpu')
 def time_step_3D_UWIND(UWIND, UWIND_OLD, dUFLXdt, \
                          COLP, COLP_OLD, A, dt):
 
@@ -121,8 +121,8 @@ def time_step_3D_UWIND(UWIND, UWIND_OLD, dUFLXdt, \
                              dt*dUFLXdt[i,j,k] /COLPA_is 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ \
-      wp+'[:,:  ], '+wp+'[:,:  ], '+wp+'[:,:  ], '+wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+ \
+      wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old], target='gpu')
 def time_step_3D_VWIND(VWIND, VWIND_OLD, dVFLXdt, \
                          COLP, COLP_OLD, A, dt):
 

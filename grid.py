@@ -4,26 +4,34 @@ from constants import con_rE, con_omega
 from boundaries import exchange_BC, exchange_BC_periodic_x
 from IO import load_restart_grid
 from numba import cuda
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 
-from debug_namelist import wp, wp_int
 
 # FIXED GPU SETTINGS (have to here in code to be able to import them in another module)
 tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
 tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)
 tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
 
-nb = wp_int(1)
-nx = wp_int(360)
-ny = wp_int(180)
-nz = wp_int(32)
+nz = wp_int(nz)
+nzs = wp_int(nz+1)
+nx = wp_int((lon1_deg - lon0_deg)/dlon_deg)
+nxs = wp_int(nx+1)
+ny = wp_int((lat1_deg - lat0_deg)/dlat_deg)
+nys = wp_int(ny+1)
+nb = wp_int(nb)
 
-nxs = nx + wp_int(1)
-nys = ny + wp_int(1)
-nzs = nz + wp_int(1)
+#nb = wp_int(1)
+#nx = wp_int(360)
+#ny = wp_int(180)
+#nz = wp_int(32)
+
+#nb = wp_int(nb)
+#nx = wp_int(nx)
+#ny = wp_int(ny)
+#nz = wp_int(nz)
+
+#nxs = nx + wp_int(1)
+#nys = ny + wp_int(1)
+#nzs = nz + wp_int(1)
 
 # GPU computation
 tpb  = (1,       1,      nz)
@@ -88,12 +96,20 @@ class Grid:
             if nz not in possible_nz:
                 raise NotImplementedError('Vertical reduction for GPU needs nz of 2**x')
             self.nz = nz
-            self.nzs = nz+1
-            self.nx = int((self.lon1_deg - self.lon0_deg)/self.dlon_deg)
-            self.nxs = self.nx + 1
-            self.ny = int((self.lat1_deg - self.lat0_deg)/self.dlat_deg)
-            self.nys = self.ny + 1
+            self.nzs = nzs
+            self.nx = nx
+            self.nxs = nxs
+            self.ny = ny
+            self.nys = nys
             self.nb = nb
+
+            #self.nz = wp_int(nz)
+            #self.nzs = wp_int(nz+1)
+            #self.nx = wp_int((self.lon1_deg - self.lon0_deg)/self.dlon_deg)
+            #self.nxs = wp_int(self.nx + 1)
+            #self.ny = wp_int((self.lat1_deg - self.lat0_deg)/self.dlat_deg)
+            #self.nys = wp_int(self.ny + 1)
+            #self.nb = wp_int(nb)
 
             # INDEX ARRAYS
             self.kk  = np.arange(0,self.nz)
@@ -143,17 +159,17 @@ class Grid:
 
             # 2D MATRIX OF LONGITUDES AND LATITUDES IN DEGREES
             self.lon_deg   = np.full( (self.nx +2*self.nb,self.ny+2*self.nb), np.nan,
-                                        dtype=wp_np)
+                                        dtype=wp)
             self.lat_deg   = np.full( (self.nx +2*self.nb,self.ny+2*self.nb), np.nan,
-                                        dtype=wp_np)
+                                        dtype=wp)
             self.lonis_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb), np.nan,
-                                        dtype=wp_np)
+                                        dtype=wp)
             self.latis_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb), np.nan,
-                                        dtype=wp_np)
+                                        dtype=wp)
             self.lonjs_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan,
-                                        dtype=wp_np)
+                                        dtype=wp)
             self.latjs_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan,
-                                        dtype=wp_np)
+                                        dtype=wp)
 
             for j in range(self.nb, self.ny+self.nb):
                 self.lon_deg[self.ii,j] = self.lon0_deg + \
@@ -183,8 +199,8 @@ class Grid:
             self.latjs_rad = self.latjs_deg/180*np.pi
 
             # 2D MATRIX OF GRID SPACING IN METERS
-            self.dx   = np.full( (self.nx+2*self.nb,self.ny +2*self.nb), np.nan, dtype=wp_np)
-            self.dxjs = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan, dtype=wp_np)
+            self.dx   = np.full( (self.nx+2*self.nb,self.ny +2*self.nb), np.nan, dtype=wp)
+            self.dxjs = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan, dtype=wp)
 
             self.dx[self.iijj] = np.cos( self.lat_rad[self.iijj] )*self.dlon_rad*con_rE 
             self.dxjs[self.iijjs] = np.cos( self.latjs_rad[self.iijjs] )*self.dlon_rad*con_rE 
@@ -197,7 +213,7 @@ class Grid:
                 maxdx = np.max(self.dx[self.iijj])
                 self.dx[self.iijj] = maxdx
 
-            self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb), np.nan, dtype=wp_np)
+            self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb), np.nan, dtype=wp)
             for i in self.ii:
                 for j in self.jj:
                     self.A[i,j] = lat_lon_recangle_area(self.lat_rad[i,j],
@@ -213,9 +229,9 @@ class Grid:
 
             # CORIOLIS FORCE
             self.corf    = np.full( (self.nx +2*self.nb, self.ny +2*self.nb), 
-                                    np.nan, dtype=wp_np)
+                                    np.nan, dtype=wp)
             self.corf_is = np.full( (self.nxs+2*self.nb, self.ny +2*self.nb),
-                                    np.nan, dtype=wp_np)
+                                    np.nan, dtype=wp)
             self.corf[self.iijj] = 2*con_omega*np.sin(self.lat_rad[self.iijj])
             self.corf_is[self.iisjj] = 2*con_omega*np.sin(self.latis_rad[self.iisjj])
 
@@ -223,8 +239,8 @@ class Grid:
             self.level  = np.arange(0,self.nz )
             self.levels = np.arange(0,self.nzs)
             # will be set in load_profile of IO
-            self.sigma_vb = np.full( self.nzs, np.nan, dtype=wp_np)
-            self.dsigma   = np.full( self.nz , np.nan, dtype=wp_np)
+            self.sigma_vb = np.full( self.nzs, np.nan, dtype=wp)
+            self.dsigma   = np.full( self.nz , np.nan, dtype=wp)
 
 
             # TIME STEP
@@ -282,12 +298,12 @@ class Grid:
             #                          (self.ny +2*self.nb)//self.blockdim_xy[1], \
             #                           1       //self.blockdim_xy[2])
 
-            #    zonal   = np.zeros((2,self.ny +2*self.nb   ,self.nz  ), dtype=wp_np)
-            #    zonals  = np.zeros((2,self.nys+2*self.nb   ,self.nz  ), dtype=wp_np)
-            #    zonalvb = np.zeros((2,self.ny +2*self.nb   ,self.nz+1), dtype=wp_np)
-            #    merid   = np.zeros((  self.nx +2*self.nb,2 ,self.nz  ), dtype=wp_np)
-            #    merids  = np.zeros((  self.nxs+2*self.nb,2 ,self.nz  ), dtype=wp_np)
-            #    meridvb = np.zeros((  self.nx +2*self.nb,2 ,self.nz+1), dtype=wp_np)
+            #    zonal   = np.zeros((2,self.ny +2*self.nb   ,self.nz  ), dtype=wp)
+            #    zonals  = np.zeros((2,self.nys+2*self.nb   ,self.nz  ), dtype=wp)
+            #    zonalvb = np.zeros((2,self.ny +2*self.nb   ,self.nz+1), dtype=wp)
+            #    merid   = np.zeros((  self.nx +2*self.nb,2 ,self.nz  ), dtype=wp)
+            #    merids  = np.zeros((  self.nxs+2*self.nb,2 ,self.nz  ), dtype=wp)
+            #    meridvb = np.zeros((  self.nx +2*self.nb,2 ,self.nz+1), dtype=wp)
 
             #    self.zonal   = cuda.to_device(zonal,  self.stream)
             #    self.zonals  = cuda.to_device(zonals, self.stream)

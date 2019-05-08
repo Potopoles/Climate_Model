@@ -1,14 +1,14 @@
 import numpy as np
-from namelist import wp, i_radiation, i_microphysics
+from namelist import wp_old, i_radiation, i_microphysics
 from numba import cuda, jit
 #from surface_model import evapity_thresh 
 
 evapity_thresh = 10.
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+\
-      wp+'[:,:  ], '+wp+'[:,:  ], '+wp+'[:,:  ], '+\
-      wp], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
+      wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+\
+      wp_old], target='gpu')
 def soil_temperature_euler_forward_gpu(dSOILTEMPdt, SOILTEMP, LWFLXNET, SWFLXNET,
                                     SOILCP, SOILRHO, SOILDEPTH, dt):
 
@@ -34,7 +34,7 @@ def soil_temperature_euler_forward_gpu(dSOILTEMPdt, SOILTEMP, LWFLXNET, SWFLXNET
     cuda.syncthreads()
 
 
-@jit([wp+'[:,:  ], '+wp+'[:,:  ], '+wp+'[:,:  ], '+wp+'[:,:,:]  '], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+'[:,:,:]  '], target='gpu')
 def calc_albedo_gpu(SURFALBEDSW, SURFALBEDLW, OCEANMASK, SOILTEMP):
 
     i, j = cuda.grid(2)
@@ -59,7 +59,7 @@ def calc_albedo_gpu(SURFALBEDSW, SURFALBEDLW, OCEANMASK, SOILTEMP):
     cuda.syncthreads()
 
 
-@jit([wp+'[:,:  ], '+wp+'[:,:  ], '+wp+'[:,:  ], '+wp+'[:,:,:]  '], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+'[:,:  ], '+wp_old+'[:,:,:]  '], target='gpu')
 def calc_evaporation_capacity_gpu(SOILEVAPITY, SOILMOIST, OCEANMASK, SOILTEMP):
     i, j = cuda.grid(2)
     # calc evaporation capacity

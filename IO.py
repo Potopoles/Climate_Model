@@ -10,10 +10,6 @@ from constants import con_kappa
 from scipy import interpolate
 from constants import con_g, con_Rd, con_kappa, con_cp
 from radiation.namelist_radiation import njobs_rad
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 
 
 
@@ -26,10 +22,10 @@ def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
                             (profile[top_ind,4]*profile[top_ind,1])
 
     ks = np.arange(0,GR.nzs)
-    z_vb_test   = np.zeros(GR.nzs, dtype=wp_np)
-    p_vb_test   = np.zeros(GR.nzs, dtype=wp_np)
-    rho_vb_test = np.zeros(GR.nzs, dtype=wp_np)
-    g_vb_test   = np.zeros(GR.nzs, dtype=wp_np)
+    z_vb_test   = np.zeros(GR.nzs, dtype=wp)
+    p_vb_test   = np.zeros(GR.nzs, dtype=wp)
+    rho_vb_test = np.zeros(GR.nzs, dtype=wp)
+    g_vb_test   = np.zeros(GR.nzs, dtype=wp)
 
     z_vb_test[0] = ztop_test
     z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)**(2)
@@ -61,7 +57,7 @@ def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
     COLP[GR.iijj] = PSURF[GR.iijj] - pTop
     PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
 
-    PAIR =  np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan, dtype=wp_np)
+    PAIR =  np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan, dtype=wp)
     for k in range(0,GR.nz):
         PAIR[:,:,k][GR.iijj] = 100000*np.power(PVTF[:,:,k][GR.iijj], 1/con_kappa)
 

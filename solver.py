@@ -1,3 +1,6 @@
+#if i == 0:
+#    from pdb import set_trace
+#    pdb.set_trace()
 import numpy as np
 import time
 from datetime import timedelta

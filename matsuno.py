@@ -1,7 +1,7 @@
 import copy
 import time
 import numpy as np
-from namelist import comp_mode, wp
+from namelist import comp_mode, wp_old
 from boundaries import exchange_BC
 from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
                     diagnose_fields_jacobson
@@ -13,7 +13,7 @@ from jacobson_cuda import proceed_timestep_jacobson_gpu
 from diagnostics import interp_COLPA
 
 from numba import cuda, jit
-if wp == 'float64':
+if wp_old == 'float64':
     from numba import float64
 
 ######################################################################################
@@ -181,13 +181,13 @@ def step_matsuno(GR, subgrids, F):
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:]'],target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:]'],target='gpu')
 def set_equal(set_FIELD, get_FIELD):
     i, j, k = cuda.grid(3)
     set_FIELD[i,j,k] = get_FIELD[i,j,k] 
     cuda.syncthreads()
 
-@jit([wp+'[:,:  ], '+wp+'[:,:  ]'],target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:  ]'],target='gpu')
 def set_equal2D(set_FIELD, get_FIELD):
     i, j = cuda.grid(2)
     set_FIELD[i,j  ] = get_FIELD[i,j  ] 

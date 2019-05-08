@@ -1,6 +1,6 @@
 import numpy as np
 from constants import con_g, con_Rd, con_kappa, con_cp
-from namelist import pTop, wp
+from namelist import pTop, wp_old
 from boundaries_cuda import exchange_BC_gpu
 
 from numba import cuda, jit
@@ -8,7 +8,7 @@ from math import pow
 
 
 
-@jit([wp+'[:,:  ], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:]'], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:]'], target='gpu')
 def diag_pvt_factor(COLP, PVTF, PVTFVB, sigma_vb):
 
 
@@ -34,8 +34,8 @@ def diag_pvt_factor(COLP, PVTF, PVTFVB, sigma_vb):
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ \
-      wp+'[:,:,:], '+wp+'[:,:]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+ \
+      wp_old+'[:,:,:], '+wp_old+'[:,:]'], target='gpu')
 def get_geopotential(PHI, PHIVB, PVTF, PVTFVB, \
                      POTT, HSURF):
     nx  = PHIVB.shape[0] - 2

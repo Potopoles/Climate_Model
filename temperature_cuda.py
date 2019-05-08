@@ -129,11 +129,64 @@ POTT_tendency_cpu = njit(parallel=True)(launch_numba_cpu)
 ####################################################################
 ### OLD GPU FUNCTION
 ####################################################################
+#@njit([wp_old+'[:,:,:], '+\
+#  wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
+#  wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
+#  #wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
+#  wp_old+'[:,:,:], '+wp_old+'[:,:,:]  '
+# ], target='gpu')
+#def calc_dPOTTdt_orig(dPOTTdt,
+#            POTT, POTTVB, COLP, COLP_NEW,
+#            UFLX, VFLX, WWIND,
+#            #dPOTTdt_RAD, dPOTTdt_MIC,
+#            A, dsigma):
+#
+#    if i_POTT_main_switch:
+#
+#        i, j, k = cuda.grid(3)
+#        if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+#
+#            # HORIZONTAL ADVECTION
+#            if i_POTT_hor_adv:
+#                dPOTTdt[i,j,k] = \
+#                    (+ UFLX[i  ,j  ,k] * (POTT[i-1,j  ,k] + POTT[i  ,j  ,k])/wp(2.)\
+#                  - UFLX[i+1,j  ,k] * (POTT[i  ,j  ,k] + POTT[i+1,j  ,k])/wp(2.)\
+#                  + VFLX[i  ,j  ,k] * (POTT[i  ,j-1,k] + POTT[i  ,j  ,k])/wp(2.)\
+#                  - VFLX[i  ,j+1,k] * (POTT[i  ,j  ,k] + POTT[i  ,j+1,k])/wp(2.))\
+#                  / A[i  ,j  ,0]
+#
+#            # VERTICAL ADVECTION
+#            if i_POTT_vert_adv:
+#                if k == wp_int(0):
+#                    vertAdv_POTT = COLP_NEW[i  ,j  ,0] * (\
+#                            - WWIND[i  ,j  ,k+1] * POTTVB[i  ,j  ,k+1]) / dsigma[0, 0, k]
+#                elif k == nz:
+#                    vertAdv_POTT = COLP_NEW[i  ,j  ,0] * (\
+#                            + WWIND[i  ,j  ,k  ] * POTTVB[i  ,j  ,k  ]) / dsigma[0, 0, k]
+#                else:
+#                    vertAdv_POTT = COLP_NEW[i  ,j  ,0] * (\
+#                            + WWIND[i  ,j  ,k  ] * POTTVB[i  ,j  ,k  ] \
+#                            - WWIND[i  ,j  ,k+1] * POTTVB[i  ,j  ,k+1]) / dsigma[0, 0, k]
+#                dPOTTdt[i,j,k] = dPOTTdt[i,j,k] + vertAdv_POTT
+#
+#
+#            # NUMERICAL DIFUSION 
+#            #                #exp(-(float(nz-k-1))) *\
+#            if i_POTT_num_dif and (POTT_dif_coef > 0.):
+#                num_dif = POTT_dif_coef*\
+#                            ( + COLP[i-1,j  ,0] * POTT[i-1,j  ,k  ] \
+#                              + COLP[i+1,j  ,0] * POTT[i+1,j  ,k  ] \
+#                              + COLP[i  ,j-1,0] * POTT[i  ,j-1,k  ] \
+#                              + COLP[i  ,j+1,0] * POTT[i  ,j+1,k  ] \
+#                         - wp(4.) * COLP[i  ,j  ,0] * POTT[i  ,j  ,k  ] )
+#                dPOTTdt[i,j,k] = dPOTTdt[i,j,k] + num_dif
+
+
 @njit([wp_old+'[:,:,:], '+\
-  wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
+  wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:], '+wp_old+'[:,:], '+\
   wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
   #wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+\
-  wp_old+'[:,:,:], '+wp_old+'[:,:,:]  '
+  wp_old+'[:,:], '+wp_old+'[:]  '
  ], target='gpu')
 def calc_dPOTTdt_orig(dPOTTdt,
             POTT, POTTVB, COLP, COLP_NEW,
@@ -153,20 +206,20 @@ def calc_dPOTTdt_orig(dPOTTdt,
                   - UFLX[i+1,j  ,k] * (POTT[i  ,j  ,k] + POTT[i+1,j  ,k])/wp(2.)\
                   + VFLX[i  ,j  ,k] * (POTT[i  ,j-1,k] + POTT[i  ,j  ,k])/wp(2.)\
                   - VFLX[i  ,j+1,k] * (POTT[i  ,j  ,k] + POTT[i  ,j+1,k])/wp(2.))\
-                  / A[i  ,j  ,0]
+                  / A[i  ,j]
 
             # VERTICAL ADVECTION
             if i_POTT_vert_adv:
                 if k == wp_int(0):
-                    vertAdv_POTT = COLP_NEW[i  ,j  ,0] * (\
-                            - WWIND[i  ,j  ,k+1] * POTTVB[i  ,j  ,k+1]) / dsigma[0, 0, k]
+                    vertAdv_POTT = COLP_NEW[i  ,j] * (\
+                            - WWIND[i  ,j  ,k+1] * POTTVB[i  ,j  ,k+1]) / dsigma[k]
                 elif k == nz:
-                    vertAdv_POTT = COLP_NEW[i  ,j  ,0] * (\
-                            + WWIND[i  ,j  ,k  ] * POTTVB[i  ,j  ,k  ]) / dsigma[0, 0, k]
+                    vertAdv_POTT = COLP_NEW[i  ,j] * (\
+                            + WWIND[i  ,j  ,k  ] * POTTVB[i  ,j  ,k  ]) / dsigma[k]
                 else:
-                    vertAdv_POTT = COLP_NEW[i  ,j  ,0] * (\
+                    vertAdv_POTT = COLP_NEW[i  ,j] * (\
                             + WWIND[i  ,j  ,k  ] * POTTVB[i  ,j  ,k  ] \
-                            - WWIND[i  ,j  ,k+1] * POTTVB[i  ,j  ,k+1]) / dsigma[0, 0, k]
+                            - WWIND[i  ,j  ,k+1] * POTTVB[i  ,j  ,k+1]) / dsigma[k]
                 dPOTTdt[i,j,k] = dPOTTdt[i,j,k] + vertAdv_POTT
 
 
@@ -174,11 +227,11 @@ def calc_dPOTTdt_orig(dPOTTdt,
             #                #exp(-(float(nz-k-1))) *\
             if i_POTT_num_dif and (POTT_dif_coef > 0.):
                 num_dif = POTT_dif_coef*\
-                            ( + COLP[i-1,j  ,0] * POTT[i-1,j  ,k  ] \
-                              + COLP[i+1,j  ,0] * POTT[i+1,j  ,k  ] \
-                              + COLP[i  ,j-1,0] * POTT[i  ,j-1,k  ] \
-                              + COLP[i  ,j+1,0] * POTT[i  ,j+1,k  ] \
-                         - wp(4.) * COLP[i  ,j  ,0] * POTT[i  ,j  ,k  ] )
+                            ( + COLP[i-1,j  ] * POTT[i-1,j  ,k  ] \
+                              + COLP[i+1,j  ] * POTT[i+1,j  ,k  ] \
+                              + COLP[i  ,j-1] * POTT[i  ,j-1,k  ] \
+                              + COLP[i  ,j+1] * POTT[i  ,j+1,k  ] \
+                         - wp(4.) * COLP[i  ,j  ] * POTT[i  ,j  ,k  ] )
                 dPOTTdt[i,j,k] = dPOTTdt[i,j,k] + num_dif
 
             ## RADIATION 

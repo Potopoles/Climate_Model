@@ -1,6 +1,7 @@
 import copy
 import matplotlib.pyplot as plt
 import numpy as np
+import cupy as cp
 import time
 from namelist import pTop, njobs, comp_mode
 from constants import con_Rd
@@ -15,7 +16,12 @@ from wind_cuda import wind_tendency_jacobson_gpu
 
 from temperature import temperature_tendency_jacobson
 from bin.temperature_cython import temperature_tendency_jacobson_c
-from temperature_cuda import calc_dPOTTdt
+from temperature_cuda import calc_dPOTTdt_orig
+###### NEW
+from tendencies import TendencyFactory
+Tendencies = TendencyFactory(target='GPU')
+###### NEW
+
 
 from moisture import water_vapor_tendency, cloud_water_tendency
 from bin.moisture_cython import water_vapor_tendency_c, cloud_water_tendency_c
@@ -158,13 +164,27 @@ def tendencies_jacobson(GR, F, subgrids):
         F.dPOTTdt = np.asarray(F.dPOTTdt)
 
     elif comp_mode == 2:
-        calc_dPOTTdt[GR.griddim, GR.blockdim, GR.stream] \
+        #F.COLP = cp.expand_dims(F.COLP, axis=2)
+        #GR.Ad = cp.expand_dims(GR.Ad, axis=2)
+        #F.COLP_NEW = cp.expand_dims(F.COLP_NEW, axis=2)
+        #GR.dsigma = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
+        #F.dPOTTdt = Tendencies.POTT_tendency(
+        #                F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP, GR.Ad,
+        #                F.POTTVB, F.WWIND, F.COLP_NEW, GR.dsigma)
+        #F.COLP = F.COLP.squeeze()
+        #GR.Ad = GR.Ad.squeeze()
+        #F.COLP_NEW = F.COLP_NEW.squeeze()
+        #GR.dsigma = GR.dsigma.squeeze()
+
+        calc_dPOTTdt_orig[GR.griddim, GR.blockdim, GR.stream] \
                                     (F.dPOTTdt, 
                                     F.POTT, F.POTTVB, F.COLP, F.COLP_NEW, 
                                     F.UFLX, F.VFLX, F.WWIND, 
-                                            F.dPOTTdt_RAD, F.dPOTTdt_MIC, 
+                                            #F.dPOTTdt_RAD, F.dPOTTdt_MIC, 
                                             GR.Ad, GR.dsigmad)
         GR.stream.synchronize()
+
+
 
     t_end = time.time()
     GR.temp_comp_time += t_end - t_start

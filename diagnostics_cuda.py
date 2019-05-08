@@ -1,13 +1,13 @@
 import numpy as np
 from constants import con_kappa, con_g, con_Rd
-from namelist import pTop, wp
+from namelist import pTop, wp_old
 
 from numba import cuda, jit
 
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:]'], target='gpu')
 def diagnose_secondary_fields_vb_gpu(POTTVB, TAIRVB, PVTFVB):
     nx = POTTVB.shape[0] - 2
     ny = POTTVB.shape[1] - 2
@@ -15,9 +15,9 @@ def diagnose_secondary_fields_vb_gpu(POTTVB, TAIRVB, PVTFVB):
     if i > 0 and i < nx+1 and j > 0 and j < ny+1:
         TAIRVB[i,j,ks] = POTTVB[i,j,ks] * PVTFVB[i,j,ks]
 
-@jit([wp+'[:,:  ], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+
-      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+ 
-      wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]  '], target='gpu')
+@jit([wp_old+'[:,:  ], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+
+      wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+ 
+      wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:]  '], target='gpu')
 def diagnose_secondary_fields_gpu(COLP, PAIR, PHI, POTT, 
                                     TAIR, RHO, PVTF,
                                     UWIND, VWIND, WIND):
@@ -35,7 +35,7 @@ def diagnose_secondary_fields_gpu(COLP, PAIR, PHI, POTT,
 
 
 
-@jit([wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:], '+wp+'[:,:,:]'], target='gpu')
+@jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:,:]'], target='gpu')
 def diagnose_POTTVB_jacobson_gpu(POTTVB, POTT, PVTF, PVTFVB):
     nx  = POTTVB.shape[0] - 2
     ny  = POTTVB.shape[1] - 2
