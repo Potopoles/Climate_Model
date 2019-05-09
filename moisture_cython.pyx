@@ -5,10 +5,6 @@ cimport numpy as np
 import cython
 from cython.parallel import prange 
 
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 ctypedef fused wp_cy:
     double
     float
@@ -46,7 +42,7 @@ cpdef water_vapor_tendency_c( GR, njobs,\
 
     cdef wp_cy c_QV_hor_dif_tau = QV_hor_dif_tau
 
-    cdef wp_cy[:,:, ::1] QVVB  = np.zeros( (nx ,ny ,nzs), dtype=wp_np)
+    cdef wp_cy[:,:, ::1] QVVB  = np.zeros( (nx ,ny ,nzs), dtype=wp)
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):
@@ -154,7 +150,7 @@ cpdef cloud_water_tendency_c( GR, njobs,\
 
     cdef wp_cy c_QC_hor_dif_tau = QV_hor_dif_tau
 
-    cdef wp_cy[:,:, ::1] QCVB  = np.zeros( (nx ,ny ,nzs), dtype=wp_np)
+    cdef wp_cy[:,:, ::1] QCVB  = np.zeros( (nx ,ny ,nzs), dtype=wp)
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):

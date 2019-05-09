@@ -7,10 +7,6 @@ cimport numpy as np
 import cython
 from cython.parallel import prange 
 
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 ctypedef fused wp_cy:
     double
     float
@@ -49,10 +45,10 @@ cpdef proceed_timestep_jacobson_c(GR, \
 
     cdef wp_cy dt = GR.dt
 
-    cdef wp_cy[:, ::1] COLPA_is_OLD = np.zeros( (nxs,ny ), dtype=wp_np )
-    cdef wp_cy[:, ::1] COLPA_is_NEW = np.zeros( (nxs,ny ), dtype=wp_np )
-    cdef wp_cy[:, ::1] COLPA_js_OLD = np.zeros( (nx ,nys), dtype=wp_np )
-    cdef wp_cy[:, ::1] COLPA_js_NEW = np.zeros( (nx ,nys), dtype=wp_np )
+    cdef wp_cy[:, ::1] COLPA_is_OLD = np.zeros( (nxs,ny ), dtype=wp )
+    cdef wp_cy[:, ::1] COLPA_is_NEW = np.zeros( (nxs,ny ), dtype=wp )
+    cdef wp_cy[:, ::1] COLPA_js_OLD = np.zeros( (nx ,nys), dtype=wp )
+    cdef wp_cy[:, ::1] COLPA_js_NEW = np.zeros( (nx ,nys), dtype=wp )
 
 
     COLPA_is_OLD, COLPA_js_OLD = interp_COLPA_c(GR, c_njobs, COLP_OLD)

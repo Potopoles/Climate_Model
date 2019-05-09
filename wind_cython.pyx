@@ -9,10 +9,6 @@ from libc.stdio cimport printf
 from libc.math cimport cos, sin
 import cython
 
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 ctypedef fused wp_cy:
     double
     float
@@ -92,8 +88,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
     #cdef wp_cy[:,:, ::1] SFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
     #cdef wp_cy[:,:, ::1] TFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
 
-    cdef wp_cy[:,:, ::1] WWIND_UWIND_ks = np.zeros( (nxs+2*nb,ny +2*nb,nzs), dtype=wp_np)
-    cdef wp_cy[:,:, ::1] WWIND_VWIND_ks = np.zeros( (nx +2*nb,nys+2*nb,nzs), dtype=wp_np)
+    cdef wp_cy[:,:, ::1] WWIND_UWIND_ks = np.zeros( (nxs+2*nb,ny +2*nb,nzs), dtype=wp)
+    cdef wp_cy[:,:, ::1] WWIND_VWIND_ks = np.zeros( (nx +2*nb,nys+2*nb,nzs), dtype=wp)
 
     cdef wp_cy COLPAWWIND_is_ks, UWIND_ks
     cdef wp_cy COLPAWWIND_js_ks, VWIND_ks

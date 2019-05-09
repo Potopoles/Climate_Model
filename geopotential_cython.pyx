@@ -9,10 +9,6 @@ import cython
 from cython.parallel import prange 
 from libc.math cimport pow
 
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 ctypedef fused wp_cy:
     double
     float
@@ -39,7 +35,7 @@ cpdef diag_pvt_factor_c(GR, njobs,
     cdef wp_cy c_con_kappa = con_kappa
     cdef wp_cy c_pTop = pTop
 
-    cdef wp_cy[:,:, ::1] PAIRVB = np.full( (nx+2*nb ,ny+2*nb ,nzs), np.nan, wp_np )
+    cdef wp_cy[:,:, ::1] PAIRVB = np.full( (nx+2*nb ,ny+2*nb ,nzs), np.nan, wp )
 
     for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i   in range(nb,nx +nb):

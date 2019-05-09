@@ -6,10 +6,6 @@ cimport numpy as np
 import cython
 from cython.parallel import prange 
 
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 ctypedef fused wp_cy:
     double
     float
@@ -126,8 +122,8 @@ cpdef interp_COLPA_c(GR, njobs,
 
     cdef int i, inb, im1, ip1, i_s, isnb, ism1, j, jnb, jm1, jp1, js, jsnb, jsm1
 
-    cdef wp_cy[:, ::1] COLPA_is = np.zeros( (nxs,ny ), dtype=wp_np )
-    cdef wp_cy[:, ::1] COLPA_js = np.zeros( (nx ,nys), dtype=wp_np )
+    cdef wp_cy[:, ::1] COLPA_is = np.zeros( (nxs,ny ), dtype=wp )
+    cdef wp_cy[:, ::1] COLPA_js = np.zeros( (nx ,nys), dtype=wp )
 
     for i_s in prange(nb,nxs +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #for i_s in range(nb,nxs +nb):

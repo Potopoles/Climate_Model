@@ -7,11 +7,6 @@ cimport numpy as np
 import cython
 from cython.parallel import prange 
 
-wp = 'float32'
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 ctypedef fused wp_cy:
     double
     float
@@ -50,7 +45,7 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
 
     cdef wp_cy c_POTT_dif_coef = POTT_dif_coef
 
-    cdef wp_cy[:,:, ::1] dPOTTdt = np.zeros( (nx+2*nb,ny+2*nb,nz), dtype=wp_np)
+    cdef wp_cy[:,:, ::1] dPOTTdt = np.zeros( (nx+2*nb,ny+2*nb,nz), dtype=wp)
 
     if i_temperature_tendency:
         for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
