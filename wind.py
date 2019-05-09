@@ -4,10 +4,6 @@ from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency
 from namelist import wp
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 
 i_hor_adv  = 1
 i_vert_adv = 1
@@ -27,8 +23,8 @@ def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVFLXdt
     if i_wind_tendency:
 
         if i_vert_adv:
-            WWIND_UWIND = np.zeros( (GR.nxs+2*GR.nb,GR.ny +2*GR.nb,GR.nzs) , dtype=wp_np)
-            WWIND_VWIND = np.zeros( (GR.nx +2*GR.nb,GR.nys+2*GR.nb,GR.nzs) , dtype=wp_np)
+            WWIND_UWIND = np.zeros( (GR.nxs+2*GR.nb,GR.ny +2*GR.nb,GR.nzs) , dtype=wp)
+            WWIND_VWIND = np.zeros( (GR.nx +2*GR.nb,GR.nys+2*GR.nb,GR.nzs) , dtype=wp)
             for ks in range(1,GR.nzs-1):
                 WWIND_UWIND[:,:,ks][GR.iisjj] = vertical_interp_UWIND(GR, COLP_NEW, UWIND,
                                                         WWIND, WWIND_UWIND, ks)

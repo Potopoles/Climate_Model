@@ -6,10 +6,6 @@ from namelist import pTop
 from constants import con_Rd, con_g, con_kappa
 #from boundaries import exchange_BC
 from namelist import wp
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 
 
 class turbulence:
@@ -19,13 +15,13 @@ class turbulence:
 
         self.i_turbulence = i_turbulence 
 
-        #self.RHO   = np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan, dtype=wp_np)
-        self.RHOVB = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp_np)
-        self.K_h   = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp_np) 
+        #self.RHO   = np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan, dtype=wp)
+        self.RHOVB = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp)
+        self.K_h   = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp) 
         self.K_h[:,:,1:GR.nzs-1] = 0.1
 
-        self.dzs = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp_np)
-        self.dz = np.full( ( GR.nx, GR.ny, GR.nz ), np.nan, dtype=wp_np)
+        self.dzs = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp)
+        self.dz = np.full( ( GR.nx, GR.ny, GR.nz ), np.nan, dtype=wp)
 
     def diag_rho(self, GR, COLP, POTT, PVTF, POTTVB, PVTFVB):
         PAIR = 100000*np.power(PVTF[GR.iijj], 1/con_kappa)
@@ -57,7 +53,7 @@ class turbulence:
 
         dvardz = np.diff(VAR[GR.iijj], axis=2) / self.dzs[:,:,1:GR.nzs-1]
 
-        FLUXVB = np.zeros( ( GR.nx, GR.ny, GR.nzs ) , dtype=wp_np) 
+        FLUXVB = np.zeros( ( GR.nx, GR.ny, GR.nzs ) , dtype=wp) 
         FLUXVB[:,:,1:GR.nzs-1] = self.RHOVB[:,:,1:GR.nzs-1] * \
                                 self.K_h[:,:,1:GR.nzs-1] * dvardz
 

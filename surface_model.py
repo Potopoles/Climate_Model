@@ -4,11 +4,6 @@ from namelist import wp, comp_mode, i_radiation, i_microphysics
 from surface_model_cuda import soil_temperature_euler_forward_gpu,\
                               calc_albedo_gpu, calc_evaporation_capacity_gpu
 from numba import cuda
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
-
 ####################################################################
 # NAMELIST
 ####################################################################
@@ -69,7 +64,7 @@ class surface:
     def advance_timestep(self, GR, CF, GF, RAD):
 
         if comp_mode in [0,1]:
-            dSOILTEMPdt = np.zeros( (GR.nx, GR.ny) , dtype=wp_np)
+            dSOILTEMPdt = np.zeros( (GR.nx, GR.ny) , dtype=wp)
 
             if i_radiation > 0:
                 dSOILTEMPdt = (CF.LWFLXNET[:,:,GR.nzs-1] + CF.SWFLXNET[:,:,GR.nzs-1])/ \

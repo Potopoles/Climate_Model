@@ -5,10 +5,6 @@ import matplotlib.pyplot as plt
 from constants import con_g, con_cp
 from boundaries import exchange_BC
 from namelist import wp
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 
 
 class microphysics:
@@ -25,9 +21,9 @@ class microphysics:
 
         self.i_microphysics = i_microphysics 
 
-        self.RH = np.zeros( ( GR.nx, GR.ny, GR.nz ), dtype=wp_np)
+        self.RH = np.zeros( ( GR.nx, GR.ny, GR.nz ), dtype=wp)
 
-        self.surf_evap_flx = np.full( ( GR.nx, GR.ny ), np.nan, dtype=wp_np)
+        self.surf_evap_flx = np.full( ( GR.nx, GR.ny ), np.nan, dtype=wp)
 
         #if self.i_microphysics >= 1:
         # specific water vapor content

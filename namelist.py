@@ -125,7 +125,7 @@ i_restart_nth_day = 5.00
 ####################################################################
 # 0: numpy, 1: cython cpu, 2: numba-cuda
 # 2 makes sense for cases comparable to dx <= 4 and nz >= 8
-comp_mode = 1
+comp_mode = 2
 # working precision (float64 or float32)
 #wp = 'float64'
 #wp = 'float32'
@@ -232,9 +232,6 @@ if i_diffusion_on:
 # TODO does it work like this? Can decrease even more?
 WIND_hor_dif_tau = WIND_hor_dif_tau * 1.0
 
-
-# TODO TEMPORARY
-POTT_dif_coef = wp(1E-1)
 
 
 

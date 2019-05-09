@@ -9,10 +9,6 @@ from diagnostics import console_output_diagnostics
 #from diagnostics_cuda import console_output_diagnostics_gpu
 
 
-if wp == 'float64':
-    from numpy import float64 as wp_np
-elif wp == 'float32':
-    from numpy import float32 as wp_np
 
 
 
@@ -20,7 +16,7 @@ def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                     PHI, PHIVB, RHO, MIC):
 
     # VORTICITY
-    VORT = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp_np)
+    VORT = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp)
     for k in range(0,GR.nz):
         VORT[:,:,k][GR.iijj] = (   \
                                 + ( VWIND[:,:,k][GR.iijj_ip1    ] + \
