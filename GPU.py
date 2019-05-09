@@ -1,5 +1,5 @@
 from inspect import signature
-from namelist import wp_3D
+from org_namelist import wp_3D
 
 
 def cuda_kernel_decorator(function):

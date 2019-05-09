@@ -1,6 +1,7 @@
 import numpy as np
 import time
-from namelist import wp, QV_hor_dif_tau
+from namelist import QV_hor_dif_tau
+from org_namelist import wp
 
 
 i_hor_adv      = 1

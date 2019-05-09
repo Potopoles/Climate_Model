@@ -2,7 +2,8 @@ import time
 import numpy as np
 from boundaries_cuda import exchange_BC_gpu
 from constants import con_cp, con_rE, con_Rd
-from namelist import wp_old, WIND_hor_dif_tau, i_wind_tendency
+from namelist import WIND_hor_dif_tau, i_wind_tendency
+from org_namelist import wp_old
 from numba import cuda, jit
 from math import cos, sin
 

@@ -1,5 +1,6 @@
 import numpy as np
 from namelist import *
+from org_namelist import wp_int, wp
 from constants import con_rE, con_omega
 from boundaries import exchange_BC, exchange_BC_periodic_x
 from IO import load_restart_grid

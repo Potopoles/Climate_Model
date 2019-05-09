@@ -4,7 +4,7 @@ import time
 import matplotlib.pyplot as plt
 from constants import con_g, con_cp
 from boundaries import exchange_BC
-from namelist import wp
+from org_namelist import wp
 
 
 class microphysics:

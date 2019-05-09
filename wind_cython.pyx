@@ -4,7 +4,8 @@ cimport numpy as np
 from cython.parallel import prange 
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
-from namelist import wp, WIND_hor_dif_tau, i_wind_tendency
+from namelist import WIND_hor_dif_tau, i_wind_tendency
+from org_namelist import wp
 from libc.stdio cimport printf
 from libc.math cimport cos, sin
 import cython

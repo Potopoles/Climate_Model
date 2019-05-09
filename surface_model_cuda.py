@@ -1,5 +1,6 @@
 import numpy as np
-from namelist import wp_old, i_radiation, i_microphysics
+from namelist import i_radiation, i_microphysics
+from org_namelist import wp_old
 from numba import cuda, jit
 #from surface_model import evapity_thresh 
 

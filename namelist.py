@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+File name:          namelist.py  
+Author:             Christoph Heim (CH)
+Date created:       20181001
+Last modified:      20190509
+License:            MIT
+
+Namelist for user input.
+"""
 import numpy as np
 from datetime import datetime
 
@@ -121,29 +132,19 @@ i_save_to_restart = 1
 i_restart_nth_day = 5.00
 
 ####################################################################
-# PARALLEL AND DEVICE
+# COMPUTATION
 ####################################################################
-# 0: numpy, 1: cython cpu, 2: numba-cuda
-# 2 makes sense for cases comparable to dx <= 4 and nz >= 8
-comp_mode = 2
-# working precision (float64 or float32)
-#wp = 'float64'
-#wp = 'float32'
-wp_3D = 'float32[:,:,:]'
-wp = np.float32
-wp_int = np.int32
-wp_old = 'float32'
+working_precision = 'float32'
+working_precision = 'float64'
 
-#wp_3D = 'float64[:,:,:]'
-#wp = np.float64
-#wp_int = np.int64
-#wp_old = 'float64'
+
 
 # cython
 njobs = 4
 
 
 
+comp_mode = 1
 ####################################################################
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
@@ -160,10 +161,10 @@ if i_simulation_mode == 0:
     lat1_deg = 80
     dlat_deg = 2
     dlon_deg = 2
-    output_path = '../output_orig'
-    output_path = '../output'
-    i_sim_n_days = 10
-    i_out_nth_hour = 12
+    output_path = '../output_ref'
+    output_path = '../output_test'
+    i_sim_n_days = 0.36*2
+    i_out_nth_hour = 4*2
     i_surface = 0
     i_radiation = 0
     i_microphysics = 0
@@ -191,7 +192,7 @@ elif i_simulation_mode == 2:
     lat1_deg = 80
     dlat_deg = 2.0
     dlon_deg = 2.0
-    output_path = '../output_run'
+    output_path = '../output'
     i_sim_n_days = 2*365.00
     i_out_nth_hour = 24
     i_surface = 1

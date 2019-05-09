@@ -3,7 +3,7 @@ import numpy as np
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
 from namelist import WIND_hor_dif_tau, i_wind_tendency
-from namelist import wp
+from org_namelist import wp
 
 i_hor_adv  = 1
 i_vert_adv = 1

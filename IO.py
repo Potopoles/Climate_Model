@@ -4,7 +4,8 @@ import pickle
 from netCDF4 import Dataset
 from scipy.interpolate import interp2d
 from boundaries import exchange_BC_rigid_y, exchange_BC_periodic_x
-from namelist import wp, pTop, n_topo_smooth, tau_topo_smooth, comp_mode
+from namelist import pTop, n_topo_smooth, tau_topo_smooth, comp_mode
+from org_namelist import wp
 from geopotential import diag_pvt_factor
 from constants import con_kappa
 from scipy import interpolate

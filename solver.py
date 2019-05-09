@@ -1,20 +1,40 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+File name:          solver.py  
+Author:             Christoph Heim (CH)
+Date created:       20181001
+Last modified:      20190509
+License:            MIT
+
+Python version of latest successful run: 3.7.3
+
+Simple global climate model, hydrostatic and on a lat-lon grid.
+Still in construction.
+
+Implementation of dynamical core according to:
+Jacobson 2005
+Fundamentals of Atmospheric Modeling, Second Edition Chapter 7
+"""
 #if i == 0:
 #    from pdb import set_trace
 #    pdb.set_trace()
-import numpy as np
 import time
 from datetime import timedelta
+import numpy as np
+
 from grid import Grid
 from fields import initialize_fields, CPU_Fields, GPU_Fields
 from nc_IO import constant_fields_to_NC, output_to_NC
 from org_model_physics import secondary_diagnostics
 from IO import write_restart
 from multiproc import create_subgrids
-from namelist import i_time_stepping, \
-                    i_load_from_restart, i_save_to_restart, \
-                    i_radiation, njobs, comp_mode, \
-                    i_microphysics, i_surface
-from IO_helper_functions import print_ts_info, print_computation_time_info
+from namelist import (i_time_stepping,
+                    i_load_from_restart, i_save_to_restart,
+                    i_radiation, njobs, comp_mode,
+                    i_microphysics, i_surface)
+from IO_helper_functions import (print_ts_info, 
+                                print_computation_time_info)
 if i_time_stepping == 'MATSUNO':
     from matsuno import step_matsuno as time_stepper
 elif i_time_stepping == 'RK4':

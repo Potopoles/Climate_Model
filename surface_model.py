@@ -1,6 +1,7 @@
 import numpy as np
 import time
-from namelist import wp, comp_mode, i_radiation, i_microphysics
+from namelist import comp_mode, i_radiation, i_microphysics
+from org_namelist import wp
 from surface_model_cuda import soil_temperature_euler_forward_gpu,\
                               calc_albedo_gpu, calc_evaporation_capacity_gpu
 from numba import cuda

@@ -1,4 +1,4 @@
-from namelist import wp, wp_int
+from org_namelist import wp, wp_int
 from grid import nx,nxs,ny,nys,nz,nzs,nb
 
 

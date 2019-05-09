@@ -1,6 +1,9 @@
 import numpy as np
-from namelist import wp, POTT_dif_coef, i_temperature_tendency, \
-                    i_radiation, i_microphysics
+from namelist import (POTT_dif_coef, \
+                    i_POTT_main_switch,
+                    i_POTT_radiation, i_POTT_microphys,
+                    i_POTT_hor_adv, i_POTT_vert_adv, i_POTT_num_dif)
+from org_namelist import (wp)
 
 from libc.math cimport exp
 cimport numpy as np
@@ -11,9 +14,9 @@ ctypedef fused wp_cy:
     double
     float
 
-cdef int i_hor_adv = 1
-cdef int i_vert_adv = 1
-cdef int i_num_dif = 1
+#cdef int i_hor_adv = i_POTT_hor_adv
+#cdef int i_vert_adv = i_POTT_vert_adv
+#cdef int i_num_dif = i_POTT_num_dif
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -30,8 +33,11 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
 
     cdef int c_njobs = njobs
 
-    cdef int c_i_microphysics = i_microphysics
-    cdef int c_i_radiation = i_radiation
+    cdef int c_i_microphysics = i_POTT_microphys
+    cdef int c_i_radiation = i_POTT_radiation
+    cdef int i_hor_adv = i_POTT_hor_adv
+    cdef int i_vert_adv = i_POTT_vert_adv
+    cdef int i_num_dif = i_POTT_num_dif
    
     cdef int nb = GR.nb
     cdef int nx  = GR.nx
@@ -47,7 +53,7 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
 
     cdef wp_cy[:,:, ::1] dPOTTdt = np.zeros( (nx+2*nb,ny+2*nb,nz), dtype=wp)
 
-    if i_temperature_tendency:
+    if i_POTT_main_switch:
         for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
         #for i   in range(nb,nx +nb):
             im1 = i - 1
@@ -100,7 +106,8 @@ cpdef temperature_tendency_jacobson_c( GR, njobs,\
 
                     # NUMERICAL DIFUSION 
                     if i_num_dif and (c_POTT_dif_coef > 0):
-                        num_diff = c_POTT_dif_coef * exp(-(nz-k-1)) *\
+                        #num_diff = c_POTT_dif_coef * exp(-(nz-k-1)) *\
+                        num_diff = c_POTT_dif_coef *\
                                     ( + COLP[im1,j  ] * POTT[im1,j  ,k  ] \
                                       + COLP[ip1,j  ] * POTT[ip1,j  ,k  ] \
                                       + COLP[i  ,jm1] * POTT[i  ,jm1,k  ]  \

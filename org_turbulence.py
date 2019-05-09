@@ -5,7 +5,7 @@ from namelist import pTop
 #import matplotlib.pyplot as plt
 from constants import con_Rd, con_g, con_kappa
 #from boundaries import exchange_BC
-from namelist import wp
+from org_namelist import wp
 
 
 class turbulence:

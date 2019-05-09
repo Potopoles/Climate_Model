@@ -1,6 +1,7 @@
 import numpy as np
 from boundaries import exchange_BC
-from namelist import wp, njobs
+from namelist import njobs
+from org_namelist import wp
 from diagnostics_cython import interp_COLPA_c
 
 cimport numpy as np

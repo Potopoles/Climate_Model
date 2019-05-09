@@ -1,5 +1,6 @@
 import numpy as np
-from namelist import  i_colp_tendency, COLP_hor_dif_tau, wp_old
+from namelist import  i_colp_tendency, COLP_hor_dif_tau
+from org_namelist import wp_old
 from grid import tpbv, tpbvs
 from boundaries_cuda import exchange_BC_gpu
 import time

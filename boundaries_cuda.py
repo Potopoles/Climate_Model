@@ -1,6 +1,6 @@
 import numpy as np
 from numba import cuda, jit
-from namelist import wp_old
+from org_namelist import wp_old
 
 
 def exchange_BC_gpu(FIELD, zonal, merid, griddim, blockdim, stream,

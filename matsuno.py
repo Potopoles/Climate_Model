@@ -1,7 +1,8 @@
 import copy
 import time
 import numpy as np
-from namelist import comp_mode, wp_old
+from namelist import comp_mode
+from org_namelist import wp_old
 from boundaries import exchange_BC
 from jacobson import tendencies_jacobson, proceed_timestep_jacobson, \
                     diagnose_fields_jacobson

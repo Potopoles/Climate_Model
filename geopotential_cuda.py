@@ -1,6 +1,7 @@
 import numpy as np
 from constants import con_g, con_Rd, con_kappa, con_cp
-from namelist import pTop, wp_old
+from namelist import pTop
+from org_namelist import wp_old
 from boundaries_cuda import exchange_BC_gpu
 
 from numba import cuda, jit

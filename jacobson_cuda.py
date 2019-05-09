@@ -1,4 +1,4 @@
-from namelist import  wp_old
+from org_namelist import  wp_old
 from boundaries_cuda import exchange_BC_gpu
 from numba import cuda, jit
 

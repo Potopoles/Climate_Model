@@ -1,6 +1,7 @@
 import numpy as np
 from constants import con_kappa, con_g, con_Rd
-from namelist import wp, pTop, njobs
+from namelist import pTop, njobs
+from org_namelist import wp
 
 cimport numpy as np
 import cython

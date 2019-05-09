@@ -1,6 +1,7 @@
 import numpy as np
 import time
 from namelist import *
+from org_namelist import wp
 from boundaries import exchange_BC
 from IO import load_topo, load_restart_fields, load_profile
 from diagnostics import diagnose_secondary_fields, diagnose_POTTVB_jacobson
@@ -411,35 +412,28 @@ class GPU_Fields:
     def copy_all_fields_to_host(self, GR):
         t_start = time.time()
 
+        # TODO: NEW STYLE (???) MAYBE USE GPU CLASS INSTEAD
+        self.CF.COLP          =    self.COLP.copy_to_host()
+        self.CF.WIND          =    self.WIND.copy_to_host() 
+        self.CF.POTT          =    self.POTT.copy_to_host() 
+        self.CF.COLP_NEW      =    self.COLP_NEW.copy_to_host() 
+
         self.COLP_OLD          .to_host(GR.stream)
-        self.COLP              .to_host(GR.stream)
-        self.COLP_NEW          .to_host(GR.stream)
+        #self.COLP              .to_host(GR.stream)
+        #self.COLP_NEW          .to_host(GR.stream)
         self.dCOLPdt           .to_host(GR.stream)
         self.PSURF             .to_host(GR.stream)
         self.HSURF             .to_host(GR.stream) 
         self.OCEANMSK          .to_host(GR.stream) 
 
-        #self.UFLX              .to_host(GR.stream)  
-        #self.dUFLXdt           .to_host(GR.stream)  
-        #self.VFLX              .to_host(GR.stream)  
-        #self.dVFLXdt           .to_host(GR.stream)  
-        #self.FLXDIV            .to_host(GR.stream)  
-        #self.BFLX              .to_host(GR.stream)  
-        #self.CFLX              .to_host(GR.stream) 
-        #self.DFLX              .to_host(GR.stream) 
-        #self.EFLX              .to_host(GR.stream) 
-        #self.RFLX              .to_host(GR.stream) 
-        #self.QFLX              .to_host(GR.stream) 
-        #self.SFLX              .to_host(GR.stream) 
-        #self.TFLX              .to_host(GR.stream)
         self.UWIND_OLD         .to_host(GR.stream) 
         self.UWIND             .to_host(GR.stream) 
         self.VWIND_OLD         .to_host(GR.stream) 
         self.VWIND             .to_host(GR.stream) 
-        self.WIND              .to_host(GR.stream) 
+        #self.WIND              .to_host(GR.stream) 
         self.WWIND             .to_host(GR.stream) 
         self.POTT_OLD          .to_host(GR.stream) 
-        self.POTT              .to_host(GR.stream) 
+        #self.POTT              .to_host(GR.stream) 
         self.dPOTTdt           .to_host(GR.stream) 
         self.POTTVB            .to_host(GR.stream) 
         self.TAIR              .to_host(GR.stream) 

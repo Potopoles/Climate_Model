@@ -1,5 +1,6 @@
-from namelist import QV_hor_dif_tau, wp_old
 from numba import cuda, jit
+from namelist import QV_hor_dif_tau
+from org_namelist import wp_old
 
 i_hor_adv      = 1
 i_vert_adv     = 1

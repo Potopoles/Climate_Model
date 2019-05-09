@@ -3,7 +3,8 @@ import time
 import copy
 from geopotential import diag_pvt_factor
 from constants import con_kappa, con_g 
-from namelist import wp, comp_mode, nth_ts_time_step_diag
+from namelist import comp_mode, nth_ts_time_step_diag
+from org_namelist import wp
 from diagnostics import console_output_diagnostics
 #from diagnostics_cython import console_output_diagnostics_c
 #from diagnostics_cuda import console_output_diagnostics_gpu

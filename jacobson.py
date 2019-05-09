@@ -14,12 +14,11 @@ from wind import wind_tendency_jacobson
 from bin.wind_cython import wind_tendency_jacobson_c
 from wind_cuda import wind_tendency_jacobson_gpu
 
-from temperature import temperature_tendency_jacobson
 from bin.temperature_cython import temperature_tendency_jacobson_c
-from temperature_cuda import calc_dPOTTdt_orig
 ###### NEW
-from tendencies import TendencyFactory
-Tendencies = TendencyFactory(target='GPU')
+from org_tendencies import TendencyFactory
+Tendencies_GPU = TendencyFactory(target='GPU')
+Tendencies_CPU = TendencyFactory(target='CPU')
 ###### NEW
 
 
@@ -150,39 +149,39 @@ def tendencies_jacobson(GR, F, subgrids):
     ##############################
     t_start = time.time()
     # PROGNOSE POTT
-    if comp_mode == 0:
-        F.dPOTTdt = temperature_tendency_jacobson(GR,
-                                            F.POTT, F.POTTVB, F.COLP, F.COLP_NEW,
-                                            F.UFLX, F.VFLX, F.WWIND,
-                                            F.dPOTTdt_RAD, F.dPOTTdt_MIC)
-
-    elif comp_mode == 1:
+    if comp_mode == 1:
         F.dPOTTdt = temperature_tendency_jacobson_c(GR, njobs,
                                             F.POTT, F.POTTVB, F.COLP, F.COLP_NEW,
                                             F.UFLX, F.VFLX, F.WWIND,
                                             F.dPOTTdt_RAD, F.dPOTTdt_MIC)
         F.dPOTTdt = np.asarray(F.dPOTTdt)
 
-    elif comp_mode == 2:
-        #F.COLP = cp.expand_dims(F.COLP, axis=2)
-        #GR.Ad = cp.expand_dims(GR.Ad, axis=2)
-        #F.COLP_NEW = cp.expand_dims(F.COLP_NEW, axis=2)
-        #GR.dsigma = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
-        #F.dPOTTdt = Tendencies.POTT_tendency(
-        #                F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP, GR.Ad,
+        # TODO
+        #F.COLP = np.expand_dims(F.COLP, axis=2)
+        #GR.A = np.expand_dims(GR.A, axis=2)
+        #F.COLP_NEW = np.expand_dims(F.COLP_NEW, axis=2)
+        #GR.dsigma = np.expand_dims(np.expand_dims(GR.dsigma, 0),0)
+        #F.dPOTTdt = Tendencies_CPU.POTT_tendency(
+        #                F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP, GR.A,
         #                F.POTTVB, F.WWIND, F.COLP_NEW, GR.dsigma)
         #F.COLP = F.COLP.squeeze()
-        #GR.Ad = GR.Ad.squeeze()
+        #GR.A = GR.A.squeeze()
         #F.COLP_NEW = F.COLP_NEW.squeeze()
         #GR.dsigma = GR.dsigma.squeeze()
 
-        calc_dPOTTdt_orig[GR.griddim, GR.blockdim, GR.stream] \
-                                    (F.dPOTTdt, 
-                                    F.POTT, F.POTTVB, F.COLP, F.COLP_NEW, 
-                                    F.UFLX, F.VFLX, F.WWIND, 
-                                            #F.dPOTTdt_RAD, F.dPOTTdt_MIC, 
-                                            GR.Ad, GR.dsigmad)
-        GR.stream.synchronize()
+    elif comp_mode == 2:
+        # TODO
+        F.COLP = cp.expand_dims(F.COLP, axis=2)
+        GR.Ad = cp.expand_dims(GR.Ad, axis=2)
+        F.COLP_NEW = cp.expand_dims(F.COLP_NEW, axis=2)
+        GR.dsigma = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
+        F.dPOTTdt = Tendencies_GPU.POTT_tendency(
+                        F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP, GR.Ad,
+                        F.POTTVB, F.WWIND, F.COLP_NEW, GR.dsigma)
+        F.COLP = F.COLP.squeeze()
+        GR.Ad = GR.Ad.squeeze()
+        F.COLP_NEW = F.COLP_NEW.squeeze()
+        GR.dsigma = GR.dsigma.squeeze()
 
 
 
