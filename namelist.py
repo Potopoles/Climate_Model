@@ -115,7 +115,7 @@ output_fields = {
                 }
 
 # RESTART FILES
-i_load_from_restart = 1
+i_load_from_restart = 0
 i_save_to_restart = 1
 i_restart_nth_day = 5.00
 
@@ -137,7 +137,7 @@ njobs = 4
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
-i_simulation_mode = 2
+i_simulation_mode = 0
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 0:
@@ -148,10 +148,10 @@ if i_simulation_mode == 0:
     dlon_deg = 2
     output_path = '../output_orig'
     output_path = '../output'
-    i_sim_n_days = 10
+    i_sim_n_days = 1
     i_out_nth_hour = 12
-    i_surface = 1
-    i_radiation = 1
+    i_surface = 0
+    i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0
 
