@@ -14,11 +14,13 @@ Differentiate between computation targets:
 - GPU
 - CPU
 """
-from numba import cuda
 import numpy as np
+from numba import cuda
 
 from tendency_POTT import POTT_tendency_gpu, POTT_tendency_cpu
+#from tendency_UFLX import UFLX_tendency_gpu, UFLX_tendency_cpu
 from grid import tpb, bpg
+####################################################################
 
 
 

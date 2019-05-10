@@ -1,27 +1,27 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
-File name:          tendency_POTT.py  
+File name:          tendency_UFLX.py  
 Author:             Christoph Heim (CH)
-Date created:       20190509
-Last modified:      20190509
+Date created:       20190510
+Last modified:      20190510
 License:            MIT
 
-Computation of potential virtual temperature (POTT) tendency 
-according to:
+Computation of horizontal momentum flux in longitude
+(UFLX) tendency according to:
 Jacobson 2005
 Fundamentals of Atmospheric Modeling, Second Edition
-Chapter 7.4, page 213
+Chapter 7.4, page 214ff
 """
 import time
 import numpy as np
 import cupy as cp
 from numba import cuda, njit, prange, vectorize
 
-from namelist import (POTT_dif_coef, \
-                    i_POTT_main_switch,
-                    i_POTT_radiation, i_POTT_microphys,
-                    i_POTT_hor_adv, i_POTT_vert_adv, i_POTT_num_dif)
+from namelist import (UVFLX_dif_coef, \
+                    i_UFLX_main_switch,
+                    i_UFLX_hor_adv, i_UFLX_vert_adv,
+                    i_UFLX_num_dif, i_UFLX_pre_grad)
 from org_namelist import (wp, wp_int, wp_old)
 from grid import nx,nxs,ny,nys,nz,nzs,nb
 from GPU import cuda_kernel_decorator
@@ -34,20 +34,6 @@ from tendency_functions import (hor_adv_py, vert_adv_py,
 ####################################################################
 ### DEVICE UNSPECIFIC PYTHON FUNCTIONS
 ####################################################################
-def radiation():
-    raise NotImplementedError()
-#    dPOTTdt[i,j,k] = dPOTTdt[i,j,k] + \
-#                        dPOTTdt_RAD[i-1,j-1,k]*COLP[i,j] # TODO add boundaries
-
-
-def microphysics():
-    raise NotImplementedError()
-#    dPOTTdt[i,j,k] = dPOTTdt[i,j,k] + \
-#                        dPOTTdt_MIC[i-1,j-1,k]*COLP[i,j] # TODO add boundaries
-
-
-
-
 def add_up_tendencies_py(
             POTT, POTT_im1, POTT_ip1, POTT_jm1, POTT_jp1,
             UFLX, UFLX_ip1, VFLX, VFLX_jp1,

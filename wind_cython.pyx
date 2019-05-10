@@ -4,7 +4,7 @@ cimport numpy as np
 from cython.parallel import prange 
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
-from namelist import WIND_hor_dif_tau, i_wind_tendency
+from namelist import UVFLX_dif_coef, i_wind_tendency
 from org_namelist import wp
 from libc.stdio cimport printf
 from libc.math cimport cos, sin
@@ -39,6 +39,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
         wp_cy[:,:, ::1] QFLX,
         wp_cy[:,:, ::1] SFLX,
         wp_cy[:,:, ::1] TFLX,
+        wp_cy[:,:, ::1] WWIND_UWIND,
+        wp_cy[:,:, ::1] WWIND_VWIND,
         wp_cy[:,   ::1] COLP,
         wp_cy[:,   ::1] COLP_NEW,
         wp_cy[:,:, ::1] PHI,
@@ -72,7 +74,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                 preGrad_UWIND, preGrad_VWIND, horAdv_UWIND, horAdv_VWIND, \
                 vertAdv_UWIND, vertAdv_VWIND
 
-    cdef wp_cy c_WIND_hor_dif_tau = WIND_hor_dif_tau
+    cdef wp_cy c_UVFLX_dif_coef = UVFLX_dif_coef
     cdef wp_cy c_con_rE = con_rE
     cdef wp_cy c_con_cp = con_cp
 
@@ -89,14 +91,17 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
     #cdef wp_cy[:,:, ::1] SFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
     #cdef wp_cy[:,:, ::1] TFLX = np.zeros( (nxs+2*nb,ny +2*nb,nz) )
 
-    cdef wp_cy[:,:, ::1] WWIND_UWIND_ks = np.zeros( (nxs+2*nb,ny +2*nb,nzs), dtype=wp)
-    cdef wp_cy[:,:, ::1] WWIND_VWIND_ks = np.zeros( (nx +2*nb,nys+2*nb,nzs), dtype=wp)
+    #cdef wp_cy[:,:, ::1] WWIND_UWIND = np.zeros( (nxs+2*nb,ny +2*nb,nzs), dtype=wp)
+    #cdef wp_cy[:,:, ::1] WWIND_VWIND = np.zeros( (nx +2*nb,nys+2*nb,nzs), dtype=wp)
 
     cdef wp_cy COLPAWWIND_is_ks, UWIND_ks
     cdef wp_cy COLPAWWIND_js_ks, VWIND_ks
 
     dUFLXdt[:] = 0.
     dVFLXdt[:] = 0.
+
+    WWIND_UWIND[:] = 0.
+    WWIND_VWIND[:] = 0.
 
     if i_wind_tendency:
 
@@ -261,7 +266,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                          dsigma[ks-1] * UWIND[i_s ,j  ,ks  ] ) / \
                                        ( dsigma[ks  ] + dsigma[ks-1] )
 
-                            WWIND_UWIND_ks[i_s ,j  ,ks ] = COLPAWWIND_is_ks * UWIND_ks
+                            WWIND_UWIND[i_s ,j  ,ks ] = COLPAWWIND_is_ks * UWIND_ks
 
                     elif j == ny+nb-1:
                         for ks in range(1,nzs-1):
@@ -280,7 +285,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                          dsigma[ks-1] * UWIND[i_s ,j  ,ks  ] ) / \
                                        ( dsigma[ks  ] + dsigma[ks-1] )
 
-                            WWIND_UWIND_ks[i_s ,j  ,ks ] = COLPAWWIND_is_ks * UWIND_ks
+                            WWIND_UWIND[i_s ,j  ,ks ] = COLPAWWIND_is_ks * UWIND_ks
 
                     else:
                         for ks in range(1,nzs-1):
@@ -303,7 +308,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                          dsigma[ks-1] * UWIND[i_s ,j  ,ks  ] ) / \
                                        ( dsigma[ks  ] + dsigma[ks-1] )
 
-                            WWIND_UWIND_ks[i_s ,j  ,ks ] = COLPAWWIND_is_ks * UWIND_ks
+                            WWIND_UWIND[i_s ,j  ,ks ] = COLPAWWIND_is_ks * UWIND_ks
 
             #######################################################################
 
@@ -335,7 +340,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                                      dsigma[ks-1] * VWIND[i  ,js  ,ks  ] ) / \
                                    ( dsigma[ks  ] + dsigma[ks-1] )
 
-                        WWIND_VWIND_ks[i  ,js ,ks] = COLPAWWIND_js_ks * VWIND_ks
+                        WWIND_VWIND[i  ,js ,ks] = COLPAWWIND_js_ks * VWIND_ks
 
 
         #######################################################################
@@ -393,15 +398,15 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
 
                     ## VERTICAL ADVECTION
                     if i_vert_adv == 1:
-                        vertAdv_UWIND = (WWIND_UWIND_ks[i_s ,j  ,k  ] - \
-                                         WWIND_UWIND_ks[i_s,j  ,k+1]  ) / dsigma[k]
+                        vertAdv_UWIND = (WWIND_UWIND[i_s ,j  ,k  ] - \
+                                         WWIND_UWIND[i_s,j  ,k+1]  ) / dsigma[k]
                         dUFLXdt[i_s,j,k] = dUFLXdt[i_s,j,k] + vertAdv_UWIND
 
                     #######################################################################
 
                     ## HORIZONTAL DIFFUSION
                     if i_num_dif == 1:
-                        diff_UWIND = c_WIND_hor_dif_tau * \
+                        diff_UWIND = c_UVFLX_dif_coef * \
                              (  UFLX[ism1,j  ,k] + UFLX[isp1,j  ,k] \
                               + UFLX[i_s ,jm1,k] + UFLX[i_s ,jp1,k] - 4.*UFLX[i_s ,j  ,k])
 
@@ -510,15 +515,15 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
 
                     ## VERTICAL ADVECTION
                     if i_vert_adv == 1:
-                        vertAdv_VWIND = (WWIND_VWIND_ks[i  ,js  ,k  ] - \
-                                         WWIND_VWIND_ks[i  ,js  ,k+1]  ) / dsigma[k]
+                        vertAdv_VWIND = (WWIND_VWIND[i  ,js  ,k  ] - \
+                                         WWIND_VWIND[i  ,js  ,k+1]  ) / dsigma[k]
                         dVFLXdt[i,js,k] = dVFLXdt[i,js,k] + vertAdv_VWIND
 
                     #######################################################################
 
                     ## HORIZONTAL DIFFUSION
                     if i_num_dif == 1:
-                        diff_VWIND = c_WIND_hor_dif_tau * \
+                        diff_VWIND = c_UVFLX_dif_coef * \
                              (  VFLX[im1,js  ,k] + VFLX[ip1,js  ,k] \
                               + VFLX[i  ,jsm1,k] + VFLX[i  ,jsp1,k] - 4.*VFLX[i ,js  ,k])
 

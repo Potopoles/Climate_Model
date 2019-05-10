@@ -1,3 +1,17 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+File name:          GPU.py  
+Author:             Christoph Heim (CH)
+Date created:       20190509
+Last modified:      20190509
+License:            MIT
+
+Functionality not yet defined.
+Should contain:
+- GPU helper functions
+- GPU fields?
+"""
 from inspect import signature
 from org_namelist import wp_3D
 

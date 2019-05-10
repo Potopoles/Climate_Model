@@ -2,7 +2,7 @@ import time
 import numpy as np
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
-from namelist import WIND_hor_dif_tau, i_wind_tendency
+from namelist import UVFLX_dif_coef, i_wind_tendency
 from org_namelist import wp
 
 i_hor_adv  = 1
@@ -62,7 +62,7 @@ def wind_tendency_jacobson(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVFLXdt
                 dUFLXdt[:,:,k][GR.iisjj] += preGrad_UWIND
                 dVFLXdt[:,:,k][GR.iijjs] += preGrad_VWIND
 
-            if i_num_dif and (WIND_hor_dif_tau > 0):
+            if i_num_dif and (UVFLX_dif_coef > 0):
                 # HORIZONTAL DIFFUSION
                 diff_UWIND, diff_VWIND = horizontal_diffusion(GR, UFLX, VFLX, k)
                 dUFLXdt[:,:,k][GR.iisjj] += diff_UWIND
@@ -152,12 +152,12 @@ def vertical_advection(GR, WWIND_UWIND, WWIND_VWIND, k):
 
 def horizontal_diffusion(GR, UFLX, VFLX, k):
 
-    diff_UWIND = WIND_hor_dif_tau * \
+    diff_UWIND = UVFLX_dif_coef * \
                  (  UFLX[:,:,k][GR.iisjj_im1] + UFLX[:,:,k][GR.iisjj_ip1] \
                   + UFLX[:,:,k][GR.iisjj_jm1] + UFLX[:,:,k][GR.iisjj_jp1] \
                 - 4*UFLX[:,:,k][GR.iisjj])
 
-    diff_VWIND = WIND_hor_dif_tau * \
+    diff_VWIND = UVFLX_dif_coef * \
                  (  VFLX[:,:,k][GR.iijjs_im1] + VFLX[:,:,k][GR.iijjs_ip1] \
                   + VFLX[:,:,k][GR.iijjs_jm1] + VFLX[:,:,k][GR.iijjs_jp1] \
                 - 4*VFLX[:,:,k][GR.iijjs])

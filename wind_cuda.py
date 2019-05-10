@@ -2,7 +2,7 @@ import time
 import numpy as np
 from boundaries_cuda import exchange_BC_gpu
 from constants import con_cp, con_rE, con_Rd
-from namelist import WIND_hor_dif_tau, i_wind_tendency
+from namelist import UVFLX_dif_coef, i_wind_tendency
 from org_namelist import wp_old
 from numba import cuda, jit
 from math import cos, sin
@@ -16,6 +16,7 @@ i_num_dif  = 1
 
 def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVFLXdt,
                                 BFLX, CFLX, DFLX, EFLX, RFLX, QFLX, SFLX, TFLX, 
+                                WWIND_UWIND, WWIND_VWIND,
                                 COLP, COLP_NEW, PHI, POTT, PVTF, PVTFVB):
 
     stream = GR.stream
@@ -25,10 +26,10 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
     set_to[GR.griddim_js, GR.blockdim, stream](dVFLXdt, 0.)
     stream.synchronize()
 
-    WWIND_UWIND_ks = cuda.device_array( (GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs), \
-                                        dtype=UWIND.dtype)
-    WWIND_VWIND_ks = cuda.device_array( (GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs), \
-                                        dtype=VWIND.dtype)
+    #WWIND_UWIND = cuda.device_array( (GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs), \
+    #                                    dtype=UWIND.dtype)
+    #WWIND_VWIND = cuda.device_array( (GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs), \
+    #                                    dtype=VWIND.dtype)
 
 
     if i_wind_tendency:
@@ -75,12 +76,12 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
 
         # VERTICAL ADVECTION
         if i_vert_adv:
-            calc_WWIND_VWIND_ks[GR.griddim_js_ks, GR.blockdim_ks, stream] \
-                                (WWIND_VWIND_ks, VWIND, COLP_NEW, WWIND, GR.Ad, 
+            calc_WWIND_VWIND[GR.griddim_js_ks, GR.blockdim_ks, stream] \
+                                (WWIND_VWIND, VWIND, COLP_NEW, WWIND, GR.Ad, 
                                 GR.dsigmad)
             stream.synchronize()
-            calc_WWIND_UWIND_ks[GR.griddim_is_ks, GR.blockdim_ks, stream] \
-                                (WWIND_UWIND_ks, UWIND, COLP_NEW, WWIND, GR.Ad, 
+            calc_WWIND_UWIND[GR.griddim_is_ks, GR.blockdim_ks, stream] \
+                                (WWIND_UWIND, UWIND, COLP_NEW, WWIND, GR.Ad, 
                                 GR.dsigmad)
             stream.synchronize()
 
@@ -92,7 +93,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
         run_UWIND[GR.griddim_is, GR.blockdim, stream] \
                         (dUFLXdt, UWIND, VWIND, COLP,
                         UFLX, BFLX, CFLX, DFLX, EFLX,
-                        PHI, POTT, PVTF, PVTFVB, WWIND_UWIND_ks,
+                        PHI, POTT, PVTF, PVTFVB, WWIND_UWIND,
                         GR.corf_isd, GR.latis_radd, GR.dlon_rad,
                         GR.dsigmad, GR.sigma_vbd, GR.dy)
         stream.synchronize()
@@ -100,7 +101,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
         run_VWIND[GR.griddim_js, GR.blockdim, stream] \
                         (dVFLXdt, UWIND, VWIND, COLP,
                         VFLX, RFLX, QFLX, SFLX, TFLX,
-                        PHI, POTT, PVTF, PVTFVB, WWIND_VWIND_ks,
+                        PHI, POTT, PVTF, PVTFVB, WWIND_VWIND,
                         GR.corfd, GR.lat_radd, GR.dlon_rad,
                         GR.dsigmad, GR.sigma_vbd, GR.dxjsd)
         stream.synchronize()
@@ -120,7 +121,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
       wp_old+'[:    ], '+wp_old+'[:    ], '+wp_old], target='gpu')
 def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
                 UFLX, BFLX, CFLX, DFLX, EFLX,
-                PHI, POTT, PVTF, PVTFVB, WWIND_UWIND_ks,
+                PHI, POTT, PVTF, PVTFVB, WWIND_UWIND,
                 corf_is, latis_rad, dlon_rad,
                 dsigma, sigma_vb, dy):
     nx = dUFLXdt.shape[0] - 2
@@ -155,8 +156,8 @@ def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
         # VERTICAL ADVECTION
         if i_vert_adv:
             dUFLXdt[i  ,j  ,k] = dUFLXdt[i  ,j  ,k] + \
-                                (WWIND_UWIND_ks[i  ,j  ,k  ] - \
-                                 WWIND_UWIND_ks[i  ,j  ,k+1]  ) / dsigma[k]
+                                (WWIND_UWIND[i  ,j  ,k  ] - \
+                                 WWIND_UWIND[i  ,j  ,k+1]  ) / dsigma[k]
 
 
         # CORIOLIS AND SPHERICAL GRID CONVERSION
@@ -204,9 +205,9 @@ def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
 
 
         # HORIZONTAL DIFFUSION
-        if i_num_dif and (WIND_hor_dif_tau > 0):
+        if i_num_dif and (UVFLX_dif_coef > 0):
             dUFLXdt[i  ,j  ,k] = dUFLXdt[i  ,j  ,k] + \
-                                WIND_hor_dif_tau * \
+                                UVFLX_dif_coef * \
                              (  UFLX[i-1,j  ,k] + UFLX[i+1,j  ,k] \
                               + UFLX[i  ,j-1,k] + UFLX[i  ,j+1,k] \
                            - 4.*UFLX[i  ,j  ,k] )
@@ -221,7 +222,7 @@ def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
       wp_old+'[:    ], '+wp_old+'[:    ], '+wp_old+'[:,:  ]'], target='gpu')
 def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
                 VFLX, RFLX, QFLX, SFLX, TFLX,
-                PHI, POTT, PVTF, PVTFVB, WWIND_VWIND_ks,
+                PHI, POTT, PVTF, PVTFVB, WWIND_VWIND,
                 corf, lat_rad, dlon_rad,
                 dsigma, sigma_vb, dxjs):
     nx = dVFLXdt.shape[0] - 2
@@ -256,8 +257,8 @@ def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
         # VERTICAL ADVECTION
         if i_vert_adv:
             dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
-                                (WWIND_VWIND_ks[i  ,j  ,k  ] - \
-                                 WWIND_VWIND_ks[i  ,j  ,k+1]  ) / dsigma[k]
+                                (WWIND_VWIND[i  ,j  ,k  ] - \
+                                 WWIND_VWIND[i  ,j  ,k+1]  ) / dsigma[k]
 
 
         # CORIOLIS AND SPHERICAL GRID CONVERSION
@@ -306,9 +307,9 @@ def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
 
 
         # HORIZONTAL DIFFUSION
-        if i_num_dif and (WIND_hor_dif_tau > 0):
+        if i_num_dif and (UVFLX_dif_coef > 0):
             dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
-                                WIND_hor_dif_tau * \
+                                UVFLX_dif_coef * \
                              (  VFLX[i-1,j  ,k] + VFLX[i+1,j  ,k] \
                               + VFLX[i  ,j-1,k] + VFLX[i  ,j+1,k] \
                            - 4.*VFLX[i  ,j  ,k] )
@@ -411,11 +412,11 @@ def calc_fluxes_isjs(CFLX, QFLX, UFLX, VFLX):
 
 @jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+ \
       wp_old+'[:    ]'], target='gpu')
-def calc_WWIND_UWIND_ks(WWIND_UWIND_ks, UWIND, COLP_NEW, WWIND, A,
+def calc_WWIND_UWIND(WWIND_UWIND, UWIND, COLP_NEW, WWIND, A,
                         dsigma):
-    nx = WWIND_UWIND_ks.shape[0] - 2
-    ny = WWIND_UWIND_ks.shape[1] - 2
-    nz = WWIND_UWIND_ks.shape[2]
+    nx = WWIND_UWIND.shape[0] - 2
+    ny = WWIND_UWIND.shape[1] - 2
+    nz = WWIND_UWIND.shape[2]
     i, j, k = cuda.grid(3)
     if i > 0 and i < nx+1 and j > 0 and j < ny+1 and k > 0 and k < nz-1:
         if j == 1:
@@ -458,10 +459,10 @@ def calc_WWIND_UWIND_ks(WWIND_UWIND_ks, UWIND, COLP_NEW, WWIND, A,
         UWIND_ks = ( dsigma[k  ] * UWIND[i  ,j  ,k-1] +   \
                      dsigma[k-1] * UWIND[i  ,j  ,k  ] ) / \
                    ( dsigma[k  ] + dsigma[k-1] )
-        WWIND_UWIND_ks[i  ,j  ,k ] = COLPAWWIND_is_ks * UWIND_ks
+        WWIND_UWIND[i  ,j  ,k ] = COLPAWWIND_is_ks * UWIND_ks
 
     if k == 0 or k == nz-1:
-        WWIND_UWIND_ks[i  ,j  ,k ] = 0.
+        WWIND_UWIND[i  ,j  ,k ] = 0.
 
     cuda.syncthreads()
 
@@ -471,11 +472,11 @@ def calc_WWIND_UWIND_ks(WWIND_UWIND_ks, UWIND, COLP_NEW, WWIND, A,
 
 @jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+wp_old+'[:,:,:], '+wp_old+'[:,:  ], '+ \
       wp_old+'[:    ]'], target='gpu')
-def calc_WWIND_VWIND_ks(WWIND_VWIND_ks, VWIND, COLP_NEW, WWIND, A,
+def calc_WWIND_VWIND(WWIND_VWIND, VWIND, COLP_NEW, WWIND, A,
                         dsigma):
-    nx = WWIND_VWIND_ks.shape[0] - 2
-    ny = WWIND_VWIND_ks.shape[1] - 2
-    nz = WWIND_VWIND_ks.shape[2]
+    nx = WWIND_VWIND.shape[0] - 2
+    ny = WWIND_VWIND.shape[1] - 2
+    nz = WWIND_VWIND.shape[2]
     i, j, k = cuda.grid(3)
     if i > 0 and i < nx+1 and j > 0 and j < ny+1 and k > 0 and k < nz-1:
         COLPAWWIND_js_ks = 1./8.*( \
@@ -495,10 +496,10 @@ def calc_WWIND_VWIND_ks(WWIND_VWIND_ks, VWIND, COLP_NEW, WWIND, A,
         VWIND_ks = ( dsigma[k  ] * VWIND[i  ,j  ,k-1] +   \
                      dsigma[k-1] * VWIND[i  ,j  ,k  ] ) / \
                    ( dsigma[k  ] + dsigma[k-1] )
-        WWIND_VWIND_ks[i  ,j  ,k ] = COLPAWWIND_js_ks * VWIND_ks
+        WWIND_VWIND[i  ,j  ,k ] = COLPAWWIND_js_ks * VWIND_ks
 
     if k == 0 or k == nz-1:
-        WWIND_VWIND_ks[i  ,j  ,k ] = 0.
+        WWIND_VWIND[i  ,j  ,k ] = 0.
 
     cuda.syncthreads()
 

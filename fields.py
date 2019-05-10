@@ -15,10 +15,6 @@ from org_turbulence import turbulence
 from constants import con_g, con_Rd, con_kappa, con_cp
 from surface_model import nz_soil
 from numba import cuda
-#if wp_old == 'float64':
-#    from numpy import float64 as wp
-#elif wp_old == 'float32':
-#    from numpy import float32 as wp
 
 ##############################################################################
 # ORDER OF FIELDS
@@ -88,6 +84,10 @@ class CPU_Fields:
         self.SFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                             np.nan, dtype=wp)
         self.TFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                            np.nan, dtype=wp)
+        self.WWIND_UWIND = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
+                            np.nan, dtype=wp)
+        self.WWIND_VWIND = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs ), 
                             np.nan, dtype=wp)
 
         # velocity field
@@ -293,6 +293,8 @@ class GPU_Fields:
         self.QFLX             = cuda.to_device(CF.QFLX,         GR.stream)
         self.SFLX             = cuda.to_device(CF.SFLX,         GR.stream)
         self.TFLX             = cuda.to_device(CF.TFLX,         GR.stream)
+        self.WWIND_UWIND      = cuda.to_device(CF.WWIND_UWIND,  GR.stream) 
+        self.WWIND_VWIND      = cuda.to_device(CF.WWIND_VWIND,  GR.stream) 
 
         # velocity fields
         ##############################################################################

@@ -11,6 +11,7 @@ Namelist for user input.
 """
 import numpy as np
 from datetime import datetime
+####################################################################
 
 ####################################################################
 # GRID PARAMS
@@ -144,11 +145,11 @@ njobs = 4
 
 
 
-comp_mode = 1
 ####################################################################
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
 ####################################################################
+comp_mode = 1
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
@@ -205,41 +206,48 @@ elif i_simulation_mode == 2:
 ####################################################################
 # DIFFUSION
 ####################################################################
-WIND_hor_dif_tau = 0 # important
+UVFLX_dif_coef = 0 # important
 POTT_dif_coef = 1E-6 # creates instabilities and acceleration in steep terrain
 COLP_hor_dif_tau = 0 # not tested (but likely not good because of same reasons as for POTT)
 QV_hor_dif_tau   = 0
 if i_diffusion_on:
     if dlat_deg == 10:
-        WIND_hor_dif_tau = 1
+        UVFLX_dif_coef = 1
     elif dlat_deg == 8:
-        WIND_hor_dif_tau = 1.2
+        UVFLX_dif_coef = 1.2
     elif dlat_deg == 6:
-        WIND_hor_dif_tau = 1.8
+        UVFLX_dif_coef = 1.8
     elif dlat_deg == 5:
-        WIND_hor_dif_tau = 2
+        UVFLX_dif_coef = 2
     elif dlat_deg == 4:
-        WIND_hor_dif_tau = 2.5
+        UVFLX_dif_coef = 2.5
     elif dlat_deg == 3:
-        WIND_hor_dif_tau = 3.3
+        UVFLX_dif_coef = 3.3
     elif dlat_deg == 2:
-        WIND_hor_dif_tau = 5
+        UVFLX_dif_coef = 5
         POTT_dif_coef = 1E-5
     elif dlat_deg == 1.5:
-        WIND_hor_dif_tau = 7.5
+        UVFLX_dif_coef = 7.5
     elif dlat_deg <= 1:
-        WIND_hor_dif_tau = 10
+        UVFLX_dif_coef = 10
 
 # TODO does it work like this? Can decrease even more?
-WIND_hor_dif_tau = WIND_hor_dif_tau * 1.0
+UVFLX_dif_coef = UVFLX_dif_coef * 1.0
 
 
 
 
 ## TENDENCIES
-i_POTT_main_switch = 1
-i_POTT_hor_adv   = 1
-i_POTT_vert_adv  = 1
-i_POTT_num_dif   = 1
-i_POTT_radiation = 0
-i_POTT_microphys = 0
+i_POTT_main_switch  = 1
+i_POTT_hor_adv      = 1
+i_POTT_vert_adv     = 1
+i_POTT_num_dif      = 1
+i_POTT_radiation    = 0
+i_POTT_microphys    = 0
+
+
+i_UFLX_main_switch  = 1
+i_UFLX_hor_adv      = 0
+i_UFLX_vert_adv     = 0
+i_UFLX_num_dif      = 0
+i_UFLX_pre_grad     = 0

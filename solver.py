@@ -41,6 +41,7 @@ elif i_time_stepping == 'RK4':
     from RK4 import step_RK4 as time_stepper
 
 import _thread
+####################################################################
 
 ####################################################################
 # CREATE MODEL GRID

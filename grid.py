@@ -20,19 +20,6 @@ ny = wp_int((lat1_deg - lat0_deg)/dlat_deg)
 nys = wp_int(ny+1)
 nb = wp_int(nb)
 
-#nb = wp_int(1)
-#nx = wp_int(360)
-#ny = wp_int(180)
-#nz = wp_int(32)
-
-#nb = wp_int(nb)
-#nx = wp_int(nx)
-#ny = wp_int(ny)
-#nz = wp_int(nz)
-
-#nxs = nx + wp_int(1)
-#nys = ny + wp_int(1)
-#nzs = nz + wp_int(1)
 
 # GPU computation
 tpb  = (1,       1,      nz)

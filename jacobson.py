@@ -112,19 +112,20 @@ def tendencies_jacobson(GR, F, subgrids):
     ##############################
     t_start = time.time()
     # PROGNOSE WIND
-    if comp_mode == 0:
-        F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson(GR, F.UWIND, F.VWIND, F.WWIND,
-                                        F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-                                        F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-                                        F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-                                        F.COLP, F.COLP_NEW, F.PHI, F.POTT,
-                                        F.PVTF, F.PVTFVB)
+    #if comp_mode == 0:
+    #    F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson(GR, F.UWIND, F.VWIND, F.WWIND,
+    #                                    F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+    #                                    F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+    #                                    F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+    #                                    F.COLP, F.COLP_NEW, F.PHI, F.POTT,
+    #                                    F.PVTF, F.PVTFVB)
 
-    elif comp_mode == 1:
+    if comp_mode == 1:
         F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs, F.UWIND, F.VWIND, F.WWIND,
                                         F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
                                         F.BFLX, F.CFLX, F.DFLX, F.EFLX,
                                         F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+                                        F.WWIND_UWIND, F.WWIND_VWIND, 
                                         F.COLP, F.COLP_NEW, F.PHI,
                                         F.POTT, F.PVTF, F.PVTFVB)
         F.dUFLXdt = np.asarray(F.dUFLXdt)
@@ -135,6 +136,7 @@ def tendencies_jacobson(GR, F, subgrids):
                                         F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
                                         F.BFLX, F.CFLX, F.DFLX, F.EFLX,
                                         F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+                                        F.WWIND_UWIND, F.WWIND_VWIND, 
                                         F.COLP, F.COLP_NEW, F.PHI, F.POTT,
                                         F.PVTF, F.PVTFVB)
 
