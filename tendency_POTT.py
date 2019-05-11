@@ -7,8 +7,8 @@ Date created:       20190509
 Last modified:      20190509
 License:            MIT
 
-Computation of potential virtual temperature (POTT) tendency 
-according to:
+Computation of potential virtual temperature (POTT) tendency
+(dPOTTdt) according to:
 Jacobson 2005
 Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 213
@@ -18,7 +18,7 @@ import numpy as np
 import cupy as cp
 from numba import cuda, njit, prange, vectorize
 
-from namelist import (POTT_dif_coef, \
+from namelist import (POTT_dif_coef,
                     i_POTT_main_switch,
                     i_POTT_radiation, i_POTT_microphys,
                     i_POTT_hor_adv, i_POTT_vert_adv, i_POTT_num_dif)

@@ -43,10 +43,10 @@ pSurf = 101350.
 gaussian_dlon = np.pi/10
 gaussian_dlat = np.pi/10
 u0 = 0
-UWIND_gaussian_pert = 00
+UWIND_gaussian_pert = 10
 UWIND_random_pert = 0
 v0 = 0
-VWIND_gaussian_pert = 00
+VWIND_gaussian_pert = 10
 VWIND_random_pert = 0
 COLP_gaussian_pert = -00000
 COLP_random_pert = 000
@@ -149,7 +149,8 @@ njobs = 4
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
 ####################################################################
-comp_mode = 1
+i_run_new_style = 1
+comp_mode = 2
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
@@ -164,8 +165,8 @@ if i_simulation_mode == 0:
     dlon_deg = 2
     output_path = '../output_ref'
     output_path = '../output_test'
-    i_sim_n_days = 0.36*2
-    i_out_nth_hour = 4*2
+    i_sim_n_days = 0.36*1
+    i_out_nth_hour = 4*1
     i_surface = 0
     i_radiation = 0
     i_microphysics = 0
@@ -246,8 +247,9 @@ i_POTT_radiation    = 0
 i_POTT_microphys    = 0
 
 
-i_UFLX_main_switch  = 1
-i_UFLX_hor_adv      = 0
-i_UFLX_vert_adv     = 0
-i_UFLX_num_dif      = 0
-i_UFLX_pre_grad     = 0
+i_UVFLX_main_switch  = 1
+i_UVFLX_hor_adv      = 0
+i_UVFLX_vert_adv     = 0
+i_UVFLX_coriolis     = 0
+i_UVFLX_num_dif      = 1
+i_UVFLX_pre_grad     = 1

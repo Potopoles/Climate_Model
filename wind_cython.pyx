@@ -4,7 +4,11 @@ cimport numpy as np
 from cython.parallel import prange 
 from boundaries import exchange_BC
 from constants import con_cp, con_rE, con_Rd
-from namelist import UVFLX_dif_coef, i_wind_tendency
+from namelist import (UVFLX_dif_coef,
+                    i_UVFLX_main_switch,
+                    i_UVFLX_hor_adv, i_UVFLX_vert_adv,
+                    i_UVFLX_coriolis,
+                    i_UVFLX_num_dif, i_UVFLX_pre_grad)
 from org_namelist import wp
 from libc.stdio cimport printf
 from libc.math cimport cos, sin
@@ -14,11 +18,11 @@ ctypedef fused wp_cy:
     double
     float
 
-cdef int i_hor_adv = 1
-cdef int i_vert_adv = 1
-cdef int i_coriolis = 1
-cdef int i_pre_grad = 1
-cdef int i_num_dif = 1
+#cdef int i_UVFLX_hor_adv    = i_UVFLX_hor_adv 
+#cdef int i_UVFLX_vert_adv   = i_UVFLX_vert_adv
+#cdef int i_UVFLX_coriolis   = i_UVFLX_coriolis
+#cdef int i_UVFLX_pre_grad   = i_UVFLX_pre_grad
+#cdef int i_UVFLX_num_dif    = i_UVFLX_num_dif 
 
 
 @cython.boundscheck(False)
@@ -49,6 +53,13 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
         wp_cy[:,:, ::1] PVTFVB):
 
     cdef int c_njobs = njobs
+
+    cdef int c_i_UVFLX_main_switch    = i_UVFLX_main_switch 
+    cdef int c_i_UVFLX_hor_adv        = i_UVFLX_hor_adv 
+    cdef int c_i_UVFLX_vert_adv       = i_UVFLX_vert_adv
+    cdef int c_i_UVFLX_coriolis       = i_UVFLX_coriolis
+    cdef int c_i_UVFLX_pre_grad       = i_UVFLX_pre_grad
+    cdef int c_i_UVFLX_num_dif        = i_UVFLX_num_dif 
    
     cdef int nb = GR.nb
     cdef int nx  = GR.nx
@@ -78,6 +89,8 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
     cdef wp_cy c_con_rE = con_rE
     cdef wp_cy c_con_cp = con_cp
 
+
+
     #cdef wp_cy[:,:, ::1] dUFLXdt = np.zeros( (nxs,ny ,nz) )
     #cdef wp_cy[:,:, ::1] dVFLXdt = np.zeros( (nx ,nys,nz) )
 
@@ -103,7 +116,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
     WWIND_UWIND[:] = 0.
     WWIND_VWIND[:] = 0.
 
-    if i_wind_tendency:
+    if c_i_UVFLX_main_switch:
 
         #######################################################################
         #######################################################################
@@ -111,7 +124,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
         #######################################################################
 
         # HORIZONTAL ADVECTION
-        if i_hor_adv:
+        if c_i_UVFLX_hor_adv:
             #for i   in range(nb,nx +nb):
             for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
                 im1 = i - 1
@@ -237,7 +250,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
         #######################################################################
 
         # VERTICAL ADVECTION
-        if i_vert_adv:
+        if c_i_UVFLX_vert_adv:
 
 
             for i_s in prange(nb,nxs+nb, nogil=True, num_threads=c_njobs, schedule='guided'):
@@ -371,7 +384,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     kp1 = k+1
 
                     # HORIZONTAL ADVECTION
-                    if i_hor_adv:
+                    if c_i_UVFLX_hor_adv:
                         horAdv_UWIND =  + BFLX [ism1,j  ,k] * \
                                         ( UWIND[ism1,j  ,k] + UWIND[i_s ,j  ,k] )/2. \
                                         - BFLX [i_s ,j  ,k] * \
@@ -397,7 +410,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     #######################################################################
 
                     ## VERTICAL ADVECTION
-                    if i_vert_adv == 1:
+                    if c_i_UVFLX_vert_adv == 1:
                         vertAdv_UWIND = (WWIND_UWIND[i_s ,j  ,k  ] - \
                                          WWIND_UWIND[i_s,j  ,k+1]  ) / dsigma[k]
                         dUFLXdt[i_s,j,k] = dUFLXdt[i_s,j,k] + vertAdv_UWIND
@@ -405,7 +418,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     #######################################################################
 
                     ## HORIZONTAL DIFFUSION
-                    if i_num_dif == 1:
+                    if c_i_UVFLX_num_dif == 1:
                         diff_UWIND = c_UVFLX_dif_coef * \
                              (  UFLX[ism1,j  ,k] + UFLX[isp1,j  ,k] \
                               + UFLX[i_s ,jm1,k] + UFLX[i_s ,jp1,k] - 4.*UFLX[i_s ,j  ,k])
@@ -415,7 +428,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     #######################################################################
 
                     #### CORIOLIS
-                    if i_coriolis == 1:
+                    if c_i_UVFLX_coriolis == 1:
                         coriolis_UWIND = c_con_rE*dlon_rad*dlon_rad/2.*(\
                                 + COLP[ism1,j  ] * \
                                 ( VWIND[ism1,j  ,k] + VWIND[ism1,jp1,k] )/2. * \
@@ -437,7 +450,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     #######################################################################
 
                     #### PRESSURE GRADIENT
-                    if i_pre_grad == 1:
+                    if c_i_UVFLX_pre_grad == 1:
                         preGrad_UWIND = - dy * ( \
                                 ( PHI [i_s ,j  ,k]  - PHI [ism1,j  ,k] ) * \
                                 ( COLP[i_s ,j    ]  + COLP[ism1,j    ] ) /2. + \
@@ -488,7 +501,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     kp1 = k+1
 
                     # HORIZONTAL ADVECTION
-                    if i_hor_adv:
+                    if c_i_UVFLX_hor_adv:
                         horAdv_VWIND =  + RFLX [i  ,jsm1,k] * \
                                         ( VWIND[i  ,jsm1,k] + VWIND[i  ,js  ,k] )/2. \
                                         - RFLX [i  ,js  ,k] * \
@@ -514,7 +527,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     #######################################################################
 
                     ## VERTICAL ADVECTION
-                    if i_vert_adv == 1:
+                    if c_i_UVFLX_vert_adv == 1:
                         vertAdv_VWIND = (WWIND_VWIND[i  ,js  ,k  ] - \
                                          WWIND_VWIND[i  ,js  ,k+1]  ) / dsigma[k]
                         dVFLXdt[i,js,k] = dVFLXdt[i,js,k] + vertAdv_VWIND
@@ -522,7 +535,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     #######################################################################
 
                     ## HORIZONTAL DIFFUSION
-                    if i_num_dif == 1:
+                    if c_i_UVFLX_num_dif == 1:
                         diff_VWIND = c_UVFLX_dif_coef * \
                              (  VFLX[im1,js  ,k] + VFLX[ip1,js  ,k] \
                               + VFLX[i  ,jsm1,k] + VFLX[i  ,jsp1,k] - 4.*VFLX[i ,js  ,k])
@@ -533,7 +546,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     #######################################################################
 
                     #### CORIOLIS
-                    if i_coriolis == 1:
+                    if c_i_UVFLX_coriolis == 1:
                         coriolis_VWIND = - c_con_rE*dlon_rad*dlon_rad/2.*(\
                                 + COLP[i,jsm1] * \
                                 ( UWIND[i  ,jsm1,k] + UWIND[ip1,jsm1,k] )/2. * \
@@ -555,7 +568,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
                     #######################################################################
 
                     #### PRESSURE GRADIENT
-                    if i_pre_grad == 1:
+                    if c_i_UVFLX_pre_grad == 1:
                         preGrad_VWIND = - dxjs[i  ,js  ] * ( \
                                 ( PHI [i ,js  ,k]  - PHI [i,jsm1 ,k] ) * \
                                 ( COLP[i ,js    ]  + COLP[i,jsm1   ] ) /2. + \

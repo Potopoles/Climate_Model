@@ -4,6 +4,7 @@ import numpy as np
 import cupy as cp
 import time
 from namelist import pTop, njobs, comp_mode
+from namelist import i_run_new_style
 from constants import con_Rd
 
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
@@ -112,33 +113,53 @@ def tendencies_jacobson(GR, F, subgrids):
     ##############################
     t_start = time.time()
     # PROGNOSE WIND
-    #if comp_mode == 0:
-    #    F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson(GR, F.UWIND, F.VWIND, F.WWIND,
-    #                                    F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-    #                                    F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-    #                                    F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-    #                                    F.COLP, F.COLP_NEW, F.PHI, F.POTT,
-    #                                    F.PVTF, F.PVTFVB)
-
     if comp_mode == 1:
-        F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs, F.UWIND, F.VWIND, F.WWIND,
-                                        F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-                                        F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-                                        F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-                                        F.WWIND_UWIND, F.WWIND_VWIND, 
-                                        F.COLP, F.COLP_NEW, F.PHI,
-                                        F.POTT, F.PVTF, F.PVTFVB)
-        F.dUFLXdt = np.asarray(F.dUFLXdt)
-        F.dVFLXdt = np.asarray(F.dVFLXdt)
+        if i_run_new_style == 1:
+            # TODO
+            F.dUFLXdt, F.dVFLXdt = Tendencies_CPU.UVFLX_tendency(
+                            F.dUFLXdt, F.dVFLXdt, F.UFLX, F.VFLX,
+                            F.PHI, F.COLP, F.POTT, F.PVTF, F.PVTFVB,
+                            GR.dsigma, GR.sigma_vb, GR.dyis, GR.dxjs)
+        
+        else:
+            F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs, F.UWIND, F.VWIND, F.WWIND,
+                                            F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+                                            F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+                                            F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+                                            F.WWIND_UWIND, F.WWIND_VWIND, 
+                                            F.COLP, F.COLP_NEW, F.PHI,
+                                            F.POTT, F.PVTF, F.PVTFVB)
+            F.dUFLXdt = np.asarray(F.dUFLXdt)
+            F.dVFLXdt = np.asarray(F.dVFLXdt)
+
 
     elif comp_mode == 2:
-        F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR, F.UWIND, F.VWIND, F.WWIND,
-                                        F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-                                        F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-                                        F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-                                        F.WWIND_UWIND, F.WWIND_VWIND, 
-                                        F.COLP, F.COLP_NEW, F.PHI, F.POTT,
-                                        F.PVTF, F.PVTFVB)
+        if i_run_new_style == 1:
+            # TODO
+            F.COLP = cp.expand_dims(F.COLP, axis=2)
+            GR.dyis = cp.expand_dims(GR.dyis, axis=2)
+            GR.dxjs = cp.expand_dims(GR.dxjs, axis=2)
+            GR.dsigma = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
+            GR.sigma_vb = cp.expand_dims(cp.expand_dims(GR.sigma_vb, 0),0)
+            F.dUFLXdt, F.dVFLXdt = Tendencies_GPU.UVFLX_tendency(
+                            F.dUFLXdt, F.dVFLXdt, F.UFLX, F.VFLX,
+                            F.PHI, F.COLP, F.POTT, F.PVTF, F.PVTFVB,
+                            GR.dsigma, GR.sigma_vb, GR.dyis, GR.dxjs)
+            F.COLP = F.COLP.squeeze()
+            GR.dyis = GR.dyis.squeeze()
+            GR.dxjs = GR.dxjs.squeeze()
+            GR.dsigma = GR.dsigma.squeeze()
+            GR.sigma_vb = GR.dsigma.squeeze()
+        else:
+            F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR, F.UWIND, F.VWIND, F.WWIND,
+                                            F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+                                            F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+                                            F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+                                            F.WWIND_UWIND, F.WWIND_VWIND, 
+                                            F.COLP, F.COLP_NEW, F.PHI, F.POTT,
+                                            F.PVTF, F.PVTFVB)
+
+
 
     t_end = time.time()
     GR.wind_comp_time += t_end - t_start
@@ -152,24 +173,26 @@ def tendencies_jacobson(GR, F, subgrids):
     t_start = time.time()
     # PROGNOSE POTT
     if comp_mode == 1:
-        F.dPOTTdt = temperature_tendency_jacobson_c(GR, njobs,
-                                            F.POTT, F.POTTVB, F.COLP, F.COLP_NEW,
-                                            F.UFLX, F.VFLX, F.WWIND,
-                                            F.dPOTTdt_RAD, F.dPOTTdt_MIC)
-        F.dPOTTdt = np.asarray(F.dPOTTdt)
+        if i_run_new_style == 1:
+            # TODO
+            F.COLP = np.expand_dims(F.COLP, axis=2)
+            GR.A = np.expand_dims(GR.A, axis=2)
+            F.COLP_NEW = np.expand_dims(F.COLP_NEW, axis=2)
+            GR.dsigma = np.expand_dims(np.expand_dims(GR.dsigma, 0),0)
+            F.dPOTTdt = Tendencies_CPU.POTT_tendency(
+                            F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP, GR.A,
+                            F.POTTVB, F.WWIND, F.COLP_NEW, GR.dsigma)
+            F.COLP = F.COLP.squeeze()
+            GR.A = GR.A.squeeze()
+            F.COLP_NEW = F.COLP_NEW.squeeze()
+            GR.dsigma = GR.dsigma.squeeze()
+        else:
+            F.dPOTTdt = temperature_tendency_jacobson_c(GR, njobs,
+                                                F.POTT, F.POTTVB, F.COLP, F.COLP_NEW,
+                                                F.UFLX, F.VFLX, F.WWIND,
+                                                F.dPOTTdt_RAD, F.dPOTTdt_MIC)
+            F.dPOTTdt = np.asarray(F.dPOTTdt)
 
-        # TODO
-        #F.COLP = np.expand_dims(F.COLP, axis=2)
-        #GR.A = np.expand_dims(GR.A, axis=2)
-        #F.COLP_NEW = np.expand_dims(F.COLP_NEW, axis=2)
-        #GR.dsigma = np.expand_dims(np.expand_dims(GR.dsigma, 0),0)
-        #F.dPOTTdt = Tendencies_CPU.POTT_tendency(
-        #                F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP, GR.A,
-        #                F.POTTVB, F.WWIND, F.COLP_NEW, GR.dsigma)
-        #F.COLP = F.COLP.squeeze()
-        #GR.A = GR.A.squeeze()
-        #F.COLP_NEW = F.COLP_NEW.squeeze()
-        #GR.dsigma = GR.dsigma.squeeze()
 
     elif comp_mode == 2:
         # TODO
@@ -318,27 +341,3 @@ def diagnose_fields_jacobson(GR, F, on_host=False):
     #TURB.diag_dz(GR, PHI, PHIVB)
 
 
-
-
-
-
-##var = PHIVB
-##var_orig = PHIVB_orig
-#var = PVTF
-#var_orig = PVTF_orig
-#print('###################')
-#nan_here = np.isnan(var)
-#nan_orig = np.isnan(var_orig)
-#diff = var - var_orig
-#nan_diff = nan_here != nan_orig 
-#print('values ' + str(np.nansum(np.abs(diff))))
-#print('  nans ' + str(np.sum(nan_diff)))
-#print('###################')
-
-##quit()
-##plt.contourf(var_orig[:,:,0].T)
-##plt.contourf(var[:,:,0].T)
-#plt.contourf(diff[:,:,0].T)
-#plt.colorbar()
-#plt.show()
-#quit()

@@ -91,14 +91,6 @@ class Grid:
             self.nys = nys
             self.nb = nb
 
-            #self.nz = wp_int(nz)
-            #self.nzs = wp_int(nz+1)
-            #self.nx = wp_int((self.lon1_deg - self.lon0_deg)/self.dlon_deg)
-            #self.nxs = wp_int(self.nx + 1)
-            #self.ny = wp_int((self.lat1_deg - self.lat0_deg)/self.dlat_deg)
-            #self.nys = wp_int(self.ny + 1)
-            #self.nb = wp_int(nb)
-
             # INDEX ARRAYS
             self.kk  = np.arange(0,self.nz)
             self.kks = np.arange(0,self.nzs)
@@ -187,13 +179,16 @@ class Grid:
             self.latjs_rad = self.latjs_deg/180*np.pi
 
             # 2D MATRIX OF GRID SPACING IN METERS
-            self.dx   = np.full( (self.nx+2*self.nb,self.ny +2*self.nb), np.nan, dtype=wp)
-            self.dxjs = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan, dtype=wp)
+            self.dx   = np.full( (self.nx +2*self.nb,self.ny +2*self.nb), np.nan, dtype=wp)
+            self.dxjs = np.full( (self.nx +2*self.nb,self.nys+2*self.nb), np.nan, dtype=wp)
+            self.dyis = np.full( (self.nxs+2*self.nb,self.ny +2*self.nb), np.nan, dtype=wp)
 
             self.dx[self.iijj] = np.cos( self.lat_rad[self.iijj] )*self.dlon_rad*con_rE 
             self.dxjs[self.iijjs] = np.cos( self.latjs_rad[self.iijjs] )*self.dlon_rad*con_rE 
+            self.dyis[self.iisjj] = self.dlat_rad*con_rE 
             self.dx = exchange_BC(self, self.dx)
             self.dxjs = exchange_BC(self, self.dxjs)
+            self.dyis = exchange_BC(self, self.dyis)
             self.dy = self.dlat_rad*con_rE
 
 
@@ -248,65 +243,6 @@ class Grid:
                     self.i_out_nth_hour*self.i_out_nth_ts)
             self.sim_time_sec = 0
             self.GMT = GMT_initialization
-
-            ## GPU RELEVANT PART OF GRID
-            ## TODO THIS IS VERY COMPLICATED. SIMPLIFY (e.g. fix blockdim)
-            #if comp_mode == 2:
-            #    self.stream = cuda.stream()
-
-            #    if tpbh > 1:
-            #        raise NotImplementedError('tpbh > 1 not yet possible see below')
-            #    elif tpbv != self.nz:
-            #        raise NotImplementedError('tpbv != nz not yet possible see below')
-            #    self.blockdim      = (tpbh, tpbh, tpbv)
-            #    self.blockdim_ks   = (tpbh, tpbh, tpbv+1)
-            #    self.blockdim_xy   = (tpbh, tpbh, 1)
-            #    self.griddim       = ((self.nx +2*self.nb)//self.blockdim[0], \
-            #                          (self.ny +2*self.nb)//self.blockdim[1], \
-            #                           self.nz //self.blockdim[2])
-            #    self.griddim_is    = ((self.nxs+2*self.nb)//self.blockdim[0], \
-            #                          (self.ny +2*self.nb)//self.blockdim[1], \
-            #                           self.nz //self.blockdim[2])
-            #    self.griddim_js    = ((self.nx +2*self.nb)//self.blockdim[0], \
-            #                          (self.nys+2*self.nb)//self.blockdim[1], \
-            #                           self.nz //self.blockdim[2])
-            #    self.griddim_is_js = ((self.nxs+2*self.nb)//self.blockdim[0], \
-            #                          (self.nys+2*self.nb)//self.blockdim[1], \
-            #                           self.nz //self.blockdim[2])
-            #    self.griddim_ks    = ((self.nx +2*self.nb)//self.blockdim_ks[0], \
-            #                          (self.ny +2*self.nb)//self.blockdim_ks[1], \
-            #                           self.nzs//self.blockdim_ks[2])
-            #    self.griddim_is_ks = ((self.nxs+2*self.nb)//self.blockdim[0], \
-            #                          (self.ny +2*self.nb)//self.blockdim[1], \
-            #                           self.nzs//self.blockdim_ks[2])
-            #    self.griddim_js_ks = ((self.nx +2*self.nb)//self.blockdim[0], \
-            #                          (self.nys+2*self.nb)//self.blockdim[1], \
-            #                           self.nzs//self.blockdim_ks[2])
-            #    self.griddim_xy    = ((self.nx +2*self.nb)//self.blockdim_xy[0], \
-            #                          (self.ny +2*self.nb)//self.blockdim_xy[1], \
-            #                           1       //self.blockdim_xy[2])
-
-            #    zonal   = np.zeros((2,self.ny +2*self.nb   ,self.nz  ), dtype=wp)
-            #    zonals  = np.zeros((2,self.nys+2*self.nb   ,self.nz  ), dtype=wp)
-            #    zonalvb = np.zeros((2,self.ny +2*self.nb   ,self.nz+1), dtype=wp)
-            #    merid   = np.zeros((  self.nx +2*self.nb,2 ,self.nz  ), dtype=wp)
-            #    merids  = np.zeros((  self.nxs+2*self.nb,2 ,self.nz  ), dtype=wp)
-            #    meridvb = np.zeros((  self.nx +2*self.nb,2 ,self.nz+1), dtype=wp)
-
-            #    self.zonal   = cuda.to_device(zonal,  self.stream)
-            #    self.zonals  = cuda.to_device(zonals, self.stream)
-            #    self.zonalvb = cuda.to_device(zonalvb, self.stream)
-            #    self.merid   = cuda.to_device(merid,  self.stream)
-            #    self.merids  = cuda.to_device(merids, self.stream)
-            #    self.meridvb = cuda.to_device(meridvb, self.stream)
-
-            #    self.Ad            = cuda.to_device(self.A, self.stream)
-            #    self.dxjsd         = cuda.to_device(self.dxjs, self.stream)
-            #    self.corfd         = cuda.to_device(self.corf, self.stream)
-            #    self.corf_isd      = cuda.to_device(self.corf_is, self.stream)
-            #    self.lat_radd      = cuda.to_device(self.lat_rad, self.stream)
-            #    self.latis_radd    = cuda.to_device(self.latis_rad, self.stream)
-            #    # dsigma and sigma_vb are copied in fields (not very nice... TODO)
 
     
         # STUFF THAT SHOULD HAPPEN BOTH FOR NEW GRID OR LOADED GRID

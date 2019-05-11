@@ -2,16 +2,14 @@ import time
 import numpy as np
 from boundaries_cuda import exchange_BC_gpu
 from constants import con_cp, con_rE, con_Rd
-from namelist import UVFLX_dif_coef, i_wind_tendency
+from namelist import (UVFLX_dif_coef,
+                    i_UVFLX_main_switch,
+                    i_UVFLX_hor_adv, i_UVFLX_vert_adv,
+                    i_UVFLX_coriolis,
+                    i_UVFLX_num_dif, i_UVFLX_pre_grad)
 from org_namelist import wp_old
 from numba import cuda, jit
 from math import cos, sin
-
-i_hor_adv  = 1
-i_vert_adv = 1
-i_coriolis = 1
-i_pre_grad = 1
-i_num_dif  = 1
 
 
 def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVFLXdt,
@@ -32,7 +30,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
     #                                    dtype=VWIND.dtype)
 
 
-    if i_wind_tendency:
+    if i_UVFLX_main_switch:
 
         #######################################################################
         #######################################################################
@@ -40,7 +38,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
         #######################################################################
 
         # HORIZONTAL ADVECTION
-        if i_hor_adv:
+        if i_UVFLX_hor_adv:
             # CALCULATE MOMENTUM FLUXES
             calc_fluxes_ij[GR.griddim, GR.blockdim, stream] \
                             (BFLX, RFLX, UFLX, VFLX)
@@ -75,7 +73,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
                                     GR.blockdim, stream, stagx=True, stagy=True)
 
         # VERTICAL ADVECTION
-        if i_vert_adv:
+        if i_UVFLX_vert_adv:
             calc_WWIND_VWIND[GR.griddim_js_ks, GR.blockdim_ks, stream] \
                                 (WWIND_VWIND, VWIND, COLP_NEW, WWIND, GR.Ad, 
                                 GR.dsigmad)
@@ -130,7 +128,7 @@ def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
     if i > 0 and i < nx+1 and j > 0 and j < ny+1:
 
         # HORIZONTAL ADVECTION
-        if i_hor_adv:
+        if i_UVFLX_hor_adv:
             dUFLXdt[i  ,j  ,k] = dUFLXdt[i  ,j  ,k] + \
                     + BFLX [i-1,j  ,k] * \
                     ( UWIND[i-1,j  ,k] + UWIND[i  ,j  ,k] )/2. \
@@ -154,14 +152,14 @@ def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
 
 
         # VERTICAL ADVECTION
-        if i_vert_adv:
+        if i_UVFLX_vert_adv:
             dUFLXdt[i  ,j  ,k] = dUFLXdt[i  ,j  ,k] + \
                                 (WWIND_UWIND[i  ,j  ,k  ] - \
                                  WWIND_UWIND[i  ,j  ,k+1]  ) / dsigma[k]
 
 
         # CORIOLIS AND SPHERICAL GRID CONVERSION
-        if i_coriolis:
+        if i_UVFLX_coriolis:
             dUFLXdt[i  ,j  ,k] = dUFLXdt[i  ,j  ,k] + \
                 con_rE*dlon_rad*dlon_rad/2.*(\
                   COLP [i-1,j    ] * \
@@ -180,7 +178,7 @@ def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
 
 
         # PRESSURE GRADIENT
-        if i_pre_grad:
+        if i_UVFLX_pre_grad:
             dUFLXdt[i  ,j  ,k] = dUFLXdt[i  ,j  ,k] + \
                  - dy * ( \
                 ( PHI [i  ,j  ,k]  - PHI [i-1,j  ,k] ) * \
@@ -205,7 +203,7 @@ def run_UWIND(dUFLXdt, UWIND, VWIND, COLP,
 
 
         # HORIZONTAL DIFFUSION
-        if i_num_dif and (UVFLX_dif_coef > 0):
+        if i_UVFLX_num_dif and (UVFLX_dif_coef > 0):
             dUFLXdt[i  ,j  ,k] = dUFLXdt[i  ,j  ,k] + \
                                 UVFLX_dif_coef * \
                              (  UFLX[i-1,j  ,k] + UFLX[i+1,j  ,k] \
@@ -231,7 +229,7 @@ def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
     if i > 0 and i < nx+1 and j > 0 and j < ny+1:
 
         # HORIZONTAL ADVECTION
-        if i_hor_adv:
+        if i_UVFLX_hor_adv:
             dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
                       RFLX [i  ,j-1,k] * \
                     ( VWIND[i  ,j-1,k] + VWIND[i  ,j  ,k] )/2. \
@@ -255,14 +253,14 @@ def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
 
 
         # VERTICAL ADVECTION
-        if i_vert_adv:
+        if i_UVFLX_vert_adv:
             dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
                                 (WWIND_VWIND[i  ,j  ,k  ] - \
                                  WWIND_VWIND[i  ,j  ,k+1]  ) / dsigma[k]
 
 
         # CORIOLIS AND SPHERICAL GRID CONVERSION
-        if i_coriolis:
+        if i_UVFLX_coriolis:
             dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
                  - con_rE*dlon_rad*dlon_rad/2.*(\
                   COLP[i  ,j-1  ] * \
@@ -282,7 +280,7 @@ def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
 
 
         # PRESSURE GRADIENT
-        if i_pre_grad:
+        if i_UVFLX_pre_grad:
             dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
                 - dxjs[i  ,j    ] * ( \
                 ( PHI [i  ,j  ,k] - PHI [i  ,j-1,k] ) *\
@@ -307,7 +305,7 @@ def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
 
 
         # HORIZONTAL DIFFUSION
-        if i_num_dif and (UVFLX_dif_coef > 0):
+        if i_UVFLX_num_dif and (UVFLX_dif_coef > 0):
             dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
                                 UVFLX_dif_coef * \
                              (  VFLX[i-1,j  ,k] + VFLX[i+1,j  ,k] \

@@ -4,7 +4,7 @@
 File name:          tendency_functions.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190510
+Last modified:      20190511
 License:            MIT
 
 Collection of generally applicable finite difference tendency
@@ -14,6 +14,7 @@ Functions are based on sigma pressure vertical coordinate.
 """
 from org_namelist import wp, wp_int
 from grid import nx,nxs,ny,nys,nz,nzs,nb
+from constants import con_cp
 ####################################################################
 
 
@@ -69,6 +70,54 @@ def num_dif_pw_py(VAR, VAR_im1, VAR_ip1, VAR_jm1, VAR_jp1,
             )
 
 
+def num_dif_py(VAR, VAR_im1, VAR_ip1, VAR_jm1, VAR_jp1,
+            VAR_dif_coef):
+    """
+    Numerical diffusion non-pressure weighting.
+    """
+    return(
+            VAR_dif_coef * (
+                + VAR_im1
+                + VAR_ip1
+                + VAR_jm1
+                + VAR_jp1
+                - wp(4.) * VAR )
+            )
 
+
+
+
+
+
+def pre_grad_py(PHI, PHI_dm1, COLP, COLP_dm1,
+                POTT, POTT_dm1,
+                PVTF, PVTF_dm1,
+                PVTFVB, PVTFVB_dm1,
+                PVTFVB_dm1_kp1, PVTFVB_kp1,
+                dsigma, sigma_vb, sigma_vb_kp1,
+                dgrid):
+    """
+    Pressure gradient term for horizontal velocities.
+    dm1 & dp1 mean in the horizontal direction of interest
+    -1 & +1 grid point.
+    """
+    return(
+            - dgrid * (
+                ( PHI - PHI_dm1 ) *
+                ( COLP + COLP_dm1 ) / wp(2.) +
+                ( COLP - COLP_dm1 ) * con_cp/wp(2.) *
+                (
+                    + POTT_dm1 / dsigma *
+                    ( 
+                    sigma_vb_kp1 * ( PVTFVB_dm1_kp1 - PVTF_dm1   ) + 
+                    sigma_vb *     ( PVTF_dm1       - PVTFVB_dm1 )  
+                    )
+                    + POTT     / dsigma *
+                    ( 
+                    sigma_vb_kp1 * ( PVTFVB_kp1     - PVTF       ) + 
+                    sigma_vb *     ( PVTF           - PVTFVB     )  
+                    )
+                ))
+            )
 
 
