@@ -60,10 +60,6 @@ def add_up_tendencies_py(
         # VERTICAL ADVECTION
         if i_UVFLX_vert_adv:
             pass
-            #dPOTTdt = dPOTTdt + vert_adv(
-            #    POTTVB, POTTVB_kp1,
-            #    WWIND, WWIND_kp1,
-            #    COLP_NEW, dsigma, k)
         # CORIOLIS AND SPHERICAL GRID CONVERSION
         if i_UVFLX_coriolis:
             pass
@@ -102,7 +98,7 @@ def launch_cuda_kernel(dVFLXdt, VFLX, PHI, COLP, POTT,
                         PVTF, PVTFVB, dsigma, sigma_vb, dxjs):
 
     i, j, k = cuda.grid(3)
-    if i >= nb and i < nx+nb and j >= nb and j < ny+nb:
+    if i >= nb and i < nx+nb and j >= nb and j < nys+nb:
         dVFLXdt[i  ,j  ,k] = \
             add_up_tendencies(VFLX[i  ,j  ,k],
             VFLX    [i-1,j  ,k  ], VFLX    [i+1,j  ,k  ],
@@ -114,7 +110,8 @@ def launch_cuda_kernel(dVFLXdt, VFLX, PHI, COLP, POTT,
             PVTFVB  [i  ,j  ,k  ], PVTFVB  [i  ,j-1,k  ],
             PVTFVB  [i  ,j-1,k+1], PVTFVB  [i  ,j  ,k+1],
             dsigma  [0  ,0  ,k  ], sigma_vb[0  ,0  ,k  ],
-            sigma_vb[0  ,0  ,k+1], dxjs    [i  ,j  ,k  ])
+            sigma_vb[0  ,0  ,k+1], dxjs    [i  ,j  ,0  ])
+
 
 VFLX_tendency_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel))\
                             (launch_cuda_kernel)

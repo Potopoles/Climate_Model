@@ -81,7 +81,9 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
             calc_WWIND_UWIND[GR.griddim_is_ks, GR.blockdim_ks, stream] \
                                 (WWIND_UWIND, UWIND, COLP_NEW, WWIND, GR.Ad, 
                                 GR.dsigmad)
-            stream.synchronize()
+            #stream.synchronize()
+            #print(np.asarray(WWIND_UWIND))
+            #quit()
 
         #######################################################################
         #######################################################################
@@ -254,9 +256,11 @@ def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
 
         # VERTICAL ADVECTION
         if i_UVFLX_vert_adv:
-            dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
-                                (WWIND_VWIND[i  ,j  ,k  ] - \
-                                 WWIND_VWIND[i  ,j  ,k+1]  ) / dsigma[k]
+            #TODO
+            pass
+            #dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
+            #                    (WWIND_VWIND[i  ,j  ,k  ] - \
+            #                     WWIND_VWIND[i  ,j  ,k+1]  ) / dsigma[k]
 
 
         # CORIOLIS AND SPHERICAL GRID CONVERSION

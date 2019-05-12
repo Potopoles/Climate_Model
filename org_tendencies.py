@@ -4,7 +4,7 @@
 File name:          org_tendencies.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190511
+Last modified:      20190512
 License:            MIT
 
 Organise the computation of all tendencies in dynamical core:
@@ -18,9 +18,11 @@ import numpy as np
 from numba import cuda
 
 from tendency_POTT import POTT_tendency_gpu, POTT_tendency_cpu
-from tendency_UFLX import UFLX_tendency_gpu, UFLX_tendency_cpu
+from tendency_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu,
+                           UFLX_vert_adv_gpu)
 from tendency_VFLX import VFLX_tendency_gpu, VFLX_tendency_cpu
-from grid import tpb, bpg
+from namelist import i_UVFLX_vert_adv
+from grid import tpb, tpb_ks, bpg
 ####################################################################
 
 
@@ -53,21 +55,35 @@ class TendencyFactory:
         return(dPOTTdt)
 
 
-    def UVFLX_tendency(self, dUFLXdt, dVFLXdt, UFLX, VFLX,
-                        PHI, COLP, POTT, PVTF, PVTFVB,
-                        dsigma, sigma_vb, dyis, dxjs):
+    def UVFLX_tendency(self, dUFLXdt, dVFLXdt,
+                        UWIND, VWIND, WWIND,
+                        UFLX, VFLX,
+                        PHI, COLP, COLP_NEW, POTT,
+                        PVTF, PVTFVB,
+                        WWIND_UWIND, WWIND_VWIND,
+                        A, dsigma, sigma_vb,
+                        dyis, dxjs):
         if self.target == 'GPU':
+            # UFLX
+            if i_UVFLX_vert_adv:
+                UFLX_vert_adv_gpu[bpg, tpb_ks](
+                            WWIND_UWIND, UWIND, WWIND,
+                            COLP_NEW, A, dsigma)
+                cuda.synchronize()
+                print(np.asarray(WWIND_UWIND))
+                quit()
             UFLX_tendency_gpu[bpg, tpb](
-                    dUFLXdt, UFLX, PHI, COLP, POTT,
-                        PVTF, PVTFVB, dsigma, sigma_vb, dyis)
+                        dUFLXdt, UFLX, PHI, COLP, POTT,
+                        PVTF, PVTFVB, WWIND_UWIND,
+                        dsigma, sigma_vb, dyis)
             cuda.synchronize()
+
+            # VFLX
             VFLX_tendency_gpu[bpg, tpb](
-                    dVFLXdt, VFLX, PHI, COLP, POTT,
+                        dVFLXdt, VFLX, PHI, COLP, POTT,
                         PVTF, PVTFVB, dsigma, sigma_vb, dxjs)
             cuda.synchronize()
+
         elif self.target == 'CPU':
-            UFLX_tendency_cpu(
-                    dUFLXdt, UFLX)
-            VFLX_tendency_cpu(
-                    dVFLXdt, VFLX)
+            raise NotImplementedError()
         return(dUFLXdt, dVFLXdt)

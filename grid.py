@@ -22,8 +22,9 @@ nb = wp_int(nb)
 
 
 # GPU computation
-tpb  = (1,       1,      nz)
-bpg  = (int(nx/tpb[0])+1,   int(ny/tpb[1])+1,  1)
+tpb     = (1,       1,      nz)
+tpb_ks  = (1,       1,      nzs)
+bpg     = (int(nx/tpb[0])+1,   int(ny/tpb[1])+1,  1)
 
 class Grid:
 
@@ -179,9 +180,12 @@ class Grid:
             self.latjs_rad = self.latjs_deg/180*np.pi
 
             # 2D MATRIX OF GRID SPACING IN METERS
-            self.dx   = np.full( (self.nx +2*self.nb,self.ny +2*self.nb), np.nan, dtype=wp)
-            self.dxjs = np.full( (self.nx +2*self.nb,self.nys+2*self.nb), np.nan, dtype=wp)
-            self.dyis = np.full( (self.nxs+2*self.nb,self.ny +2*self.nb), np.nan, dtype=wp)
+            self.dx   = np.full( (self.nx +2*self.nb,self.ny +2*self.nb),
+                                np.nan, dtype=wp)
+            self.dxjs = np.full( (self.nx +2*self.nb,self.nys+2*self.nb),
+                                np.nan, dtype=wp)
+            self.dyis = np.full( (self.nxs+2*self.nb,self.ny +2*self.nb),
+                                np.nan, dtype=wp)
 
             self.dx[self.iijj] = np.cos( self.lat_rad[self.iijj] )*self.dlon_rad*con_rE 
             self.dxjs[self.iijjs] = np.cos( self.latjs_rad[self.iijjs] )*self.dlon_rad*con_rE 

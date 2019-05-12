@@ -249,7 +249,7 @@ i_POTT_microphys    = 0
 
 i_UVFLX_main_switch  = 1
 i_UVFLX_hor_adv      = 0
-i_UVFLX_vert_adv     = 0
+i_UVFLX_vert_adv     = 1
 i_UVFLX_coriolis     = 0
 i_UVFLX_num_dif      = 1
 i_UVFLX_pre_grad     = 1

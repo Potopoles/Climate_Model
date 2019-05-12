@@ -94,11 +94,13 @@ def tendencies_jacobson(GR, F, subgrids):
 
     elif comp_mode == 2:
         vertical_wind_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, GR.stream]\
-                                    (F.WWIND, F.dCOLPdt, F.FLXDIV, F.COLP_NEW, GR.sigma_vbd)
+                                    (F.WWIND, F.dCOLPdt, F.FLXDIV,
+                                    F.COLP_NEW, GR.sigma_vbd)
         GR.stream.synchronize()
         # TODO 2 NECESSARY
         F.COLP_NEW = exchange_BC_gpu(F.COLP_NEW, GR.zonal, GR.merid,
-                                    GR.griddim_xy, GR.blockdim_xy, GR.stream, array2D=True)
+                                    GR.griddim_xy, GR.blockdim_xy,
+                                    GR.stream, array2D=True)
         F.WWIND = exchange_BC_gpu(F.WWIND, GR.zonalvb, GR.meridvb,
                                     GR.griddim_ks, GR.blockdim_ks, GR.stream)
 
@@ -122,13 +124,14 @@ def tendencies_jacobson(GR, F, subgrids):
                             GR.dsigma, GR.sigma_vb, GR.dyis, GR.dxjs)
         
         else:
-            F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs, F.UWIND, F.VWIND, F.WWIND,
-                                            F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-                                            F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-                                            F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-                                            F.WWIND_UWIND, F.WWIND_VWIND, 
-                                            F.COLP, F.COLP_NEW, F.PHI,
-                                            F.POTT, F.PVTF, F.PVTFVB)
+            F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs,
+                                        F.UWIND, F.VWIND, F.WWIND,
+                                        F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+                                        F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+                                        F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+                                        F.WWIND_UWIND, F.WWIND_VWIND, 
+                                        F.COLP, F.COLP_NEW, F.PHI,
+                                        F.POTT, F.PVTF, F.PVTFVB)
             F.dUFLXdt = np.asarray(F.dUFLXdt)
             F.dVFLXdt = np.asarray(F.dVFLXdt)
 
@@ -136,28 +139,38 @@ def tendencies_jacobson(GR, F, subgrids):
     elif comp_mode == 2:
         if i_run_new_style == 1:
             # TODO
-            F.COLP = cp.expand_dims(F.COLP, axis=2)
-            GR.dyis = cp.expand_dims(GR.dyis, axis=2)
-            GR.dxjs = cp.expand_dims(GR.dxjs, axis=2)
-            GR.dsigma = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
+            F.COLP      = cp.expand_dims(F.COLP, axis=2)
+            F.COLP_NEW  = cp.expand_dims(F.COLP_NEW, axis=2)
+            GR.Ad       = cp.expand_dims(GR.Ad, axis=2)
+            GR.dyis     = cp.expand_dims(GR.dyis, axis=2)
+            GR.dxjs     = cp.expand_dims(GR.dxjs, axis=2)
+            GR.dsigma   = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
             GR.sigma_vb = cp.expand_dims(cp.expand_dims(GR.sigma_vb, 0),0)
             F.dUFLXdt, F.dVFLXdt = Tendencies_GPU.UVFLX_tendency(
-                            F.dUFLXdt, F.dVFLXdt, F.UFLX, F.VFLX,
-                            F.PHI, F.COLP, F.POTT, F.PVTF, F.PVTFVB,
-                            GR.dsigma, GR.sigma_vb, GR.dyis, GR.dxjs)
-            F.COLP = F.COLP.squeeze()
-            GR.dyis = GR.dyis.squeeze()
-            GR.dxjs = GR.dxjs.squeeze()
-            GR.dsigma = GR.dsigma.squeeze()
-            GR.sigma_vb = GR.dsigma.squeeze()
+                            F.dUFLXdt, F.dVFLXdt,
+                            F.UWIND, F.VWIND, F.WWIND,
+                            F.UFLX, F.VFLX,
+                            F.PHI, F.COLP, F.COLP_NEW, F.POTT,
+                            F.PVTF, F.PVTFVB,
+                            F.WWIND_UWIND, F.WWIND_VWIND,
+                            GR.Ad, GR.dsigma, GR.sigma_vb,
+                            GR.dyis, GR.dxjs)
+            F.COLP      = F.COLP.squeeze()
+            F.COLP_NEW  = F.COLP_NEW.squeeze()
+            GR.Ad       = GR.Ad.squeeze()
+            GR.dyis     = GR.dyis.squeeze()
+            GR.dxjs     = GR.dxjs.squeeze()
+            GR.dsigma   = GR.dsigma.squeeze()
+            GR.sigma_vb = GR.sigma_vb.squeeze()
         else:
-            F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR, F.UWIND, F.VWIND, F.WWIND,
-                                            F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-                                            F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-                                            F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-                                            F.WWIND_UWIND, F.WWIND_VWIND, 
-                                            F.COLP, F.COLP_NEW, F.PHI, F.POTT,
-                                            F.PVTF, F.PVTFVB)
+            F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
+                                        F.UWIND, F.VWIND, F.WWIND,
+                                        F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+                                        F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+                                        F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+                                        F.WWIND_UWIND, F.WWIND_VWIND, 
+                                        F.COLP, F.COLP_NEW, F.PHI, F.POTT,
+                                        F.PVTF, F.PVTFVB)
 
 
 
