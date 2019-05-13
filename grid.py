@@ -152,6 +152,11 @@ class Grid:
             self.latjs_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan,
                                         dtype=wp)
 
+            self.dlon_rad_2D   = np.full( (self.nx +2*self.nb,self.nys+2*self.nb), self.dlon_rad,
+                                        dtype=wp)
+            self.dlat_rad_2D   = np.full( (self.nxs+2*self.nb,self.ny +2*self.nb), self.dlat_rad,
+                                        dtype=wp)
+
             for j in range(self.nb, self.ny+self.nb):
                 self.lon_deg[self.ii,j] = self.lon0_deg + \
                                         (self.ii-self.nb+0.5)*self.dlon_deg

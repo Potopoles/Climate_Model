@@ -86,9 +86,9 @@ class CPU_Fields:
         self.TFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                             np.nan, dtype=wp)
         self.WWIND_UWIND = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                            np.nan, dtype=wp)
+                            0., dtype=wp)
         self.WWIND_VWIND = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs ), 
-                            np.nan, dtype=wp)
+                            0., dtype=wp)
 
         # velocity field
         ##############################################################################
@@ -249,6 +249,9 @@ class GPU_Fields:
             GR.corf_isd      = cuda.to_device(GR.corf_is, GR.stream)
             GR.lat_radd      = cuda.to_device(GR.lat_rad, GR.stream)
             GR.latis_radd    = cuda.to_device(GR.latis_rad, GR.stream)
+            GR.dlon_rad_2D   = cuda.to_device(GR.dlon_rad_2D, GR.stream)
+            GR.dlat_rad_2D   = cuda.to_device(GR.dlat_rad_2D, GR.stream)
+
             GR.dsigmad       = cuda.to_device(GR.dsigma, GR.stream)
             GR.sigma_vbd     = cuda.to_device(GR.sigma_vb, GR.stream)
 

@@ -4,7 +4,7 @@
 File name:          org_tendencies.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190512
+Last modified:      20190513
 License:            MIT
 
 Organise the computation of all tendencies in dynamical core:
@@ -19,8 +19,9 @@ from numba import cuda
 
 from tendency_POTT import POTT_tendency_gpu, POTT_tendency_cpu
 from tendency_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu,
-                           UFLX_vert_adv_gpu)
-from tendency_VFLX import VFLX_tendency_gpu, VFLX_tendency_cpu
+                           UFLX_vert_adv_gpu, UFLX_vert_adv_cpu,)
+from tendency_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu,
+                           VFLX_vert_adv_gpu, VFLX_vert_adv_cpu)
 from namelist import i_UVFLX_vert_adv
 from grid import tpb, tpb_ks, bpg
 ####################################################################
@@ -61,8 +62,12 @@ class TendencyFactory:
                         PHI, COLP, COLP_NEW, POTT,
                         PVTF, PVTFVB,
                         WWIND_UWIND, WWIND_VWIND,
-                        A, dsigma, sigma_vb,
-                        dyis, dxjs):
+                        A, corf_is, corf,
+                        lat_rad, lat_is_rad,
+                        dlon_rad, dlat_rad,
+                        dyis, dxjs,
+                        dsigma, sigma_vb):
+
         if self.target == 'GPU':
             # UFLX
             if i_UVFLX_vert_adv:
@@ -70,20 +75,64 @@ class TendencyFactory:
                             WWIND_UWIND, UWIND, WWIND,
                             COLP_NEW, A, dsigma)
                 cuda.synchronize()
-                print(np.asarray(WWIND_UWIND))
-                quit()
+
             UFLX_tendency_gpu[bpg, tpb](
-                        dUFLXdt, UFLX, PHI, COLP, POTT,
+                        dUFLXdt, UFLX, UWIND, VWIND,
+                        PHI, COLP, POTT,
                         PVTF, PVTFVB, WWIND_UWIND,
-                        dsigma, sigma_vb, dyis)
+                        corf_is, lat_is_rad,
+                        dlon_rad, dlat_rad,
+                        dyis,
+                        dsigma, sigma_vb)
             cuda.synchronize()
 
             # VFLX
+            if i_UVFLX_vert_adv:
+                VFLX_vert_adv_gpu[bpg, tpb_ks](
+                            WWIND_VWIND, VWIND, WWIND,
+                            COLP_NEW, A, dsigma)
+                cuda.synchronize()
+
             VFLX_tendency_gpu[bpg, tpb](
-                        dVFLXdt, VFLX, PHI, COLP, POTT,
-                        PVTF, PVTFVB, dsigma, sigma_vb, dxjs)
+                        dVFLXdt, VFLX, UWIND,
+                        PHI, COLP, POTT,
+                        PVTF, PVTFVB, WWIND_VWIND,
+                        corf, lat_rad,
+                        dlon_rad, dlat_rad,
+                        dxjs, 
+                        dsigma, sigma_vb)
             cuda.synchronize()
 
+
         elif self.target == 'CPU':
-            raise NotImplementedError()
+            # UFLX
+            if i_UVFLX_vert_adv:
+                UFLX_vert_adv_cpu(
+                            WWIND_UWIND, UWIND, WWIND,
+                            COLP_NEW, A, dsigma)
+
+            UFLX_tendency_cpu(
+                        dUFLXdt, UFLX, UWIND, VWIND,
+                        PHI, COLP, POTT,
+                        PVTF, PVTFVB, WWIND_UWIND,
+                        corf_is, lat_is_rad,
+                        dlon_rad, dlat_rad,
+                        dyis,
+                        dsigma, sigma_vb)
+
+            # VFLX
+            if i_UVFLX_vert_adv:
+                VFLX_vert_adv_cpu(
+                            WWIND_VWIND, VWIND, WWIND,
+                            COLP_NEW, A, dsigma)
+
+            VFLX_tendency_cpu(
+                        dVFLXdt, VFLX, UWIND,
+                        PHI, COLP, POTT,
+                        PVTF, PVTFVB, WWIND_VWIND,
+                        corf, lat_rad,
+                        dlon_rad, dlat_rad,
+                        dxjs, 
+                        dsigma, sigma_vb)
+
         return(dUFLXdt, dVFLXdt)

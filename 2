@@ -149,7 +149,7 @@ njobs = 4
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
 ####################################################################
-i_run_new_style = 1
+i_run_new_style = 0
 comp_mode = 2
 # 0: testsuite equality
 # 1: benchmark experiment
@@ -164,7 +164,7 @@ if i_simulation_mode == 0:
     dlat_deg = 2
     dlon_deg = 2
     output_path = '../output_ref'
-    output_path = '../output_test'
+    #output_path = '../output_test'
     i_sim_n_days = 0.36*1
     i_out_nth_hour = 4*1
     i_surface = 0

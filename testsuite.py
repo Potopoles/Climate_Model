@@ -16,7 +16,7 @@ import xarray as xr
 
 # USER INPUT
 ####################################################################
-tolerance = 1E-7
+tolerance = 1E-6
 
 ref_path = '../output_ref'
 test_path = '../output_test'

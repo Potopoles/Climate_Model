@@ -118,10 +118,49 @@ def tendencies_jacobson(GR, F, subgrids):
     if comp_mode == 1:
         if i_run_new_style == 1:
             # TODO
+            F.COLP          = np.expand_dims(F.COLP, axis=2)
+            F.COLP_NEW      = np.expand_dims(F.COLP_NEW, axis=2)
+
+            GR.corf         = np.expand_dims(GR.corf   , axis=2)
+            GR.corf_is      = np.expand_dims(GR.corf_is, axis=2)
+            GR.lat_rad      = np.expand_dims(GR.lat_rad, axis=2)
+            GR.lat_is_rad   = np.expand_dims(GR.latis_rad, axis=2)
+            GR.dlon_rad_2D  = np.expand_dims(GR.dlon_rad_2D, axis=2)
+            GR.dlat_rad_2D  = np.expand_dims(GR.dlat_rad_2D, axis=2)
+            GR.A            = np.expand_dims(GR.A, axis=2)
+            GR.dyis         = np.expand_dims(GR.dyis, axis=2)
+            GR.dxjs         = np.expand_dims(GR.dxjs, axis=2)
+
+            GR.dsigma       = np.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
+            GR.sigma_vb     = np.expand_dims(cp.expand_dims(GR.sigma_vb, 0),0)
+
             F.dUFLXdt, F.dVFLXdt = Tendencies_CPU.UVFLX_tendency(
-                            F.dUFLXdt, F.dVFLXdt, F.UFLX, F.VFLX,
-                            F.PHI, F.COLP, F.POTT, F.PVTF, F.PVTFVB,
-                            GR.dsigma, GR.sigma_vb, GR.dyis, GR.dxjs)
+                            F.dUFLXdt, F.dVFLXdt,
+                            F.UWIND, F.VWIND, F.WWIND,
+                            F.UFLX, F.VFLX,
+                            F.PHI, F.COLP, F.COLP_NEW, F.POTT,
+                            F.PVTF, F.PVTFVB,
+                            F.WWIND_UWIND, F.WWIND_VWIND,
+                            GR.A, GR.corf_is, GR.corf,
+                            GR.lat_rad, GR.lat_is_rad,
+                            GR.dlon_rad_2D, GR.dlat_rad_2D,
+                            GR.dyis, GR.dxjs,
+                            GR.dsigma, GR.sigma_vb)
+            F.COLP          = F.COLP.squeeze()
+            F.COLP_NEW      = F.COLP_NEW.squeeze()
+
+            GR.corf         = GR.corf       .squeeze()
+            GR.corf_is      = GR.corf_is    .squeeze()
+            GR.lat_rad      = GR.lat_rad    .squeeze()
+            GR.latis_rad    = GR.lat_is_rad .squeeze()
+            GR.dlon_rad_2D  = GR.dlon_rad_2D.squeeze()
+            GR.dlat_rad_2D  = GR.dlat_rad_2D.squeeze()
+            GR.A            = GR.A          .squeeze()
+            GR.dyis         = GR.dyis       .squeeze()
+            GR.dxjs         = GR.dxjs       .squeeze()
+
+            GR.dsigma       = GR.dsigma     .squeeze()
+            GR.sigma_vb     = GR.sigma_vb   .squeeze()
         
         else:
             F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs,
@@ -139,13 +178,23 @@ def tendencies_jacobson(GR, F, subgrids):
     elif comp_mode == 2:
         if i_run_new_style == 1:
             # TODO
-            F.COLP      = cp.expand_dims(F.COLP, axis=2)
-            F.COLP_NEW  = cp.expand_dims(F.COLP_NEW, axis=2)
-            GR.Ad       = cp.expand_dims(GR.Ad, axis=2)
-            GR.dyis     = cp.expand_dims(GR.dyis, axis=2)
-            GR.dxjs     = cp.expand_dims(GR.dxjs, axis=2)
-            GR.dsigma   = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
-            GR.sigma_vb = cp.expand_dims(cp.expand_dims(GR.sigma_vb, 0),0)
+            F.COLP          = cp.expand_dims(F.COLP, axis=2)
+            F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
+
+            GR.corf         = cp.expand_dims(GR.corf   , axis=2)
+            GR.corf_is      = cp.expand_dims(GR.corf_is, axis=2)
+            GR.lat_rad      = cp.expand_dims(GR.lat_rad, axis=2)
+            GR.lat_is_rad   = cp.expand_dims(GR.latis_rad, axis=2)
+            GR.dlon_rad_2D  = cp.expand_dims(GR.dlon_rad_2D, axis=2)
+            GR.dlat_rad_2D  = cp.expand_dims(GR.dlat_rad_2D, axis=2)
+            GR.Ad           = cp.expand_dims(GR.Ad, axis=2)
+            GR.dyis         = cp.expand_dims(GR.dyis, axis=2)
+            GR.dxjs         = cp.expand_dims(GR.dxjs, axis=2)
+
+            GR.dsigma       = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
+            GR.sigma_vb     = cp.expand_dims(cp.expand_dims(GR.sigma_vb, 0),0)
+
+
             F.dUFLXdt, F.dVFLXdt = Tendencies_GPU.UVFLX_tendency(
                             F.dUFLXdt, F.dVFLXdt,
                             F.UWIND, F.VWIND, F.WWIND,
@@ -153,15 +202,26 @@ def tendencies_jacobson(GR, F, subgrids):
                             F.PHI, F.COLP, F.COLP_NEW, F.POTT,
                             F.PVTF, F.PVTFVB,
                             F.WWIND_UWIND, F.WWIND_VWIND,
-                            GR.Ad, GR.dsigma, GR.sigma_vb,
-                            GR.dyis, GR.dxjs)
-            F.COLP      = F.COLP.squeeze()
-            F.COLP_NEW  = F.COLP_NEW.squeeze()
-            GR.Ad       = GR.Ad.squeeze()
-            GR.dyis     = GR.dyis.squeeze()
-            GR.dxjs     = GR.dxjs.squeeze()
-            GR.dsigma   = GR.dsigma.squeeze()
-            GR.sigma_vb = GR.sigma_vb.squeeze()
+                            GR.Ad, GR.corf_is, GR.corf,
+                            GR.lat_rad, GR.lat_is_rad,
+                            GR.dlon_rad_2D, GR.dlat_rad_2D,
+                            GR.dyis, GR.dxjs,
+                            GR.dsigma, GR.sigma_vb)
+            F.COLP          = F.COLP.squeeze()
+            F.COLP_NEW      = F.COLP_NEW.squeeze()
+
+            GR.corf         = GR.corf       .squeeze()
+            GR.corf_is      = GR.corf_is    .squeeze()
+            GR.lat_rad      = GR.lat_rad    .squeeze()
+            GR.latis_rad    = GR.lat_is_rad .squeeze()
+            GR.dlon_rad_2D  = GR.dlon_rad_2D.squeeze()
+            GR.dlat_rad_2D  = GR.dlat_rad_2D.squeeze()
+            GR.Ad           = GR.Ad         .squeeze()
+            GR.dyis         = GR.dyis       .squeeze()
+            GR.dxjs         = GR.dxjs       .squeeze()
+
+            GR.dsigma       = GR.dsigma     .squeeze()
+            GR.sigma_vb     = GR.sigma_vb   .squeeze()
         else:
             F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
                                         F.UWIND, F.VWIND, F.WWIND,

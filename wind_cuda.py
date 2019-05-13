@@ -256,11 +256,9 @@ def run_VWIND(dVFLXdt, UWIND, VWIND, COLP,
 
         # VERTICAL ADVECTION
         if i_UVFLX_vert_adv:
-            #TODO
-            pass
-            #dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
-            #                    (WWIND_VWIND[i  ,j  ,k  ] - \
-            #                     WWIND_VWIND[i  ,j  ,k+1]  ) / dsigma[k]
+            dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
+                                (WWIND_VWIND[i  ,j  ,k  ] - \
+                                 WWIND_VWIND[i  ,j  ,k+1]  ) / dsigma[k]
 
 
         # CORIOLIS AND SPHERICAL GRID CONVERSION

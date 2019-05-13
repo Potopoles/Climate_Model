@@ -4,13 +4,15 @@
 File name:          tendency_functions.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190512
+Last modified:      20190513
 License:            MIT
 
 Collection of generally applicable finite difference tendency
 kernels in pure python form. Can later be specified to GPU
 or CPU using numba/cuda jit.
 Functions are based on sigma pressure vertical coordinate.
+Taken from Jacobson 2005:
+Fundamentals of Atmospheric Modeling, Second Edition Chapter 7
 """
 from org_namelist import wp, wp_int
 from grid import nx,nxs,ny,nys,nz,nzs,nb
@@ -188,135 +190,3 @@ def interp_WWIND_UVWIND_py(
 
 
 
-
-
-
-
-#    nx = WWIND_UWIND.shape[0] - 2
-#    ny = WWIND_UWIND.shape[1] - 2
-#    nz = WWIND_UWIND.shape[2]
-#    i, j, k = cuda.grid(3)
-#    if i > 0 and i < nx+1 and j > 0 and j < ny+1 and k > 0 and k < nz-1:
-#####################################################################
-#        if j == nb:
-#            # meridional rigid wall boundaries (personal comm.
-#            # with Mark Z. Jacobson.)
-#            COLPAWWIND_is_ks = wp(0.25)*( 
-#                    COLP_NEW_im1_jp1 * A_im1_jp1 * WWIND_im1_jp1 +
-#                    COLP_NEW_jp1     * A_jp1     * WWIND_jp1     +
-#                    COLP_NEW_im1     * A_im1     * WWIND_im1     +
-#                    COLP_NEW         * A         * WWIND         )
-#        elif j == ny:
-#            # meridional rigid wall boundaries (personal comm.
-#            # with Mark Z. Jacobson.)
-#            COLPAWWIND_is_ks = wp(0.25)*( 
-#                    COLP_NEW_im1     * A_im1     * WWIND_im1     +
-#                    COLP_NEW         * A         * WWIND         +
-#                    COLP_NEW_im1_jm1 * A_im1_jm1 * WWIND_im1_jm1 +
-#                    COLP_NEW_jm1     * A_jm1     * WWIND_jm1     )
-#        else:
-#            COLPAWWIND_is_ks = wp(0.125)*( 
-#                    COLP_NEW_im1_jp1 * A_im1_jp1 * WWIND_im1_jp1 +
-#                    COLP_NEW_jp1     * A_jp1     * WWIND_jp1     +
-#           wp(2.) * COLP_NEW_im1     * A_im1     * WWIND_im1     +
-#           wp(2.) * COLP_NEW         * A         * WWIND         +
-#                    COLP_NEW_im1_jm1 * A_im1_jm1 * WWIND_im1_jm1 +
-#                    COLP_NEW_jm1     * A_jm1     * WWIND_jm1     )
-#
-#
-#
-#
-#        UWIND_ks = ( dsigma[k  ] * UWIND[i  ,j  ,k-1] +   \
-#                     dsigma[k-1] * UWIND[i  ,j  ,k  ] ) / \
-#                   ( dsigma[k  ] + dsigma[k-1] )
-#        WWIND_UWIND[i  ,j  ,k ] = COLPAWWIND_is_ks * UWIND_ks
-#
-#    if k == 0 or k == nz-1:
-#        WWIND_UWIND[i  ,j  ,k ] = 0.
-#
-#    cuda.syncthreads()
-#
-#
-#
-#
-#
-#    nx = WWIND_VWIND.shape[0] - 2
-#    ny = WWIND_VWIND.shape[1] - 2
-#    nz = WWIND_VWIND.shape[2]
-#    i, j, k = cuda.grid(3)
-#    if i > 0 and i < nx+1 and j > 0 and j < ny+1 and k > 0 and k < nz-1:
-#        COLPAWWIND_js_ks = wp(0.125)*( 
-#                COLP_NEW_ip1_jm1 * A_ip1_jm1 * WWIND_ip1_jm1 +
-#                COLP_NEW_ip1     * A_ip1     * WWIND_ip1     +
-#       wp(2.) * COLP_NEW_jm1     * A_jm1     * WWIND_jm1     +
-#       wp(2.) * COLP_NEW         * A         * WWIND         +
-#                COLP_NEW_im1_jm1 * A_im1_jm1 * WWIND_im1_jm1 +
-#                COLP_NEW_im1     * A_im1     * WWIND_im1     )
-#
-#        VWIND_ks = ( dsigma[k  ] * VWIND[i  ,j  ,k-1] +   \
-#                     dsigma[k-1] * VWIND[i  ,j  ,k  ] ) / \
-#                   ( dsigma[k  ] + dsigma[k-1] )
-#        WWIND_VWIND[i  ,j  ,k ] = COLPAWWIND_js_ks * VWIND_ks
-#
-#    if k == 0 or k == nz-1:
-#        WWIND_VWIND[i  ,j  ,k ] = 0.
-#
-#    cuda.syncthreads()
-#
-#
-#
-#
-#
-#
-#
-#    dUFLXdt[i  ,j  ,k] = dUFLXdt[i  ,j  ,k] + \
-#                        (WWIND_UWIND[i  ,j  ,k  ] - \
-#                         WWIND_UWIND[i  ,j  ,k+1]  ) / dsigma[k]
-#
-#
-#    dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
-#                        (WWIND_VWIND[i  ,j  ,k  ] - \
-#                         WWIND_VWIND[i  ,j  ,k+1]  ) / dsigma[k]
-
-
-
-
-
-
-
-
-
-
-
-
-#dUFLXdt[i  ,j  ,k] = dUFLXdt[i  ,j  ,k] + \
-#    con_rE*dlon_rad*dlon_rad/2.*(\
-#      COLP [i-1,j    ] * \
-#    ( VWIND[i-1,j  ,k] + VWIND[i-1,j+1,k] )/2. * \
-#    ( corf_is[i  ,j  ] * con_rE *\
-#      cos(latis_rad[i  ,j  ]) + \
-#      ( UWIND[i-1,j  ,k] + UWIND[i  ,j  ,k] )/2. * \
-#      sin(latis_rad[i  ,j  ]) )\
-#    + COLP [i  ,j    ] * \
-#    ( VWIND[i  ,j  ,k] + VWIND[i  ,j+1,k] )/2. * \
-#    ( corf_is[i  ,j  ] * con_rE * \
-#      cos(latis_rad[i  ,j  ]) + \
-#      ( UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k] )/2. * \
-#      sin(latis_rad[i  ,j  ]) )\
-#    )
-#
-#dVFLXdt[i  ,j  ,k] = dVFLXdt[i  ,j  ,k] + \
-#     - con_rE*dlon_rad*dlon_rad/2.*(\
-#      COLP[i  ,j-1  ] * \
-#    ( UWIND[i  ,j-1,k] + UWIND[i+1,j-1,k] )/2. * \
-#    ( corf[i  ,j-1  ] * con_rE *\
-#      cos(lat_rad[i  ,j-1  ]) +\
-#      ( UWIND[i  ,j-1,k] + UWIND[i+1,j-1,k] )/2. * \
-#      sin(lat_rad[i  ,j-1  ]) )\
-#    + COLP [i  ,j    ] * \
-#    ( UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k] )/2. * \
-#    ( corf [i  ,j    ] * con_rE *\
-#      cos(lat_rad[i  ,j    ]) +\
-#      ( UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k] )/2. * \
-#      sin(lat_rad[i  ,j    ]) )\
-#    )
