@@ -135,16 +135,11 @@ i_restart_nth_day = 5.00
 ####################################################################
 # COMPUTATION
 ####################################################################
-working_precision = 'float32'
-working_precision = 'float64'
-
-
-
 # cython
 njobs = 4
 
-
-
+working_precision = 'float32'
+#working_precision = 'float64'
 ####################################################################
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
@@ -154,10 +149,10 @@ comp_mode = 2
 # 0: testsuite equality
 # 1: benchmark experiment
 # 2: longtime run
-i_simulation_mode = 0
+i_simulation_mode = 2
 
 # TESTSUITE EQUALITY
-if i_simulation_mode == 0:
+if i_simulation_mode == 1:
     nz = 8
     lat0_deg = -80
     lat1_deg = 80
@@ -173,7 +168,7 @@ if i_simulation_mode == 0:
     i_turbulence = 0
 
 ## BENCHMARK EXPERIMENT
-elif i_simulation_mode == 1:
+elif i_simulation_mode == 10:
     nz = 16
     lat0_deg = -80
     lat1_deg = 80
@@ -192,13 +187,13 @@ elif i_simulation_mode == 2:
     nz = 32
     lat0_deg = -80
     lat1_deg = 80
-    dlat_deg = 2.0
-    dlon_deg = 2.0
+    dlat_deg = 1.0
+    dlon_deg = 1.0
     output_path = '../output'
     i_sim_n_days = 2*365.00
     i_out_nth_hour = 24
-    i_surface = 1
-    i_radiation = 1
+    i_surface = 0
+    i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0
 

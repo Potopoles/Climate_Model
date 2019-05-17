@@ -11,7 +11,8 @@ Load namelist and process variables if necessary such that
 they can be imported form here in other files.
 """
 import numpy as np
-from namelist import (working_precision)
+from namelist import (working_precision, UVFLX_dif_coef,
+                    POTT_dif_coef)
 ####################################################################
 
 ####################################################################
@@ -29,3 +30,9 @@ elif working_precision == 'float64':
     wp_int = np.int64
     # TODO
     wp_old = 'float64'
+
+
+
+
+UVFLX_dif_coef = wp(UVFLX_dif_coef)
+POTT_dif_coef = wp(POTT_dif_coef)

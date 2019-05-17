@@ -75,7 +75,7 @@ cpdef wind_tendency_jacobson_c( GR, njobs,\
     cdef wp_cy[:, ::1] dxjs      = GR.dxjs
     cdef wp_cy[:, ::1] corf_is   = GR.corf_is
     cdef wp_cy[:, ::1] corf      = GR.corf
-    cdef wp_cy[:, ::1] latis_rad = GR.latis_rad
+    cdef wp_cy[:, ::1] latis_rad = GR.lat_is_rad
     cdef wp_cy[:, ::1] lat_rad   = GR.lat_rad
     cdef wp_cy[:, ::1] A         = GR.A
 

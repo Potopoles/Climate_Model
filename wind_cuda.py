@@ -94,7 +94,7 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
                         (dUFLXdt, UWIND, VWIND, COLP,
                         UFLX, BFLX, CFLX, DFLX, EFLX,
                         PHI, POTT, PVTF, PVTFVB, WWIND_UWIND,
-                        GR.corf_isd, GR.latis_radd, GR.dlon_rad,
+                        GR.corf_isd, GR.lat_is_radd, GR.dlon_rad,
                         GR.dsigmad, GR.sigma_vbd, GR.dy)
         stream.synchronize()
 

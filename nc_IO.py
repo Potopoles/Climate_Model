@@ -54,9 +54,9 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
     dtime[:] = GR.sim_time_sec/3600/24
     bnds[:] = [0]
     lon[:] = GR.lon_rad[GR.ii,GR.nb+1]
-    lons[:] = GR.lonis_rad[GR.iis,GR.nb+1]
+    lons[:] = GR.lon_is_rad[GR.iis,GR.nb+1]
     lat[:] = GR.lat_rad[GR.nb+1,GR.jj]
-    lats[:] = GR.latjs_rad[GR.nb+1,GR.jjs]
+    lats[:] = GR.lat_js_rad[GR.nb+1,GR.jjs]
     level[:] = GR.level
     levels[:] = GR.levels
 
@@ -345,9 +345,9 @@ def constant_fields_to_NC(GR, F, RAD, SURF):
     levels = ncf.createVariable('levels', 'f4', ('levels',) )
 
     lon[:] = GR.lon_rad[GR.ii,GR.nb+1]
-    lons[:] = GR.lonis_rad[GR.iis,GR.nb+1]
+    lons[:] = GR.lon_is_rad[GR.iis,GR.nb+1]
     lat[:] = GR.lat_rad[GR.nb+1,GR.jj]
-    lats[:] = GR.latjs_rad[GR.nb+1,GR.jjs]
+    lats[:] = GR.lat_js_rad[GR.nb+1,GR.jjs]
     level[:] = GR.level
     levels[:] = GR.levels
 

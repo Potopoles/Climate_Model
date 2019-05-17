@@ -189,4 +189,124 @@ def interp_WWIND_UVWIND_py(
 
 
 
+# isjs
+if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+
+
+def calc_momentum_fluxes(
+            ):
+
+
+if i >= nb and i < nxs+nb and j >= nb and j < nys+nb:
+
+    # FLUXES is js
+    CFLX = wp(1.)/wp(12.) * (
+                VFLX_im1_jm1 + VFLX_jm1         +
+       wp(2.)*( VFLX_im1     + VFLX         )   +
+                VFLX_im1_jp1 + VFLX_jp1         )
+
+    QFLX = wp(1.)/wp(12.) * (
+                UFLX_im1_jm1 + UFLX_im1         +
+       wp(2.)*( UFLX_jm1     + UFLX         )   +
+                UFLX_ip1_jm1 + UFLX_ip1         )
+
+
+    DFLX  = wp(1.)/wp(24.) * (
+        VFLX_jm1 + wp(2.) * VFLX + VFLX_jp1     +
+                UFLX_jm1     + UFLX             +
+                UFLX_ip1_jm1 + UFLX_ip1         )
+
+    EFLX  = wp(1.)/wp(24.) * (  VFLX_jm1    + \
+                                wp(2.)*VFLX  +\
+                                   VFLX_jp1    - \
+                                   UFLX_jm1    +\
+                                 - UFLX    - \
+                                   UFLX_ip1_jm1    +\
+                                 - UFLX_ip1    )
+
+
+    # FLUXES i j
+    if i < nx+nb and j < ny+nb:
+        BFLX = wp(1.)/wp(12.) * (
+                    UFLX_jm1     + UFLX_ip1_jm1     +
+           wp(2.)*( UFLX         + UFLX_ip1     )   +
+                    UFLX_jp1 + UFLX_ip1_jp1         )
+
+        RFLX = wp(1.)/wp(12.) * (
+                    VFLX_im1     + VFLX_im1_jp1     +
+           wp(2.)*( VFLX         + VFLX_jp1     )   +
+                    VFLX_ip1 + VFLX_ip1_jp1         )
+    # FLUXES i js
+    elif i < nx+nb:
+
+#if i >= nb and i < nxs+nb and j >= nb and j < ny +nb:
+#if i >= nb and i < nx +nb and j >= nb and j < ny +nb:
+
+
+def calc_fluxes_ij(BFLX, RFLX, UFLX, VFLX):
+    nx = BFLX.shape[0] - 2
+    ny = BFLX.shape[1] - 2
+    i, j, k = cuda.grid(3)
+    if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+
+def calc_fluxes_isj(SFLX, TFLX, UFLX, VFLX):
+    nx = SFLX.shape[0] - 2
+    ny = SFLX.shape[1] - 2
+    i, j, k = cuda.grid(3)
+    if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+        SFLX  = 1./24. * (  VFLX_im1  + \
+                                       VFLX_im1_jp1 +\
+                                       VFLX  +   \
+                                       VFLX_jp1 +\
+                                       UFLX_im1  + \
+                                    2.*UFLX +\
+                                       UFLX_ip1   )
+
+        TFLX  = 1./24. * (  VFLX_im1 + \
+                                       VFLX_im1_jp1 +\
+                                       VFLX + \
+                                       VFLX_jp1 +\
+                                     - UFLX_im1 - \
+                                    2.*UFLX +\
+                                     - UFLX_ip1   )
+
+
+def calc_fluxes_ijs(DFLX, EFLX, UFLX, VFLX):
+    nx = DFLX.shape[0] - 2
+    ny = DFLX.shape[1] - 2
+    i, j, k = cuda.grid(3)
+    if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+        DFLX  = 1./24. * (  VFLX_jm1   + \
+                                    2.*VFLX +\
+                                       VFLX_jp1   + \
+                                       UFLX_jm1   +\
+                                       UFLX   + \
+                                       UFLX_ip1_jm1   +\
+                                       UFLX_ip1   )
+
+        EFLX  = 1./24. * (  VFLX_jm1    + \
+                                    2.*VFLX  +\
+                                       VFLX_jp1    - \
+                                       UFLX_jm1    +\
+                                     - UFLX    - \
+                                       UFLX_ip1_jm1    +\
+                                     - UFLX_ip1    )
+
+def calc_fluxes_isjs(CFLX, QFLX, UFLX, VFLX):
+    nx = CFLX.shape[0] - 2
+    ny = CFLX.shape[1] - 2
+    i, j, k = cuda.grid(3)
+    if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+        CFLX = wp(1.)/wp(12.) * (
+                    VFLX_im1_jm1 + VFLX_jm1         +
+           wp(2.)*( VFLX_im1     + VFLX         )   +
+                    VFLX_im1_jp1 + VFLX_jp1         )
+
+        QFLX = wp(1.)/wp(12.) * (
+                    UFLX_im1_jm1 + UFLX_im1         +
+           wp(2.)*( UFLX_jm1     + UFLX         )   +
+                    UFLX_ip1_jm1 + UFLX_ip1         )
+
+
 

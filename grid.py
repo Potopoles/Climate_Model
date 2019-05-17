@@ -1,10 +1,11 @@
+import math
+from numba import cuda
 import numpy as np
 from namelist import *
 from org_namelist import wp_int, wp
 from constants import con_rE, con_omega
 from boundaries import exchange_BC, exchange_BC_periodic_x
 from IO import load_restart_grid
-from numba import cuda
 
 
 # FIXED GPU SETTINGS (have to here in code to be able to import them in another module)
@@ -24,7 +25,8 @@ nb = wp_int(nb)
 # GPU computation
 tpb     = (1,       1,      nz)
 tpb_ks  = (1,       1,      nzs)
-bpg     = (int(nx/tpb[0])+1,   int(ny/tpb[1])+1,  1)
+#bpg     = (int(nx/tpb[0])+1,   int(ny/tpb[1])+1,  1)
+bpg     = (nxs+2*nb, nys+2*nb, 1)
 
 class Grid:
 
@@ -143,13 +145,13 @@ class Grid:
                                         dtype=wp)
             self.lat_deg   = np.full( (self.nx +2*self.nb,self.ny+2*self.nb), np.nan,
                                         dtype=wp)
-            self.lonis_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb), np.nan,
+            self.lon_is_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb), np.nan,
                                         dtype=wp)
-            self.latis_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb), np.nan,
+            self.lat_is_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb), np.nan,
                                         dtype=wp)
-            self.lonjs_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan,
+            self.lon_js_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan,
                                         dtype=wp)
-            self.latjs_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan,
+            self.lat_js_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan,
                                         dtype=wp)
 
             self.dlon_rad_2D   = np.full( (self.nx +2*self.nb,self.nys+2*self.nb), self.dlon_rad,
@@ -160,29 +162,29 @@ class Grid:
             for j in range(self.nb, self.ny+self.nb):
                 self.lon_deg[self.ii,j] = self.lon0_deg + \
                                         (self.ii-self.nb+0.5)*self.dlon_deg
-                self.lonis_deg[self.iis,j] = self.lon0_deg + \
+                self.lon_is_deg[self.iis,j] = self.lon0_deg + \
                                         (self.iis-self.nb)*self.dlon_deg
             for j_s in range(self.nb, self.nys+self.nb):
-                self.lonjs_deg[self.ii,j_s] = self.lon0_deg + \
+                self.lon_js_deg[self.ii,j_s] = self.lon0_deg + \
                                         (self.ii-self.nb+0.5)*self.dlon_deg
 
             for i in range(self.nb, self.nx+self.nb):
                 self.lat_deg[i,self.jj] = self.lat0_deg + \
                                         (self.jj-self.nb+0.5)*self.dlat_deg
-                self.latjs_deg[i,self.jjs] = self.lat0_deg + \
+                self.lat_js_deg[i,self.jjs] = self.lat0_deg + \
                                         (self.jjs-self.nb)*self.dlat_deg
             for i_s in range(self.nb, self.nxs+self.nb):
-                self.latis_deg[i_s,self.jj] = self.lat0_deg + \
+                self.lat_is_deg[i_s,self.jj] = self.lat0_deg + \
                                         (self.jj-self.nb+0.5)*self.dlat_deg
 
 
             # 2D MATRIX OF LONGITUDES AND LATITUDES IN RADIANS
             self.lon_rad = self.lon_deg/180*np.pi
             self.lat_rad = self.lat_deg/180*np.pi
-            self.lonis_rad = self.lonis_deg/180*np.pi
-            self.latis_rad = self.latis_deg/180*np.pi
-            self.lonjs_rad = self.lonjs_deg/180*np.pi
-            self.latjs_rad = self.latjs_deg/180*np.pi
+            self.lon_is_rad = self.lon_is_deg/180*np.pi
+            self.lat_is_rad = self.lat_is_deg/180*np.pi
+            self.lon_js_rad = self.lon_js_deg/180*np.pi
+            self.lat_js_rad = self.lat_js_deg/180*np.pi
 
             # 2D MATRIX OF GRID SPACING IN METERS
             self.dx   = np.full( (self.nx +2*self.nb,self.ny +2*self.nb),
@@ -193,7 +195,7 @@ class Grid:
                                 np.nan, dtype=wp)
 
             self.dx[self.iijj] = np.cos( self.lat_rad[self.iijj] )*self.dlon_rad*con_rE 
-            self.dxjs[self.iijjs] = np.cos( self.latjs_rad[self.iijjs] )*self.dlon_rad*con_rE 
+            self.dxjs[self.iijjs] = np.cos( self.lat_js_rad[self.iijjs] )*self.dlon_rad*con_rE 
             self.dyis[self.iisjj] = self.dlat_rad*con_rE 
             self.dx = exchange_BC(self, self.dx)
             self.dxjs = exchange_BC(self, self.dxjs)
@@ -225,7 +227,7 @@ class Grid:
             self.corf_is = np.full( (self.nxs+2*self.nb, self.ny +2*self.nb),
                                     np.nan, dtype=wp)
             self.corf[self.iijj] = 2*con_omega*np.sin(self.lat_rad[self.iijj])
-            self.corf_is[self.iisjj] = 2*con_omega*np.sin(self.latis_rad[self.iisjj])
+            self.corf_is[self.iisjj] = 2*con_omega*np.sin(self.lat_is_rad[self.iisjj])
 
             # SIGMA LEVELS
             self.level  = np.arange(0,self.nz )

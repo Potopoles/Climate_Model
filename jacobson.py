@@ -124,7 +124,7 @@ def tendencies_jacobson(GR, F, subgrids):
             GR.corf         = np.expand_dims(GR.corf   , axis=2)
             GR.corf_is      = np.expand_dims(GR.corf_is, axis=2)
             GR.lat_rad      = np.expand_dims(GR.lat_rad, axis=2)
-            GR.lat_is_rad   = np.expand_dims(GR.latis_rad, axis=2)
+            GR.lat_is_rad   = np.expand_dims(GR.lat_is_rad, axis=2)
             GR.dlon_rad_2D  = np.expand_dims(GR.dlon_rad_2D, axis=2)
             GR.dlat_rad_2D  = np.expand_dims(GR.dlat_rad_2D, axis=2)
             GR.A            = np.expand_dims(GR.A, axis=2)
@@ -134,6 +134,8 @@ def tendencies_jacobson(GR, F, subgrids):
             GR.dsigma       = np.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
             GR.sigma_vb     = np.expand_dims(cp.expand_dims(GR.sigma_vb, 0),0)
 
+            #print('CPU')
+            t0 = time.time()
             F.dUFLXdt, F.dVFLXdt = Tendencies_CPU.UVFLX_tendency(
                             F.dUFLXdt, F.dVFLXdt,
                             F.UWIND, F.VWIND, F.WWIND,
@@ -146,13 +148,15 @@ def tendencies_jacobson(GR, F, subgrids):
                             GR.dlon_rad_2D, GR.dlat_rad_2D,
                             GR.dyis, GR.dxjs,
                             GR.dsigma, GR.sigma_vb)
+            #print(time.time() - t0)
+
             F.COLP          = F.COLP.squeeze()
             F.COLP_NEW      = F.COLP_NEW.squeeze()
 
             GR.corf         = GR.corf       .squeeze()
             GR.corf_is      = GR.corf_is    .squeeze()
             GR.lat_rad      = GR.lat_rad    .squeeze()
-            GR.latis_rad    = GR.lat_is_rad .squeeze()
+            GR.lat_is_rad   = GR.lat_is_rad .squeeze()
             GR.dlon_rad_2D  = GR.dlon_rad_2D.squeeze()
             GR.dlat_rad_2D  = GR.dlat_rad_2D.squeeze()
             GR.A            = GR.A          .squeeze()
@@ -161,6 +165,35 @@ def tendencies_jacobson(GR, F, subgrids):
 
             GR.dsigma       = GR.dsigma     .squeeze()
             GR.sigma_vb     = GR.sigma_vb   .squeeze()
+
+
+
+            ## TODO
+            ##t0 = time.time()
+            #F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs,
+            #                            F.UWIND, F.VWIND, F.WWIND,
+            #                            F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+            #                            F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+            #                            F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+            #                            F.WWIND_UWIND, F.WWIND_VWIND, 
+            #                            F.COLP, F.COLP_NEW, F.PHI,
+            #                            F.POTT, F.PVTF, F.PVTFVB)
+            #F.dUFLXdt = np.asarray(F.dUFLXdt)
+            #F.dVFLXdt = np.asarray(F.dVFLXdt)
+            ##print(time.time() - t0)
+            ##t0 = time.time()
+            #F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs,
+            #                            F.UWIND, F.VWIND, F.WWIND,
+            #                            F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+            #                            F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+            #                            F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+            #                            F.WWIND_UWIND, F.WWIND_VWIND, 
+            #                            F.COLP, F.COLP_NEW, F.PHI,
+            #                            F.POTT, F.PVTF, F.PVTFVB)
+            #F.dUFLXdt = np.asarray(F.dUFLXdt)
+            #F.dVFLXdt = np.asarray(F.dVFLXdt)
+            #print(time.time() - t0)
+            ##quit()
         
         else:
             F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs,
@@ -181,20 +214,21 @@ def tendencies_jacobson(GR, F, subgrids):
             F.COLP          = cp.expand_dims(F.COLP, axis=2)
             F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
 
-            GR.corf         = cp.expand_dims(GR.corf   , axis=2)
-            GR.corf_is      = cp.expand_dims(GR.corf_is, axis=2)
-            GR.lat_rad      = cp.expand_dims(GR.lat_rad, axis=2)
-            GR.lat_is_rad   = cp.expand_dims(GR.latis_rad, axis=2)
-            GR.dlon_rad_2D  = cp.expand_dims(GR.dlon_rad_2D, axis=2)
-            GR.dlat_rad_2D  = cp.expand_dims(GR.dlat_rad_2D, axis=2)
+            GR.corfd        = cp.expand_dims(GR.corfd  , axis=2)
+            GR.corf_isd     = cp.expand_dims(GR.corf_isd, axis=2)
+            GR.lat_radd     = cp.expand_dims(GR.lat_radd, axis=2)
+            GR.lat_is_radd  = cp.expand_dims(GR.lat_is_radd, axis=2)
+            GR.dlon_rad_2Dd = cp.expand_dims(GR.dlon_rad_2Dd,axis=2)
+            GR.dlat_rad_2Dd = cp.expand_dims(GR.dlat_rad_2Dd,axis=2)
             GR.Ad           = cp.expand_dims(GR.Ad, axis=2)
-            GR.dyis         = cp.expand_dims(GR.dyis, axis=2)
-            GR.dxjs         = cp.expand_dims(GR.dxjs, axis=2)
+            GR.dyisd        = cp.expand_dims(GR.dyisd, axis=2)
+            GR.dxjsd        = cp.expand_dims(GR.dxjsd, axis=2)
 
-            GR.dsigma       = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
-            GR.sigma_vb     = cp.expand_dims(cp.expand_dims(GR.sigma_vb, 0),0)
+            GR.dsigmad      = cp.expand_dims(cp.expand_dims(GR.dsigmad, 0),0)
+            GR.sigma_vbd    = cp.expand_dims(cp.expand_dims(GR.sigma_vbd, 0),0)
 
-
+            print('GPU')
+            t0 = time.time()
             F.dUFLXdt, F.dVFLXdt = Tendencies_GPU.UVFLX_tendency(
                             F.dUFLXdt, F.dVFLXdt,
                             F.UWIND, F.VWIND, F.WWIND,
@@ -202,27 +236,98 @@ def tendencies_jacobson(GR, F, subgrids):
                             F.PHI, F.COLP, F.COLP_NEW, F.POTT,
                             F.PVTF, F.PVTFVB,
                             F.WWIND_UWIND, F.WWIND_VWIND,
-                            GR.Ad, GR.corf_is, GR.corf,
-                            GR.lat_rad, GR.lat_is_rad,
-                            GR.dlon_rad_2D, GR.dlat_rad_2D,
-                            GR.dyis, GR.dxjs,
-                            GR.dsigma, GR.sigma_vb)
+                            GR.Ad, GR.corf_isd, GR.corfd,
+                            GR.lat_radd, GR.lat_is_radd,
+                            GR.dlon_rad_2Dd, GR.dlat_rad_2Dd,
+                            GR.dyisd, GR.dxjsd,
+                            GR.dsigmad, GR.sigma_vbd)
+            cuda.synchronize()
+            print(time.time() - t0)
+            t0 = time.time()
+            for i in range(100):
+                F.dUFLXdt, F.dVFLXdt = Tendencies_GPU.UVFLX_tendency(
+                                F.dUFLXdt, F.dVFLXdt,
+                                F.UWIND, F.VWIND, F.WWIND,
+                                F.UFLX, F.VFLX,
+                                F.PHI, F.COLP, F.COLP_NEW, F.POTT,
+                                F.PVTF, F.PVTFVB,
+                                F.WWIND_UWIND, F.WWIND_VWIND,
+                                GR.Ad, GR.corf_isd, GR.corfd,
+                                GR.lat_radd, GR.lat_is_radd,
+                                GR.dlon_rad_2Dd, GR.dlat_rad_2Dd,
+                                GR.dyisd, GR.dxjsd,
+                                GR.dsigmad, GR.sigma_vbd)
+                cuda.synchronize()
+            print(time.time() - t0)
+            #quit()
+
+            #print(F.UFLX.shape)
+            #t0 = time.time()
+            #cp.average(F.UFLX[1:30,1:30,:])
+            #print(time.time() - t0)
+            #t0 = time.time()
+            #cp.average(F.UFLX[1:30,1:30,:])
+            #print(time.time() - t0)
+            #print()
+            #t0 = time.time()
+            #F.UFLX = exchange_BC_gpu(F.UFLX, GR.zonal, GR.merid, GR.griddim,
+            #                        GR.blockdim, GR.stream)
+            #print(time.time() - t0)
+            #t0 = time.time()
+            #F.UFLX = exchange_BC_gpu(F.UFLX, GR.zonal, GR.merid, GR.griddim,
+            #                        GR.blockdim, GR.stream)
+            #print(time.time() - t0)
+            #print()
+            #UFLX = cp.asarray(F.UFLX)
+            #t0 = time.time()
+            #UFLX = exchange_BC_gpu(UFLX, GR.zonal, GR.merid, GR.griddim,
+            #                        GR.blockdim, GR.stream)
+            #print(time.time() - t0)
+            #t0 = time.time()
+            #UFLX = exchange_BC_gpu(UFLX, GR.zonal, GR.merid, GR.griddim,
+            #                        GR.blockdim, GR.stream)
+            #print(time.time() - t0)
+            #print()
+            #t0 = time.time()
+            #out = cp.split(UFLX, [1,160], axis=0)
+            #UFLX = cp.concatenate((out[2],out[1],out[0]), axis=0)
+            #print(time.time() - t0)
+            #t0 = time.time()
+            #UFLX[0,:,:] = UFLX[-2,:,:]
+            #UFLX[-1,:,:] = UFLX[1,:,:]
+            #UFLX[:,0,:] = UFLX[:,-2,:]
+            #UFLX[:,-1,:] = UFLX[:,1,:]
+            #print(time.time() - t0)
+            #t0 = time.time()
+            #UFLX[0,:,:] = UFLX[-2,:,:]
+            #UFLX[-1,:,:] = UFLX[1,:,:]
+            #UFLX[:,0,:] = UFLX[:,-2,:]
+            #UFLX[:,-1,:] = UFLX[:,1,:]
+            #print(time.time() - t0)
+            #quit()
+
+
+
+
             F.COLP          = F.COLP.squeeze()
             F.COLP_NEW      = F.COLP_NEW.squeeze()
 
-            GR.corf         = GR.corf       .squeeze()
-            GR.corf_is      = GR.corf_is    .squeeze()
-            GR.lat_rad      = GR.lat_rad    .squeeze()
-            GR.latis_rad    = GR.lat_is_rad .squeeze()
-            GR.dlon_rad_2D  = GR.dlon_rad_2D.squeeze()
-            GR.dlat_rad_2D  = GR.dlat_rad_2D.squeeze()
-            GR.Ad           = GR.Ad         .squeeze()
-            GR.dyis         = GR.dyis       .squeeze()
-            GR.dxjs         = GR.dxjs       .squeeze()
+            GR.corfd        = GR.corfd          .squeeze()
+            GR.corf_isd     = GR.corf_isd       .squeeze()
+            GR.lat_radd     = GR.lat_radd       .squeeze()
+            GR.lat_is_radd   = GR.lat_is_radd   .squeeze()
+            GR.dlon_rad_2Dd = GR.dlon_rad_2Dd   .squeeze()
+            GR.dlat_rad_2Dd = GR.dlat_rad_2Dd   .squeeze()
+            GR.Ad           = GR.Ad             .squeeze()
+            GR.dyisd        = GR.dyisd          .squeeze()
+            GR.dxjsd        = GR.dxjsd          .squeeze()
 
-            GR.dsigma       = GR.dsigma     .squeeze()
-            GR.sigma_vb     = GR.sigma_vb   .squeeze()
-        else:
+            GR.dsigmad      = GR.dsigmad        .squeeze()
+            GR.sigma_vbd    = GR.sigma_vbd      .squeeze()
+
+
+            # TODO
+            t0 = time.time()
             F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
                                         F.UWIND, F.VWIND, F.WWIND,
                                         F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
@@ -231,6 +336,36 @@ def tendencies_jacobson(GR, F, subgrids):
                                         F.WWIND_UWIND, F.WWIND_VWIND, 
                                         F.COLP, F.COLP_NEW, F.PHI, F.POTT,
                                         F.PVTF, F.PVTFVB)
+            cuda.synchronize()
+            print(time.time() - t0)
+            t0 = time.time()
+            for i in range(100):
+                F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
+                                            F.UWIND, F.VWIND, F.WWIND,
+                                            F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+                                            F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+                                            F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+                                            F.WWIND_UWIND, F.WWIND_VWIND, 
+                                            F.COLP, F.COLP_NEW, F.PHI, F.POTT,
+                                            F.PVTF, F.PVTFVB)
+                cuda.synchronize()
+            print(time.time() - t0)
+            quit()
+
+
+
+        else:
+            t0 = time.time()
+            F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
+                                        F.UWIND, F.VWIND, F.WWIND,
+                                        F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+                                        F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+                                        F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+                                        F.WWIND_UWIND, F.WWIND_VWIND, 
+                                        F.COLP, F.COLP_NEW, F.PHI, F.POTT,
+                                        F.PVTF, F.PVTFVB)
+            print(time.time() - t0)
+            #quit()
 
 
 
@@ -272,14 +407,22 @@ def tendencies_jacobson(GR, F, subgrids):
         F.COLP = cp.expand_dims(F.COLP, axis=2)
         GR.Ad = cp.expand_dims(GR.Ad, axis=2)
         F.COLP_NEW = cp.expand_dims(F.COLP_NEW, axis=2)
-        GR.dsigma = cp.expand_dims(cp.expand_dims(GR.dsigma, 0),0)
+        GR.dsigmad = cp.expand_dims(cp.expand_dims(GR.dsigmad, 0),0)
+
+        #print('GPU POTT')
+        #t0 = time.time()
         F.dPOTTdt = Tendencies_GPU.POTT_tendency(
                         F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP, GR.Ad,
-                        F.POTTVB, F.WWIND, F.COLP_NEW, GR.dsigma)
+                        F.POTTVB, F.WWIND, F.COLP_NEW, GR.dsigmad)
+        #print(time.time() - t0)
+        #quit()
+
         F.COLP = F.COLP.squeeze()
         GR.Ad = GR.Ad.squeeze()
         F.COLP_NEW = F.COLP_NEW.squeeze()
-        GR.dsigma = GR.dsigma.squeeze()
+        GR.dsigmad = GR.dsigmad.squeeze()
+
+
 
 
 

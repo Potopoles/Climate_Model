@@ -19,11 +19,11 @@ import cupy as cp
 from math import sin, cos
 from numba import cuda, njit, prange, vectorize
 
-from namelist import (UVFLX_dif_coef,
-                    i_UVFLX_main_switch,
+from namelist import (i_UVFLX_main_switch,
                     i_UVFLX_hor_adv, i_UVFLX_vert_adv,
                     i_UVFLX_coriolis,
                     i_UVFLX_num_dif, i_UVFLX_pre_grad)
+from org_namelist import UVFLX_dif_coef
 from constants import con_rE
 from org_namelist import (wp, wp_int, wp_old)
 from grid import nx,nxs,ny,nys,nz,nzs,nb
@@ -107,6 +107,7 @@ def add_up_tendencies_py(
                 UWIND_ip1, UWIND_ip1_jm1,
                 corf, corf_jm1, lat_rad, lat_rad_jm1,
                 dlon_rad, dlat_rad)
+
         # PRESSURE GRADIENT
         if i_UVFLX_pre_grad:
             dVFLXdt = dVFLXdt + pre_grad(
@@ -150,18 +151,18 @@ def launch_cuda_vert_adv_kernel(WWIND_VWIND, VWIND, WWIND,
     if i >= nb and i < nx+nb and j >= nb and j < nys+nb:
         WWIND_VWIND[i  ,j  ,k  ] = \
             interp_WWIND_UVWIND(
-                VWIND     [i  ,j  ,k  ], VWIND     [i  ,j  ,k-1],
-                WWIND     [i  ,j  ,k  ], WWIND     [i  ,j-1,k  ],
-                WWIND     [i-1,j  ,k  ], WWIND     [i+1,j  ,k  ],
-                WWIND     [i-1,j-1,k  ], WWIND     [i+1,j-1,k  ], 
-                COLP_NEW  [i  ,j  ,0  ], COLP_NEW  [i  ,j-1,0  ],
-                COLP_NEW  [i-1,j  ,0  ], COLP_NEW  [i+1,j  ,0  ],
-                COLP_NEW  [i-1,j-1,0  ], COLP_NEW  [i+1,j-1,0  ], 
-                A         [i  ,j  ,0  ], A         [i  ,j-1,0  ],
-                A         [i-1,j  ,0  ], A         [i+1,j  ,0  ],
-                A         [i-1,j-1,0  ], A         [i+1,j-1,0  ], 
-                dsigma    [0  ,0  ,k  ], dsigma    [0  ,0  ,k-1],
-                False, i, nx, k)
+            VWIND     [i  ,j  ,k  ], VWIND     [i  ,j  ,k-1],
+            WWIND     [i  ,j  ,k  ], WWIND     [i  ,j-1,k  ],
+            WWIND     [i-1,j  ,k  ], WWIND     [i+1,j  ,k  ],
+            WWIND     [i-1,j-1,k  ], WWIND     [i+1,j-1,k  ], 
+            COLP_NEW  [i  ,j  ,0  ], COLP_NEW  [i  ,j-1,0  ],
+            COLP_NEW  [i-1,j  ,0  ], COLP_NEW  [i+1,j  ,0  ],
+            COLP_NEW  [i-1,j-1,0  ], COLP_NEW  [i+1,j-1,0  ], 
+            A         [i  ,j  ,0  ], A         [i  ,j-1,0  ],
+            A         [i-1,j  ,0  ], A         [i+1,j  ,0  ],
+            A         [i-1,j-1,0  ], A         [i+1,j-1,0  ], 
+            dsigma    [0  ,0  ,k  ], dsigma    [0  ,0  ,k-1],
+            False, i, nx, k)
 
 VFLX_vert_adv_gpu = cuda.jit(cuda_kernel_decorator(
                     launch_cuda_vert_adv_kernel))(
@@ -230,18 +231,18 @@ def launch_numba_cpu_vert_adv(WWIND_VWIND, VWIND, WWIND,
             for k in range(wp_int(0),nz):
                 WWIND_VWIND[i  ,j  ,k  ] = \
                     interp_WWIND_UVWIND(
-                VWIND     [i  ,j  ,k  ], VWIND     [i  ,j  ,k-1],
-                WWIND     [i  ,j  ,k  ], WWIND     [i  ,j-1,k  ],
-                WWIND     [i-1,j  ,k  ], WWIND     [i+1,j  ,k  ],
-                WWIND     [i-1,j-1,k  ], WWIND     [i+1,j-1,k  ], 
-                COLP_NEW  [i  ,j  ,0  ], COLP_NEW  [i  ,j-1,0  ],
-                COLP_NEW  [i-1,j  ,0  ], COLP_NEW  [i+1,j  ,0  ],
-                COLP_NEW  [i-1,j-1,0  ], COLP_NEW  [i+1,j-1,0  ], 
-                A         [i  ,j  ,0  ], A         [i  ,j-1,0  ],
-                A         [i-1,j  ,0  ], A         [i+1,j  ,0  ],
-                A         [i-1,j-1,0  ], A         [i+1,j-1,0  ], 
-                dsigma    [0  ,0  ,k  ], dsigma    [0  ,0  ,k-1],
-                False, i, nx, k)
+            VWIND     [i  ,j  ,k  ], VWIND     [i  ,j  ,k-1],
+            WWIND     [i  ,j  ,k  ], WWIND     [i  ,j-1,k  ],
+            WWIND     [i-1,j  ,k  ], WWIND     [i+1,j  ,k  ],
+            WWIND     [i-1,j-1,k  ], WWIND     [i+1,j-1,k  ], 
+            COLP_NEW  [i  ,j  ,0  ], COLP_NEW  [i  ,j-1,0  ],
+            COLP_NEW  [i-1,j  ,0  ], COLP_NEW  [i+1,j  ,0  ],
+            COLP_NEW  [i-1,j-1,0  ], COLP_NEW  [i+1,j-1,0  ], 
+            A         [i  ,j  ,0  ], A         [i  ,j-1,0  ],
+            A         [i-1,j  ,0  ], A         [i+1,j  ,0  ],
+            A         [i-1,j-1,0  ], A         [i+1,j-1,0  ], 
+            dsigma    [0  ,0  ,k  ], dsigma    [0  ,0  ,k-1],
+            False, i, nx, k)
 
 VFLX_vert_adv_cpu = njit(parallel=True)(launch_numba_cpu_vert_adv)
 

@@ -245,12 +245,13 @@ class GPU_Fields:
 
             GR.Ad            = cuda.to_device(GR.A, GR.stream)
             GR.dxjsd         = cuda.to_device(GR.dxjs, GR.stream)
+            GR.dyisd         = cuda.to_device(GR.dyis, GR.stream)
             GR.corfd         = cuda.to_device(GR.corf, GR.stream)
             GR.corf_isd      = cuda.to_device(GR.corf_is, GR.stream)
             GR.lat_radd      = cuda.to_device(GR.lat_rad, GR.stream)
-            GR.latis_radd    = cuda.to_device(GR.latis_rad, GR.stream)
-            GR.dlon_rad_2D   = cuda.to_device(GR.dlon_rad_2D, GR.stream)
-            GR.dlat_rad_2D   = cuda.to_device(GR.dlat_rad_2D, GR.stream)
+            GR.lat_is_radd   = cuda.to_device(GR.lat_is_rad, GR.stream)
+            GR.dlon_rad_2Dd  = cuda.to_device(GR.dlon_rad_2D, GR.stream)
+            GR.dlat_rad_2Dd  = cuda.to_device(GR.dlat_rad_2D, GR.stream)
 
             GR.dsigmad       = cuda.to_device(GR.dsigma, GR.stream)
             GR.sigma_vbd     = cuda.to_device(GR.sigma_vb, GR.stream)
@@ -604,11 +605,11 @@ def gaussian2D(GR, FIELD, pert, lon0_rad, lat0_rad, lonSig_rad, latSig_rad):
         selinds = GR.iijjs
         perturb = pert*np.exp( \
                 - np.power(GR.lon_rad[selinds] - lon0_rad, 2)/(2*lonSig_rad**2) \
-                - np.power(GR.latjs_rad[selinds] - lat0_rad, 2)/(2*latSig_rad**2) )
+                - np.power(GR.lat_js_rad[selinds] - lat0_rad, 2)/(2*latSig_rad**2) )
     elif (dimx == GR.nxs+2*GR.nb): # staggered in x 
         selinds = GR.iisjj
         perturb = pert*np.exp( \
-                - np.power(GR.lonis_rad[selinds] - lon0_rad, 2)/(2*lonSig_rad**2) \
+                - np.power(GR.lon_is_rad[selinds] - lon0_rad, 2)/(2*lonSig_rad**2) \
                 - np.power(GR.lat_rad[selinds] - lat0_rad, 2)/(2*latSig_rad**2) )
     else: # unstaggered in y and x 
         selinds = GR.iijj
