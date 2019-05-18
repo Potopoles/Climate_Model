@@ -4,7 +4,7 @@
 File name:          tendency_VFLX.py  
 Author:             Christoph Heim (CH)
 Date created:       20190511
-Last modified:      20190513
+Last modified:      20190518
 License:            MIT
 
 Computation of horizontal momentum flux in latitude
@@ -29,8 +29,7 @@ from org_namelist import (wp, wp_int, wp_old)
 from grid import nx,nxs,ny,nys,nz,nzs,nb
 from GPU import cuda_kernel_decorator
 
-from tendency_functions import (num_dif_py, pre_grad_py,
-                                interp_WWIND_UVWIND_py)
+from tendency_functions import (num_dif_py, pre_grad_py)
 ####################################################################
 
 
@@ -141,34 +140,6 @@ add_up_tendencies = njit(add_up_tendencies_py, device=True,
                         inline=True)
 coriolis_and_spherical_VWIND = njit(coriolis_and_spherical_VWIND_py,
                         device=True, inline=True)
-interp_WWIND_UVWIND = njit(interp_WWIND_UVWIND_py, device=True,
-                        inline=True)
-
-
-def launch_cuda_vert_adv_kernel(WWIND_VWIND, VWIND, WWIND,
-                                COLP_NEW, A, dsigma):
-    i, j, k = cuda.grid(3)
-    if i >= nb and i < nx+nb and j >= nb and j < nys+nb:
-        WWIND_VWIND[i  ,j  ,k  ] = \
-            interp_WWIND_UVWIND(
-            VWIND     [i  ,j  ,k  ], VWIND     [i  ,j  ,k-1],
-            WWIND     [i  ,j  ,k  ], WWIND     [i  ,j-1,k  ],
-            WWIND     [i-1,j  ,k  ], WWIND     [i+1,j  ,k  ],
-            WWIND     [i-1,j-1,k  ], WWIND     [i+1,j-1,k  ], 
-            COLP_NEW  [i  ,j  ,0  ], COLP_NEW  [i  ,j-1,0  ],
-            COLP_NEW  [i-1,j  ,0  ], COLP_NEW  [i+1,j  ,0  ],
-            COLP_NEW  [i-1,j-1,0  ], COLP_NEW  [i+1,j-1,0  ], 
-            A         [i  ,j  ,0  ], A         [i  ,j-1,0  ],
-            A         [i-1,j  ,0  ], A         [i+1,j  ,0  ],
-            A         [i-1,j-1,0  ], A         [i+1,j-1,0  ], 
-            dsigma    [0  ,0  ,k  ], dsigma    [0  ,0  ,k-1],
-            False, i, nx, k)
-
-VFLX_vert_adv_gpu = cuda.jit(cuda_kernel_decorator(
-                    launch_cuda_vert_adv_kernel))(
-                    launch_cuda_vert_adv_kernel)
-
-
 
 def launch_cuda_main_kernel(dVFLXdt, VFLX,
                     UWIND, 
@@ -215,37 +186,10 @@ VFLX_tendency_gpu = cuda.jit(cuda_kernel_decorator(
 ####################################################################
 ### SPECIALIZE FOR CPU
 ####################################################################
-### SPECIALIZE FOR CPU
-####################################################################
 num_dif = njit(num_dif_py)
 pre_grad = njit(pre_grad_py)
 add_up_tendencies = njit(add_up_tendencies_py)
 coriolis_and_spherical_VWIND = njit(coriolis_and_spherical_VWIND_py)
-interp_WWIND_UVWIND = njit(interp_WWIND_UVWIND_py)
-
-
-def launch_numba_cpu_vert_adv(WWIND_VWIND, VWIND, WWIND,
-                                COLP_NEW, A, dsigma):
-    for i in prange(nb,nx+nb):
-        for j in range(nb,nys+nb):
-            for k in range(wp_int(0),nz):
-                WWIND_VWIND[i  ,j  ,k  ] = \
-                    interp_WWIND_UVWIND(
-            VWIND     [i  ,j  ,k  ], VWIND     [i  ,j  ,k-1],
-            WWIND     [i  ,j  ,k  ], WWIND     [i  ,j-1,k  ],
-            WWIND     [i-1,j  ,k  ], WWIND     [i+1,j  ,k  ],
-            WWIND     [i-1,j-1,k  ], WWIND     [i+1,j-1,k  ], 
-            COLP_NEW  [i  ,j  ,0  ], COLP_NEW  [i  ,j-1,0  ],
-            COLP_NEW  [i-1,j  ,0  ], COLP_NEW  [i+1,j  ,0  ],
-            COLP_NEW  [i-1,j-1,0  ], COLP_NEW  [i+1,j-1,0  ], 
-            A         [i  ,j  ,0  ], A         [i  ,j-1,0  ],
-            A         [i-1,j  ,0  ], A         [i+1,j  ,0  ],
-            A         [i-1,j-1,0  ], A         [i+1,j-1,0  ], 
-            dsigma    [0  ,0  ,k  ], dsigma    [0  ,0  ,k-1],
-            False, i, nx, k)
-
-VFLX_vert_adv_cpu = njit(parallel=True)(launch_numba_cpu_vert_adv)
-
 
 def launch_numba_cpu_main(dVFLXdt, VFLX,
                     UWIND, 

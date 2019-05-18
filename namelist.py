@@ -139,7 +139,7 @@ i_restart_nth_day = 5.00
 njobs = 4
 
 working_precision = 'float32'
-#working_precision = 'float64'
+working_precision = 'float64'
 ####################################################################
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
@@ -243,7 +243,7 @@ i_POTT_microphys    = 0
 
 
 i_UVFLX_main_switch  = 1
-i_UVFLX_hor_adv      = 0
+i_UVFLX_hor_adv      = 1
 i_UVFLX_vert_adv     = 1
 i_UVFLX_coriolis     = 1
 i_UVFLX_num_dif      = 1

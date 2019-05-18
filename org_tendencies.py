@@ -18,10 +18,10 @@ import numpy as np
 from numba import cuda
 
 from tendency_POTT import POTT_tendency_gpu, POTT_tendency_cpu
-from tendency_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu,
-                           UFLX_vert_adv_gpu, UFLX_vert_adv_cpu,)
-from tendency_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu,
-                           VFLX_vert_adv_gpu, VFLX_vert_adv_cpu)
+from tendency_UVFLX_prepare import (UVFLX_vert_adv_gpu,
+                            UVFLX_vert_adv_cpu)
+from tendency_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
+from tendency_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
 from namelist import i_UVFLX_vert_adv
 from grid import tpb, tpb_ks, bpg
 ####################################################################
@@ -59,6 +59,8 @@ class TendencyFactory:
     def UVFLX_tendency(self, dUFLXdt, dVFLXdt,
                         UWIND, VWIND, WWIND,
                         UFLX, VFLX,
+                        CFLX, QFLX, DFLX, EFLX,
+                        SFLX, TFLX, BFLX, RFLX,
                         PHI, COLP, COLP_NEW, POTT,
                         PVTF, PVTFVB,
                         WWIND_UWIND, WWIND_VWIND,
@@ -69,13 +71,18 @@ class TendencyFactory:
                         dsigma, sigma_vb):
 
         if self.target == 'GPU':
-            # UFLX
+            # PREPARE
             if i_UVFLX_vert_adv:
-                UFLX_vert_adv_gpu[bpg, tpb_ks](
-                            WWIND_UWIND, UWIND, WWIND,
+                UVFLX_vert_adv_gpu[bpg, tpb_ks](
+                            WWIND_UWIND, WWIND_VWIND,
+                            UWIND, VWIND, WWIND,
+                            UFLX, VFLX,
+                            CFLX, QFLX, DFLX, EFLX,
+                            SFLX, TFLX, BFLX, RFLX,
                             COLP_NEW, A, dsigma)
                 cuda.synchronize()
 
+            # UFLX
             UFLX_tendency_gpu[bpg, tpb](
                         dUFLXdt, UFLX, UWIND, VWIND,
                         PHI, COLP, POTT,
@@ -87,12 +94,6 @@ class TendencyFactory:
             cuda.synchronize()
 
             # VFLX
-            if i_UVFLX_vert_adv:
-                VFLX_vert_adv_gpu[bpg, tpb_ks](
-                            WWIND_VWIND, VWIND, WWIND,
-                            COLP_NEW, A, dsigma)
-                cuda.synchronize()
-
             VFLX_tendency_gpu[bpg, tpb](
                         dVFLXdt, VFLX, UWIND,
                         PHI, COLP, POTT,
@@ -105,12 +106,13 @@ class TendencyFactory:
 
 
         elif self.target == 'CPU':
-            # UFLX
+            # PREPARE
             if i_UVFLX_vert_adv:
-                UFLX_vert_adv_cpu(
-                            WWIND_UWIND, UWIND, WWIND,
+                UVFLX_vert_adv_cpu(
+                            WWIND_UWIND, WWIND_VWIND,
+                            UWIND, VWIND, WWIND,
                             COLP_NEW, A, dsigma)
-
+            # UFLX
             UFLX_tendency_cpu(
                         dUFLXdt, UFLX, UWIND, VWIND,
                         PHI, COLP, POTT,
@@ -121,11 +123,6 @@ class TendencyFactory:
                         dsigma, sigma_vb)
 
             # VFLX
-            if i_UVFLX_vert_adv:
-                VFLX_vert_adv_cpu(
-                            WWIND_VWIND, VWIND, WWIND,
-                            COLP_NEW, A, dsigma)
-
             VFLX_tendency_cpu(
                         dVFLXdt, VFLX, UWIND,
                         PHI, COLP, POTT,
