@@ -1,3 +1,16 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+####################################################################
+File name:          fields.py  
+Author:             Christoph Heim (CH)
+Date created:       20181001
+Last modified:      20190521
+License:            MIT
+
+Setup fields for dynamical core of model.
+####################################################################
+"""
 import numpy as np
 import time
 from namelist import *
@@ -6,7 +19,6 @@ from boundaries import exchange_BC
 from IO import load_topo, load_restart_fields, load_profile
 from diagnostics import diagnose_secondary_fields, diagnose_POTTVB_jacobson
 from geopotential import diag_geopotential_jacobson, diag_pvt_factor
-from jacobson import diagnose_fields_jacobson
 from radiation.org_radiation import radiation
 from surface_model import surface
 from grid import tpbh, tpbv, tpbvs
@@ -24,6 +36,7 @@ from numba import cuda
 # temperature fields
 # primary diagnostic fields (relevant for dynamics)
 # secondary diagnostic fields (not relevant for dynamics)
+
 
 class CPU_Fields:
     
@@ -536,7 +549,8 @@ def initialize_fields(GR, subgrids, CF):
         CF.POTT  = exchange_BC(GR, CF.POTT)
 
         # PRIMARY DIAGNOSTIC FIELDS
-        diagnose_fields_jacobson(GR, CF, on_host=True)
+        #diagnose_fields_jacobson(GR, CF, on_host=True)
+        diagnose_fields_initializaiton(GR, CF)
 
         # SECONDARY DIAGNOSTIC FIELDS
         CF.PAIR, CF.TAIR, CF.TAIRVB, CF.RHO, CF.WIND = \
@@ -622,3 +636,12 @@ def gaussian2D(GR, FIELD, pert, lon0_rad, lat0_rad, lonSig_rad, latSig_rad):
     return(FIELD)
 
 
+
+
+
+def diagnose_fields_initializaiton(GR, F):
+    F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
+                 diag_geopotential_jacobson(GR, F.PHI, F.PHIVB, F.HSURF, 
+                                                F.POTT, F.COLP, F.PVTF, F.PVTFVB)
+
+    F.POTTVB = diagnose_POTTVB_jacobson(GR, F.POTTVB, F.POTT, F.PVTF, F.PVTFVB)

@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
+####################################################################
 File name:          org_tendencies.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190513
+Last modified:      20190521
 License:            MIT
 
 Organise the computation of all tendencies in dynamical core:
@@ -13,7 +14,9 @@ Organise the computation of all tendencies in dynamical core:
 Differentiate between computation targets:
 - GPU
 - CPU
+####################################################################
 """
+import math
 import numpy as np
 from numba import cuda
 
@@ -24,6 +27,8 @@ from tendency_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
 from tendency_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
 from namelist import i_UVFLX_vert_adv
 from grid import tpb, tpb_ks, bpg
+#TODO
+from grid import nx,nxs,ny,nys,nz,nzs,nb
 ####################################################################
 
 
@@ -72,6 +77,7 @@ class TendencyFactory:
 
         if self.target == 'GPU':
             # PREPARE
+
             if i_UVFLX_vert_adv:
                 UVFLX_vert_adv_gpu[bpg, tpb_ks](
                             WWIND_UWIND, WWIND_VWIND,

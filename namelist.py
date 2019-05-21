@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
+####################################################################
 File name:          namelist.py  
 Author:             Christoph Heim (CH)
 Date created:       20181001
-Last modified:      20190509
+Last modified:      20190521
 License:            MIT
 
 Namelist for user input.
+####################################################################
 """
 import numpy as np
 from datetime import datetime
@@ -139,16 +141,16 @@ i_restart_nth_day = 5.00
 njobs = 4
 
 working_precision = 'float32'
-working_precision = 'float64'
+#working_precision = 'float64'
 ####################################################################
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
 ####################################################################
 i_run_new_style = 1
 comp_mode = 2
-# 0: testsuite equality
-# 1: benchmark experiment
+# 1: testsuite equality
 # 2: longtime run
+# 10: benchmark experiment
 i_simulation_mode = 2
 
 # TESTSUITE EQUALITY

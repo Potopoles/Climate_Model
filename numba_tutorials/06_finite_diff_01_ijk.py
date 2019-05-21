@@ -4,17 +4,19 @@ from numba import cuda, float32
 import time
 from inspect import signature
 
-nx_tpb = 1
-ny_tpb = 2
-nz_tpb = 32
-tpb_improve = (nx_tpb,ny_tpb,nz_tpb)
-shared_memory_size = (nx_tpb+2,ny_tpb+2,nz_tpb)
-
+zoom = 0.25
 zoom = 2
 nx = int(180*zoom)
 ny = int(90*zoom)
 nz = 32
 nb = 1
+
+nx_tpb = 2
+ny_tpb = 2
+nz_tpb = 32
+tpb_improve = (nx_tpb,ny_tpb,nz_tpb)
+shared_memory_size = (nx_tpb+2,ny_tpb+2,nz_tpb)
+
 
 
 def cuda_kernel_decorator(function):
@@ -32,51 +34,62 @@ def exchange_BC(VAR):
     VAR[ii,0,:] = VAR[ii,ny,:]
     VAR[ii,ny+nb,:] = VAR[ii,nb,:]
 
-#def kernel_numpy(dVARdt, VAR, VAR1):
-#    dVARdt[ii,jj,:] = (VAR[ii+1,jj,:] - VAR[ii-1,jj,:]) * VAR1[ii,jj,:]
 
 def kernel_trivial(dVARdt, VAR, VAR1, VAR2):
     i, j, k = cuda.grid(3)
     if i >= nb and i < nx+nb and j >= nb and j < ny+nb:
-        dVARdt[i,j,k] = (VAR[i+1,j,k] - VAR[i-1,j,k]) * VAR1[i,j,k]
-        for c in range(10):
-            dVARdt[i,j,k] = (dVARdt[i,j,k] + 
-                            (VAR[i,j+1,k] - VAR[i,j-1,k]) * 
-                        np.float32(0.5)*(VAR2[i+1,j,k] + VAR2[i-1,j,k]))
+        tmp = wp(0.)
+        tmp += (VAR[i,j+1,k] - VAR[i,j-1,k])
+        tmp += (VAR[i+1,j,k] - VAR[i-1,j,k])
+        if k >= 1 and k < nz-1:
+            tmp +=(VAR[i,j,k+1] - VAR[i,j,k-1]) 
+        dVARdt[i,j,k] = tmp
 
 def kernel_improve(dVARdt, VAR, VAR1, VAR2):
     i, j, k = cuda.grid(3)
     if i >= nb and i < nx+nb and j >= nb and j < ny+nb:
-        dVARdt[i,j,k] = (VAR[i+1,j,k] - VAR[i-1,j,k]) * VAR1[i,j,k]
-        for c in range(10):
-            dVARdt[i,j,k] = (dVARdt[i,j,k] + 
-                            (VAR[i,j+1,k] - VAR[i,j-1,k]) * 
-                            np.float32(0.5)*(VAR2[i+1,j,k] + VAR2[i-1,j,k]))
+        tmp = wp(0.)
+        tmp += (VAR[i,j+1,k] - VAR[i,j-1,k])
+        tmp += (VAR[i+1,j,k] - VAR[i-1,j,k])
+        if k >= 1 and k < nz-1:
+            tmp +=(VAR[i,j,k+1] - VAR[i,j,k-1]) 
+        dVARdt[i,j,k] = tmp
 
 
 def kernel_shared(dVARdt, VAR, VAR1, VAR2):
     sVAR = cuda.shared.array(shape=(shared_memory_size),dtype=float32)    
-    sVAR1 = cuda.shared.array(shape=(shared_memory_size),dtype=float32)    
-    sVAR2 = cuda.shared.array(shape=(shared_memory_size),dtype=float32)    
     i, j, k = cuda.grid(3)
-    ti = cuda.threadIdx.x
-    tj = cuda.threadIdx.y
-    tk = cuda.threadIdx.z
-    sVAR[ti,tj,tk] = VAR[i,j,k]
-    sVAR1[ti,tj,tk] = VAR1[i,j,k]
-    sVAR2[ti,tj,tk] = VAR2[i,j,k]
+    si = cuda.threadIdx.x + 1
+    sj = cuda.threadIdx.y + 1
+    sk = cuda.threadIdx.z
+
+    sVAR[si,sj,sk] = VAR[i,j,k]
+    #cuda.syncthreads()
+
+    if si == 1:
+        sVAR[si-1,sj,sk] = VAR[i-1,j,k]
+    if si == cuda.blockDim.x:
+        sVAR[si+1,sj,sk] = VAR[i+1,j,k]
+    #cuda.syncthreads()
+
+    if sj == 1:
+        sVAR[si,sj-1,sk] = VAR[i,j-1,k]
+    if sj == cuda.blockDim.y:
+        sVAR[si,sj+1,sk] = VAR[i,j+1,k]
     cuda.syncthreads()
+
     if i >= nb and i < nx+nb and j >= nb and j < ny+nb:
-        dVARdt[i,j,k] = (sVAR[ti+1,tj,tk] - sVAR[ti-1,tj,tk]) * sVAR1[ti,tj,tk]
-        for c in range(10):
-            dVARdt[i,j,k] = (dVARdt[i,j,k] + 
-                            (sVAR[ti,tj+1,tk] - sVAR[ti,tj-1,tk]) * 
-                        np.float32(0.5)*(sVAR2[ti+1,tj,tk] + sVAR2[ti-1,tj,tk]))
+        tmp = wp(0.)
+        tmp += (sVAR[si,sj+1,sk] - sVAR[si,sj-1,sk])
+        tmp += (sVAR[si+1,sj,sk] - sVAR[si-1,sj,sk])
+        if k >= 1 and k < nz-1:
+            tmp += (sVAR[si,sj,sk+1] - sVAR[si,sj,sk-1]) 
+        dVARdt[i,j,k] = tmp
 
 
 if __name__ == '__main__':
 
-    n_iter = 50
+    n_iter = 20
 
     wp = np.float32
     wp_3D = 'float32[:,:,:]'
@@ -120,7 +133,7 @@ if __name__ == '__main__':
     #t0 = time.time()
     #for c in range(n_iter):
     #    kernel_numpy(dVARdt, VAR, VAR1)
-    #print(time.time() - t0)
+    #print((time.time() - t0)/n_iter)
     ##print(np.mean(dVARdt[:,jj,ii]))
     #print(np.mean(dVARdt[:,jj,ii]))
 
@@ -139,7 +152,7 @@ if __name__ == '__main__':
     for c in range(n_iter):
         kernel_trivial[bpg, tpb](dVARdtd, VARd, VAR1d, VAR2d)
         cuda.synchronize()
-    print(time.time() - t0)
+    print((time.time() - t0)/n_iter*1000)
     dVARdt = dVARdtd.copy_to_host()
     print(np.mean(dVARdt[ii,jj,:]))
 
@@ -159,9 +172,10 @@ if __name__ == '__main__':
     for c in range(n_iter):
         kernel_improve[bpg, tpb](dVARdtd, VARd, VAR1d, VAR2d)
         cuda.synchronize()
-    print(time.time() - t0)
+    print((time.time() - t0)/n_iter*1000)
     dVARdt = dVARdtd.copy_to_host()
     print(np.mean(dVARdt[ii,jj,:]))
+    array1 = dVARdt.copy()
 
 
 
@@ -181,6 +195,14 @@ if __name__ == '__main__':
     for c in range(n_iter):
         kernel_shared[bpg, tpb](dVARdtd, VARd, VAR1d, VAR2d)
         cuda.synchronize()
-    print(time.time() - t0)
+    print((time.time() - t0)/n_iter*1000)
     dVARdt = dVARdtd.copy_to_host()
     print(np.mean(dVARdt[ii,jj,:]))
+    array2 = dVARdt
+
+    #print(array1[:,5,5])
+    #print()
+    #print(array2[:,5,5])
+    #print((np.abs(array2 - array1) > 0)[:,5,5])
+    print(np.sum(np.abs(array2 - array1) > 0))
+    quit()

@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
+####################################################################
 File name:          tendency_UFLX.py  
 Author:             Christoph Heim (CH)
 Date created:       20190510
-Last modified:      20190518
+Last modified:      20190521
 License:            MIT
 
 Computation of horizontal momentum flux in longitude
@@ -12,6 +13,7 @@ Computation of horizontal momentum flux in longitude
 Jacobson 2005
 Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 214ff
+####################################################################
 """
 import time
 import numpy as np

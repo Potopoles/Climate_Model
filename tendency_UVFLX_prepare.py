@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
+####################################################################
 File name:          tendency_UVFLX.py  
 Author:             Christoph Heim (CH)
 Date created:       20190518
-Last modified:      20190518
+Last modified:      20190521
 License:            MIT
 
 Prepare computation of horizontal momentum flux tendencies
@@ -13,6 +14,7 @@ according to:
 Jacobson 2005
 Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 214ff
+####################################################################
 """
 import time
 import numpy as np

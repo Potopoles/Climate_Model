@@ -1,3 +1,18 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+####################################################################
+File name:          grid.py  
+Author:             Christoph Heim (CH)
+Date created:       20181001
+Last modified:      20190521
+License:            MIT
+
+Setup computational and geographical grid for simulation.
+Alson includes coriolis parameter and grid cell area and similar
+things.
+####################################################################
+"""
 import math
 from numba import cuda
 import numpy as np
@@ -23,10 +38,9 @@ nb = wp_int(nb)
 
 
 # GPU computation
-tpb     = (1,       1,      nz)
-tpb_ks  = (1,       1,      nzs)
-#bpg     = (int(nx/tpb[0])+1,   int(ny/tpb[1])+1,  1)
-bpg     = (nxs+2*nb, nys+2*nb, 1)
+tpb     = (2,       2,      nz )
+tpb_ks  = (tpb[0],  tpb[1], nzs)
+bpg = (math.ceil((nxs+2*nb)/tpb[0]), math.ceil((nys+2*nb)/tpb[1]), 1)
 
 class Grid:
 

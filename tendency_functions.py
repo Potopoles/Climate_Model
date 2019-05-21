@@ -301,73 +301,73 @@ def calc_momentum_fluxes_ij_py(
 
 
 
-def calc_momentum_fluxes_py(
-            UFLX, UFLX_im1,
-            UFLX_im1_jm1, UFLX_im1_jp1,
-            UFLX_ip1, UFLX_ip1_jm1,
-            UFLX_ip1_jp1, UFLX_jm1,
-            UFLX_jp1,
-            VFLX, VFLX_im1,
-            VFLX_im1_jm1, VFLX_im1_jp1,
-            VFLX_ip1, VFLX_ip1_jm1,
-            VFLX_ip1_jp1, VFLX_jm1,
-            VFLX_jp1):
-    """
-    """
-
-
-    if i >= nb and i < nxs+nb and j >= nb and j < nys+nb:
-
-        # FLUXES is js
-        CFLX = wp(1.)/wp(12.) * (
-                    VFLX_im1_jm1 + VFLX_jm1         +
-           wp(2.)*( VFLX_im1     + VFLX         )   +
-                    VFLX_im1_jp1 + VFLX_jp1         )
-
-        QFLX = wp(1.)/wp(12.) * (
-                    UFLX_im1_jm1 + UFLX_im1         +
-           wp(2.)*( UFLX_jm1     + UFLX         )   +
-                    UFLX_ip1_jm1 + UFLX_ip1         )
-
-        # FLUXES i j
-        if i < nx +nb and j < ny +nb:
-            BFLX = wp(1.)/wp(12.) * (
-                        UFLX_jm1     + UFLX_ip1_jm1     +
-               wp(2.)*( UFLX         + UFLX_ip1     )   +
-                        UFLX_jp1 + UFLX_ip1_jp1         )
-
-            RFLX = wp(1.)/wp(12.) * (
-                        VFLX_im1     + VFLX_im1_jp1     +
-               wp(2.)*( VFLX         + VFLX_jp1     )   +
-                        VFLX_ip1 + VFLX_ip1_jp1         )
-
-        # FLUXES i js
-        if i < nx +nb and j < nys+nb:
-            DFLX  = wp(1.)/wp(24.) * (
-                    VFLX_jm1 + wp(2.) * VFLX + VFLX_jp1 +
-                        UFLX_jm1     + UFLX             +
-                        UFLX_ip1_jm1 + UFLX_ip1         )
-
-            EFLX  = wp(1.)/wp(24.) * (
-                    VFLX_jm1 + wp(2.)*VFLX + VFLX_jp1   -
-                        UFLX_jm1     - UFLX             -
-                        UFLX_ip1_jm1 - UFLX_ip1         )
-
-        # FLUXES is j
-        if i < nxs+nb and j < ny +nb:
-            SFLX  = wp(1.)/wp(24.) * (
-                        VFLX_im1     + VFLX_im1_jp1     +
-                        VFLX         + VFLX_jp1         +
-                        UFLX_im1     + wp(2.)*UFLX      +
-                        UFLX_ip1                        )
-
-            TFLX  = wp(1.)/wp(24.) * (
-                        VFLX_im1     + VFLX_im1_jp1     +
-                        VFLX         + VFLX_jp1         -
-                        UFLX_im1     - wp(2.)*UFLX      -
-                        UFLX_ip1                        )
-
-        return(BFLX, CFLX, DFLX, EFLX,
-                RFLX, SFLX, TFLX, QFLX)
+#def calc_momentum_fluxes_py(
+#            UFLX, UFLX_im1,
+#            UFLX_im1_jm1, UFLX_im1_jp1,
+#            UFLX_ip1, UFLX_ip1_jm1,
+#            UFLX_ip1_jp1, UFLX_jm1,
+#            UFLX_jp1,
+#            VFLX, VFLX_im1,
+#            VFLX_im1_jm1, VFLX_im1_jp1,
+#            VFLX_ip1, VFLX_ip1_jm1,
+#            VFLX_ip1_jp1, VFLX_jm1,
+#            VFLX_jp1):
+#    """
+#    """
+#
+#
+#    if i >= nb and i < nxs+nb and j >= nb and j < nys+nb:
+#
+#        # FLUXES is js
+#        CFLX = wp(1.)/wp(12.) * (
+#                    VFLX_im1_jm1 + VFLX_jm1         +
+#           wp(2.)*( VFLX_im1     + VFLX         )   +
+#                    VFLX_im1_jp1 + VFLX_jp1         )
+#
+#        QFLX = wp(1.)/wp(12.) * (
+#                    UFLX_im1_jm1 + UFLX_im1         +
+#           wp(2.)*( UFLX_jm1     + UFLX         )   +
+#                    UFLX_ip1_jm1 + UFLX_ip1         )
+#
+#        # FLUXES i j
+#        if i < nx +nb and j < ny +nb:
+#            BFLX = wp(1.)/wp(12.) * (
+#                        UFLX_jm1     + UFLX_ip1_jm1     +
+#               wp(2.)*( UFLX         + UFLX_ip1     )   +
+#                        UFLX_jp1 + UFLX_ip1_jp1         )
+#
+#            RFLX = wp(1.)/wp(12.) * (
+#                        VFLX_im1     + VFLX_im1_jp1     +
+#               wp(2.)*( VFLX         + VFLX_jp1     )   +
+#                        VFLX_ip1 + VFLX_ip1_jp1         )
+#
+#        # FLUXES i js
+#        if i < nx +nb and j < nys+nb:
+#            DFLX  = wp(1.)/wp(24.) * (
+#                    VFLX_jm1 + wp(2.) * VFLX + VFLX_jp1 +
+#                        UFLX_jm1     + UFLX             +
+#                        UFLX_ip1_jm1 + UFLX_ip1         )
+#
+#            EFLX  = wp(1.)/wp(24.) * (
+#                    VFLX_jm1 + wp(2.)*VFLX + VFLX_jp1   -
+#                        UFLX_jm1     - UFLX             -
+#                        UFLX_ip1_jm1 - UFLX_ip1         )
+#
+#        # FLUXES is j
+#        if i < nxs+nb and j < ny +nb:
+#            SFLX  = wp(1.)/wp(24.) * (
+#                        VFLX_im1     + VFLX_im1_jp1     +
+#                        VFLX         + VFLX_jp1         +
+#                        UFLX_im1     + wp(2.)*UFLX      +
+#                        UFLX_ip1                        )
+#
+#            TFLX  = wp(1.)/wp(24.) * (
+#                        VFLX_im1     + VFLX_im1_jp1     +
+#                        VFLX         + VFLX_jp1         -
+#                        UFLX_im1     - wp(2.)*UFLX      -
+#                        UFLX_ip1                        )
+#
+#        return(BFLX, CFLX, DFLX, EFLX,
+#                RFLX, SFLX, TFLX, QFLX)
 
 
