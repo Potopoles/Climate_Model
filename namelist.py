@@ -141,7 +141,7 @@ i_restart_nth_day = 5.00
 njobs = 4
 
 working_precision = 'float32'
-#working_precision = 'float64'
+working_precision = 'float64'
 ####################################################################
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
@@ -151,7 +151,7 @@ comp_mode = 2
 # 1: testsuite equality
 # 2: longtime run
 # 10: benchmark experiment
-i_simulation_mode = 2
+i_simulation_mode = 1
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 1:

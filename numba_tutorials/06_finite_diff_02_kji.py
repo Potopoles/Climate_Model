@@ -33,10 +33,8 @@ def exchange_BC(VAR):
     VAR[:,0,ii] = VAR[:,ny,ii]
     VAR[:,ny+nb,ii] = VAR[:,nb,ii]
 
-#def kernel_numpy(dVARdt, VAR, VAR1):
-#    dVARdt[:,jj,ii] = (VAR[:,jj,ii+1] - VAR[:,jj,ii-1]) * VAR1[:,jj,ii]
 
-def kernel_trivial(dVARdt, VAR, VAR1, VAR2):
+def kernel_trivial(dVARdt, VAR):
     k, j, i = cuda.grid(3)
     if i >= nb and i < nx+nb and j >= nb and j < ny+nb:
         tmp = wp(0.)
@@ -47,7 +45,7 @@ def kernel_trivial(dVARdt, VAR, VAR1, VAR2):
         dVARdt[k,j,i] = tmp
 
 
-def kernel_improve(dVARdt, VAR, VAR1, VAR2):
+def kernel_improve(dVARdt, VAR):
     k, j, i = cuda.grid(3)
     if i >= nb and i < nx+nb and j >= nb and j < ny+nb:
         tmp = wp(0.)
@@ -59,7 +57,7 @@ def kernel_improve(dVARdt, VAR, VAR1, VAR2):
 
 
 
-def kernel_shared(dVARdt, VAR, VAR1, VAR2):
+def kernel_shared(dVARdt, VAR):
     sVAR = cuda.shared.array(shape=(shared_memory_size),dtype=float32)    
 
     k, j, i = cuda.grid(3)
@@ -152,11 +150,11 @@ if __name__ == '__main__':
             math.ceil((nx+2*nb)/tpb[2]))
     print(tpb)
     print(bpg)
-    kernel_trivial[bpg, tpb](dVARdtd, VARd, VAR1d, VAR2d)
+    kernel_trivial[bpg, tpb](dVARdtd, VARd)
     cuda.synchronize()
     t0 = time.time()
     for c in range(n_iter):
-        kernel_trivial[bpg, tpb](dVARdtd, VARd, VAR1d, VAR2d)
+        kernel_trivial[bpg, tpb](dVARdtd, VARd)
         cuda.synchronize()
     print((time.time() - t0)/n_iter*1000)
     dVARdt = dVARdtd.copy_to_host()
@@ -172,11 +170,11 @@ if __name__ == '__main__':
             math.ceil((nx+2*nb)/tpb[2]))
     print(tpb)
     print(bpg)
-    kernel_improve[bpg, tpb](dVARdtd, VARd, VAR1d, VAR2d)
+    kernel_improve[bpg, tpb](dVARdtd, VARd)
     cuda.synchronize()
     t0 = time.time()
     for c in range(n_iter):
-        kernel_improve[bpg, tpb](dVARdtd, VARd, VAR1d, VAR2d)
+        kernel_improve[bpg, tpb](dVARdtd, VARd)
         cuda.synchronize()
     print((time.time() - t0)/n_iter*1000)
     dVARdt = dVARdtd.copy_to_host()
@@ -194,11 +192,11 @@ if __name__ == '__main__':
             math.ceil((nx+2*nb)/tpb[2]))
     print(tpb)
     print(bpg)
-    kernel_shared[bpg, tpb](dVARdtd, VARd, VAR1d, VAR2d)
+    kernel_shared[bpg, tpb](dVARdtd, VARd)
     cuda.synchronize()
     t0 = time.time()
     for c in range(n_iter):
-        kernel_shared[bpg, tpb](dVARdtd, VARd, VAR1d, VAR2d)
+        kernel_shared[bpg, tpb](dVARdtd, VARd)
         cuda.synchronize()
     print((time.time() - t0)/n_iter*1000)
     dVARdt = dVARdtd.copy_to_host()

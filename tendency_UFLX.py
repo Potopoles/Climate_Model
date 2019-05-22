@@ -5,7 +5,7 @@
 File name:          tendency_UFLX.py  
 Author:             Christoph Heim (CH)
 Date created:       20190510
-Last modified:      20190521
+Last modified:      20190522
 License:            MIT
 
 Computation of horizontal momentum flux in longitude
@@ -31,7 +31,8 @@ from org_namelist import (wp, wp_int, wp_old)
 from grid import nx,nxs,ny,nys,nz,nzs,nb
 from GPU import cuda_kernel_decorator
 
-from tendency_functions import (num_dif_py, pre_grad_py)
+from tendency_functions import (num_dif_py, pre_grad_py,
+                               UVFLX_hor_adv_py)
 ####################################################################
 
 
@@ -72,9 +73,18 @@ def add_up_tendencies_py(
             UFLX,
             UFLX_im1, UFLX_ip1, UFLX_jm1, UFLX_jp1,
             VWIND, VWIND_im1,
-            VWIND_jp1, VWIND_im1_jp1,
-            UWIND, UWIND_im1,
-            UWIND_ip1,
+            VWIND_jp1    , VWIND_im1_jp1 ,
+            UWIND        , UWIND_im1     ,
+
+            UWIND_ip1    , UWIND_jm1     ,
+            UWIND_jp1    , UWIND_im1_jm1 ,
+            UWIND_im1_jp1, UWIND_ip1_jm1 ,
+            UWIND_ip1_jp1, 
+            BFLX         , BFLX_im1      ,
+            CFLX         , CFLX_jp1      ,
+            DFLX_im1     , DFLX_jp1      ,
+            EFLX         , EFLX_im1_jp1  ,
+
             PHI, PHI_im1,
             POTT, POTT_im1,
             PVTF, PVTF_im1,
@@ -99,7 +109,17 @@ def add_up_tendencies_py(
     if i_UVFLX_main_switch:
         # HORIZONTAL ADVECTION
         if i_UVFLX_hor_adv:
-            pass
+            dUFLXdt = dUFLXdt + UVFLX_hor_adv(
+                UWIND        , UWIND_im1     ,
+                UWIND_ip1    , UWIND_jm1     ,
+                UWIND_jp1    , UWIND_im1_jm1 ,
+                UWIND_im1_jp1, UWIND_ip1_jm1 ,
+                UWIND_ip1_jp1, 
+                BFLX         , BFLX_im1      ,
+                CFLX         , CFLX_jp1      ,
+                DFLX_im1     , DFLX_jp1      ,
+                EFLX         , EFLX_im1_jp1  ,
+                wp(1.))
         # VERTICAL ADVECTION
         if i_UVFLX_vert_adv:
             dUFLXdt = dUFLXdt + (
@@ -141,34 +161,73 @@ def add_up_tendencies_py(
 ####################################################################
 ### SPECIALIZE FOR GPU
 ####################################################################
-num_dif = njit(num_dif_py, device=True, inline=True)
-pre_grad = njit(pre_grad_py, device=True, inline=True)
-add_up_tendencies = njit(add_up_tendencies_py, device=True,
-                        inline=True)
+UVFLX_hor_adv = njit(UVFLX_hor_adv_py, device=True, inline=True)
 coriolis_and_spherical_UWIND = njit(coriolis_and_spherical_UWIND_py,
                         device=True, inline=True)
+pre_grad = njit(pre_grad_py, device=True, inline=True)
+num_dif = njit(num_dif_py, device=True, inline=True)
+add_up_tendencies = njit(add_up_tendencies_py, device=True,
+                        inline=True)
 
 def launch_cuda_main_kernel(dUFLXdt, UFLX,
-                        UWIND, VWIND, 
-                        PHI, COLP, POTT,
-                        PVTF, PVTFVB, WWIND_UWIND,
-                        corf_is, lat_is_rad,
-                        dlon_rad, dlat_rad,
-                        dyis,
-                        dsigma, sigma_vb):
+                    UWIND, VWIND, 
+                    BFLX_3D, CFLX_3D, DFLX_3D, EFLX_3D,
+                    PHI, COLP, POTT,
+                    PVTF, PVTFVB, WWIND_UWIND,
+                    corf_is, lat_is_rad,
+                    dlon_rad, dlat_rad,
+                    dyis,
+                    dsigma, sigma_vb):
 
     i, j, k = cuda.grid(3)
+
+    # Prepare momentum fluxes and set boundary conditions if
+    # necessary
+    BFLX         = BFLX_3D[i  ,j  ,k  ]                 
+    CFLX         = CFLX_3D[i  ,j  ,k  ]                 
+    EFLX         = EFLX_3D[i  ,j  ,k  ]                 
+    DFLX_jp1     = DFLX_3D[i  ,j+1,k  ]                 
+    CFLX_jp1     = CFLX_3D[i  ,j+1,k  ]                 
+
+    # BCx i
+    if i == nb:
+        BFLX_im1     = BFLX_3D[nx ,j  ,k  ]
+        DFLX_im1     = DFLX_3D[nx ,j  ,k  ] 
+        EFLX_im1_jp1 = EFLX_3D[nx ,j+1,k  ]                 
+    else:
+        BFLX_im1     = BFLX_3D[i-1,j  ,k  ]                 
+        DFLX_im1     = DFLX_3D[i-1,j  ,k  ]                 
+        EFLX_im1_jp1 = EFLX_3D[i-1,j+1,k  ]                 
+
+    # BCy js
+    if j == nb:
+        DFLX_im1     = wp(0.)                 
+        CFLX         = wp(0.)                 
+        EFLX         = wp(0.)                 
+    if j == ny+nb-1:
+        DFLX_jp1     = wp(0.)                 
+        CFLX_jp1     = wp(0.)                 
+        EFLX_im1_jp1 = wp(0.)                 
+
+
     if i >= nb and i < nxs+nb and j >= nb and j < ny+nb:
         dUFLXdt[i  ,j  ,k] = \
             add_up_tendencies(
             # 3D
-            UFLX       [i  ,j  ,k],
+            UFLX       [i  ,j  ,k  ],
             UFLX       [i-1,j  ,k  ], UFLX       [i+1,j  ,k  ],
             UFLX       [i  ,j-1,k  ], UFLX       [i  ,j+1,k  ],
             VWIND      [i  ,j  ,k  ], VWIND      [i-1,j  ,k  ],
             VWIND      [i  ,j+1,k  ], VWIND      [i-1,j+1,k  ],
             UWIND      [i  ,j  ,k  ], UWIND      [i-1,j  ,k  ],
-            UWIND      [i+1,j  ,k  ], 
+            UWIND      [i+1,j  ,k  ], UWIND      [i  ,j-1,k  ], 
+            UWIND      [i  ,j+1,k  ], UWIND      [i-1,j-1,k  ], 
+            UWIND      [i-1,j+1,k  ], UWIND      [i+1,j-1,k  ], 
+            UWIND      [i+1,j+1,k  ], 
+            BFLX                    , BFLX_im1                ,
+            CFLX                    , CFLX_jp1                ,
+            DFLX_im1                , DFLX_jp1                ,
+            EFLX                    , EFLX_im1_jp1            ,
             PHI        [i  ,j  ,k  ], PHI        [i-1,j  ,k  ],
             POTT       [i  ,j  ,k  ], POTT       [i-1,j  ,k  ],
             PVTF       [i  ,j  ,k  ], PVTF       [i-1,j  ,k  ],

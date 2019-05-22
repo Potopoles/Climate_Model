@@ -4,7 +4,7 @@
 File name:          tendency_functions.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190513
+Last modified:      20190522
 License:            MIT
 
 Collection of generally applicable finite difference tendency
@@ -300,74 +300,34 @@ def calc_momentum_fluxes_ij_py(
 
 
 
+def UVFLX_hor_adv_py(
+        DWIND        , DWIND_dm1     ,
+        DWIND_dp1    , DWIND_pm1     ,
+        DWIND_pp1    , DWIND_dm1_pm1 ,
+        DWIND_dm1_pp1, DWIND_dp1_pm1 ,
+        DWIND_dp1_pp1, 
+        BRFLX        , BRFLX_dm1     ,
+        CQFLX        , CQFLX_pp1     ,
+        DSFLX_dm1    , DSFLX_pp1     ,
+        ETFLX        , ETFLX_dm1_pp1 ,
+        sign_ETFLX_term):
+    """
+    """
+    return(
+        + BRFLX_dm1     * (DWIND_dm1     + DWIND        )/wp(2.)
+        - BRFLX         * (DWIND         + DWIND_dp1    )/wp(2.)
 
-#def calc_momentum_fluxes_py(
-#            UFLX, UFLX_im1,
-#            UFLX_im1_jm1, UFLX_im1_jp1,
-#            UFLX_ip1, UFLX_ip1_jm1,
-#            UFLX_ip1_jp1, UFLX_jm1,
-#            UFLX_jp1,
-#            VFLX, VFLX_im1,
-#            VFLX_im1_jm1, VFLX_im1_jp1,
-#            VFLX_ip1, VFLX_ip1_jm1,
-#            VFLX_ip1_jp1, VFLX_jm1,
-#            VFLX_jp1):
-#    """
-#    """
-#
-#
-#    if i >= nb and i < nxs+nb and j >= nb and j < nys+nb:
-#
-#        # FLUXES is js
-#        CFLX = wp(1.)/wp(12.) * (
-#                    VFLX_im1_jm1 + VFLX_jm1         +
-#           wp(2.)*( VFLX_im1     + VFLX         )   +
-#                    VFLX_im1_jp1 + VFLX_jp1         )
-#
-#        QFLX = wp(1.)/wp(12.) * (
-#                    UFLX_im1_jm1 + UFLX_im1         +
-#           wp(2.)*( UFLX_jm1     + UFLX         )   +
-#                    UFLX_ip1_jm1 + UFLX_ip1         )
-#
-#        # FLUXES i j
-#        if i < nx +nb and j < ny +nb:
-#            BFLX = wp(1.)/wp(12.) * (
-#                        UFLX_jm1     + UFLX_ip1_jm1     +
-#               wp(2.)*( UFLX         + UFLX_ip1     )   +
-#                        UFLX_jp1 + UFLX_ip1_jp1         )
-#
-#            RFLX = wp(1.)/wp(12.) * (
-#                        VFLX_im1     + VFLX_im1_jp1     +
-#               wp(2.)*( VFLX         + VFLX_jp1     )   +
-#                        VFLX_ip1 + VFLX_ip1_jp1         )
-#
-#        # FLUXES i js
-#        if i < nx +nb and j < nys+nb:
-#            DFLX  = wp(1.)/wp(24.) * (
-#                    VFLX_jm1 + wp(2.) * VFLX + VFLX_jp1 +
-#                        UFLX_jm1     + UFLX             +
-#                        UFLX_ip1_jm1 + UFLX_ip1         )
-#
-#            EFLX  = wp(1.)/wp(24.) * (
-#                    VFLX_jm1 + wp(2.)*VFLX + VFLX_jp1   -
-#                        UFLX_jm1     - UFLX             -
-#                        UFLX_ip1_jm1 - UFLX_ip1         )
-#
-#        # FLUXES is j
-#        if i < nxs+nb and j < ny +nb:
-#            SFLX  = wp(1.)/wp(24.) * (
-#                        VFLX_im1     + VFLX_im1_jp1     +
-#                        VFLX         + VFLX_jp1         +
-#                        UFLX_im1     + wp(2.)*UFLX      +
-#                        UFLX_ip1                        )
-#
-#            TFLX  = wp(1.)/wp(24.) * (
-#                        VFLX_im1     + VFLX_im1_jp1     +
-#                        VFLX         + VFLX_jp1         -
-#                        UFLX_im1     - wp(2.)*UFLX      -
-#                        UFLX_ip1                        )
-#
-#        return(BFLX, CFLX, DFLX, EFLX,
-#                RFLX, SFLX, TFLX, QFLX)
+        + CQFLX         * (DWIND_pm1     + DWIND        )/wp(2.)
+        - CQFLX_pp1     * (DWIND         + DWIND_pp1    )/wp(2.)
+
+        + DSFLX_dm1     * (DWIND_dm1_pm1 + DWIND        )/wp(2.)
+        - DSFLX_pp1     * (DWIND         + DWIND_dp1_pp1)/wp(2.)
+
+        + sign_ETFLX_term * (
+        + ETFLX         * (DWIND_dp1_pm1 + DWIND        )/wp(2.)
+        - ETFLX_dm1_pp1 * (DWIND         + DWIND_dm1_pp1)/wp(2.)
+        )
+    )
+
 
 

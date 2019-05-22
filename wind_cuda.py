@@ -37,34 +37,34 @@ def wind_tendency_jacobson_gpu(GR, UWIND, VWIND, WWIND, UFLX, dUFLXdt, VFLX, dVF
             calc_fluxes_ij[GR.griddim, GR.blockdim, stream] \
                             (BFLX, RFLX, UFLX, VFLX)
             stream.synchronize()
-            #BFLX = exchange_BC_gpu(BFLX, GR.zonal, GR.merid, GR.griddim,
-            #                        GR.blockdim, stream)
-            #RFLX = exchange_BC_gpu(RFLX, GR.zonal, GR.merid, GR.griddim,
-            #                        GR.blockdim, stream)
+            BFLX = exchange_BC_gpu(BFLX, GR.zonal, GR.merid, GR.griddim,
+                                    GR.blockdim, stream)
+            RFLX = exchange_BC_gpu(RFLX, GR.zonal, GR.merid, GR.griddim,
+                                    GR.blockdim, stream)
 
             calc_fluxes_isj[GR.griddim_is, GR.blockdim, stream] \
                             (SFLX, TFLX, UFLX, VFLX)
             stream.synchronize()
-            #SFLX = exchange_BC_gpu(SFLX, GR.zonal, GR.merids, GR.griddim_is,
-            #                        GR.blockdim, stream, stagx=True)
-            #TFLX = exchange_BC_gpu(TFLX, GR.zonal, GR.merids, GR.griddim_is,
-            #                        GR.blockdim, stream, stagx=True)
+            SFLX = exchange_BC_gpu(SFLX, GR.zonal, GR.merids, GR.griddim_is,
+                                    GR.blockdim, stream, stagx=True)
+            TFLX = exchange_BC_gpu(TFLX, GR.zonal, GR.merids, GR.griddim_is,
+                                    GR.blockdim, stream, stagx=True)
 
             calc_fluxes_ijs[GR.griddim_js, GR.blockdim, stream] \
                             (DFLX, EFLX, UFLX, VFLX)
             stream.synchronize()
-            #DFLX = exchange_BC_gpu(DFLX, GR.zonals, GR.merid, GR.griddim_js,
-            #                        GR.blockdim, stream, stagy=True)
-            #EFLX = exchange_BC_gpu(EFLX, GR.zonals, GR.merid, GR.griddim_js,
-            #                        GR.blockdim, stream, stagy=True)
+            DFLX = exchange_BC_gpu(DFLX, GR.zonals, GR.merid, GR.griddim_js,
+                                    GR.blockdim, stream, stagy=True)
+            EFLX = exchange_BC_gpu(EFLX, GR.zonals, GR.merid, GR.griddim_js,
+                                    GR.blockdim, stream, stagy=True)
 
             calc_fluxes_isjs[GR.griddim_is_js, GR.blockdim, stream] \
                             (CFLX, QFLX, UFLX, VFLX)
             stream.synchronize()
-            #CFLX = exchange_BC_gpu(CFLX, GR.zonals, GR.merids, GR.griddim_is_js,
-            #                        GR.blockdim, stream, stagx=True, stagy=True)
-            #QFLX = exchange_BC_gpu(QFLX, GR.zonals, GR.merids, GR.griddim_is_js,
-            #                        GR.blockdim, stream, stagx=True, stagy=True)
+            CFLX = exchange_BC_gpu(CFLX, GR.zonals, GR.merids, GR.griddim_is_js,
+                                    GR.blockdim, stream, stagx=True, stagy=True)
+            QFLX = exchange_BC_gpu(QFLX, GR.zonals, GR.merids, GR.griddim_is_js,
+                                    GR.blockdim, stream, stagx=True, stagy=True)
 
         # VERTICAL ADVECTION
         if i_UVFLX_vert_adv:

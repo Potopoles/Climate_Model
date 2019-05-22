@@ -252,39 +252,41 @@ def tendencies_jacobson(GR, F, subgrids):
                             GR.lat_radd, GR.lat_is_radd,
                             GR.dlon_rad_2Dd, GR.dlat_rad_2Dd,
                             GR.dyisd, GR.dxjsd,
-                            GR.dsigmad, GR.sigma_vbd)
+                            GR.dsigmad, GR.sigma_vbd, GR)
             cuda.synchronize()
-            print('GPU')
-            n_iter = 10
-            t0 = time.time()
-            for i in range(n_iter):
-                F.dUFLXdt, F.dVFLXdt = Tendencies_GPU.UVFLX_tendency(
-                                F.dUFLXdt, F.dVFLXdt,
-                                F.UWIND, F.VWIND, F.WWIND,
-                                F.UFLX, F.VFLX,
-                                F.CFLX, F.QFLX, F.DFLX, F.EFLX,
-                                F.SFLX, F.TFLX, F.BFLX, F.RFLX,
-                                F.PHI, F.COLP, F.COLP_NEW, F.POTT,
-                                F.PVTF, F.PVTFVB,
-                                F.WWIND_UWIND, F.WWIND_VWIND,
-                                GR.Ad, GR.corf_isd, GR.corfd,
-                                GR.lat_radd, GR.lat_is_radd,
-                                GR.dlon_rad_2Dd, GR.dlat_rad_2Dd,
-                                GR.dyisd, GR.dxjsd,
-                                GR.dsigmad, GR.sigma_vbd)
-                cuda.synchronize()
-            print((time.time() - t0)/n_iter)
-            
-            
-            #TODO
-            CFLX_new = np.asarray(F.CFLX)
-            QFLX_new = np.asarray(F.QFLX)
-            DFLX_new = np.asarray(F.DFLX)
-            EFLX_new = np.asarray(F.EFLX)
-            SFLX_new = np.asarray(F.SFLX)
-            TFLX_new = np.asarray(F.TFLX)
-            BFLX_new = np.asarray(F.BFLX)
-            RFLX_new = np.asarray(F.RFLX)
+            #print('GPU')
+            #n_iter = 10
+            #t0 = time.time()
+            #for i in range(n_iter):
+            #    F.dUFLXdt, F.dVFLXdt = Tendencies_GPU.UVFLX_tendency(
+            #                    F.dUFLXdt, F.dVFLXdt,
+            #                    F.UWIND, F.VWIND, F.WWIND,
+            #                    F.UFLX, F.VFLX,
+            #                    F.CFLX, F.QFLX, F.DFLX, F.EFLX,
+            #                    F.SFLX, F.TFLX, F.BFLX, F.RFLX,
+            #                    F.PHI, F.COLP, F.COLP_NEW, F.POTT,
+            #                    F.PVTF, F.PVTFVB,
+            #                    F.WWIND_UWIND, F.WWIND_VWIND,
+            #                    GR.Ad, GR.corf_isd, GR.corfd,
+            #                    GR.lat_radd, GR.lat_is_radd,
+            #                    GR.dlon_rad_2Dd, GR.dlat_rad_2Dd,
+            #                    GR.dyisd, GR.dxjsd,
+            #                    GR.dsigmad, GR.sigma_vbd, GR)
+            #    cuda.synchronize()
+            #print((time.time() - t0)/n_iter)
+            #
+            #
+            ##TODO
+            #dUFLXdt_new = np.asarray(F.dUFLXdt)
+            #dVFLXdt_new = np.asarray(F.dVFLXdt)
+            #CFLX_new = np.asarray(F.CFLX)
+            #QFLX_new = np.asarray(F.QFLX)
+            #DFLX_new = np.asarray(F.DFLX)
+            #EFLX_new = np.asarray(F.EFLX)
+            #SFLX_new = np.asarray(F.SFLX)
+            #TFLX_new = np.asarray(F.TFLX)
+            #BFLX_new = np.asarray(F.BFLX)
+            #RFLX_new = np.asarray(F.RFLX)
 
             F.COLP          = F.COLP.squeeze()
             F.COLP_NEW      = F.COLP_NEW.squeeze()
@@ -313,21 +315,23 @@ def tendencies_jacobson(GR, F, subgrids):
                                         F.COLP, F.COLP_NEW, F.PHI, F.POTT,
                                         F.PVTF, F.PVTFVB)
             cuda.synchronize()
-            t0 = time.time()
-            for i in range(n_iter):
-                F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
-                                            F.UWIND, F.VWIND, F.WWIND,
-                                            F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-                                            F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-                                            F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-                                            F.WWIND_UWIND, F.WWIND_VWIND, 
-                                            F.COLP, F.COLP_NEW, F.PHI, F.POTT,
-                                            F.PVTF, F.PVTFVB)
-                cuda.synchronize()
-            print((time.time() - t0)/n_iter)
-            quit()
+            #t0 = time.time()
+            #for i in range(n_iter):
+            #    F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
+            #                                F.UWIND, F.VWIND, F.WWIND,
+            #                                F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
+            #                                F.BFLX, F.CFLX, F.DFLX, F.EFLX,
+            #                                F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
+            #                                F.WWIND_UWIND, F.WWIND_VWIND, 
+            #                                F.COLP, F.COLP_NEW, F.PHI, F.POTT,
+            #                                F.PVTF, F.PVTFVB)
+            #    cuda.synchronize()
+            #print((time.time() - t0)/n_iter)
+            ##quit()
 
             ##TODO
+            #dUFLXdt_old = np.asarray(F.dUFLXdt)
+            #dVFLXdt_old = np.asarray(F.dVFLXdt)
             #CFLX_old = np.asarray(F.CFLX)
             #QFLX_old = np.asarray(F.QFLX)
             #DFLX_old = np.asarray(F.DFLX)
@@ -339,43 +343,51 @@ def tendencies_jacobson(GR, F, subgrids):
             #
             #print()
 
-            #print(np.nanmean(CFLX_new - CFLX_old))
-            #print(np.sum(np.isnan(CFLX_new)) - np.sum(np.isnan(CFLX_old)))
+            ##print(np.nanmean(dUFLXdt_new - dUFLXdt_old))
+            ##print(np.sum(np.isnan(dUFLXdt_new)) - np.sum(np.isnan(dUFLXdt_old)))
 
-            #print(np.nanmean(QFLX_new - QFLX_old))
-            #print(np.sum(np.isnan(QFLX_new)) - np.sum(np.isnan(QFLX_old)))
+            ##print(np.nanmean(dVFLXdt_new - dVFLXdt_old))
+            ##print(np.sum(np.isnan(dVFLXdt_new)) - np.sum(np.isnan(dVFLXdt_old)))
 
-            #print(np.nanmean(DFLX_new - DFLX_old))
-            #print(np.sum(np.isnan(DFLX_new)) - np.sum(np.isnan(DFLX_old)))
+            ##print(np.nanmean(CFLX_new - CFLX_old))
+            ##print(np.sum(np.isnan(CFLX_new)) - np.sum(np.isnan(CFLX_old)))
 
-            #print(np.nanmean(EFLX_new - EFLX_old))
-            #print(np.sum(np.isnan(EFLX_new)) - np.sum(np.isnan(EFLX_old)))
+            ##print(np.nanmean(QFLX_new - QFLX_old))
+            ##print(np.sum(np.isnan(QFLX_new)) - np.sum(np.isnan(QFLX_old)))
 
-            #print(np.nanmean(SFLX_new - SFLX_old))
-            #print(np.sum(np.isnan(SFLX_new)) - np.sum(np.isnan(SFLX_old)))
+            ##print(np.nanmean(DFLX_new - DFLX_old))
+            ##print(np.sum(np.isnan(DFLX_new)) - np.sum(np.isnan(DFLX_old)))
 
-            #print(np.nanmean(TFLX_new - TFLX_old))
-            #print(np.sum(np.isnan(TFLX_new)) - np.sum(np.isnan(TFLX_old)))
+            ##print(np.nanmean(EFLX_new - EFLX_old))
+            ##print(np.sum(np.isnan(EFLX_new)) - np.sum(np.isnan(EFLX_old)))
 
-            #print(np.nanmean(BFLX_new - BFLX_old))
-            #print(np.sum(np.isnan(BFLX_new)) - np.sum(np.isnan(BFLX_old)))
+            ##print(np.nanmean(SFLX_new - SFLX_old))
+            ##print(np.sum(np.isnan(SFLX_new)) - np.sum(np.isnan(SFLX_old)))
 
-            #print(np.nanmean(RFLX_new - RFLX_old))
-            #print(np.sum(np.isnan(RFLX_new)) - np.sum(np.isnan(RFLX_old)))
+            ##print(np.nanmean(TFLX_new - TFLX_old))
+            ##print(np.sum(np.isnan(TFLX_new)) - np.sum(np.isnan(TFLX_old)))
+
+            ##print(np.nanmean(BFLX_new - BFLX_old))
+            ##print(np.sum(np.isnan(BFLX_new)) - np.sum(np.isnan(BFLX_old)))
+
+            ##print(np.nanmean(RFLX_new - RFLX_old))
+            ##print(np.sum(np.isnan(RFLX_new)) - np.sum(np.isnan(RFLX_old)))
             #
             #quit()
-            #diff = CFLX_new - CFLX_old
+            #print()
+            #k = 2
+            #diff = dVFLXdt_new - dVFLXdt_old
+            ##print(diff[:,:,k].squeeze())
             #import matplotlib.pyplot as plt
-            #k = 0
-            #plt.contourf(diff[:,:,k].squeeze())
+            #plt.contourf(diff[:,:,k].squeeze().T)
             #plt.colorbar()
             #plt.show()
-            ##print(diff[:,:,k].squeeze())
+            #quit()
 
 
 
         else:
-            t0 = time.time()
+            #t0 = time.time()
             F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
                                         F.UWIND, F.VWIND, F.WWIND,
                                         F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
@@ -384,7 +396,7 @@ def tendencies_jacobson(GR, F, subgrids):
                                         F.WWIND_UWIND, F.WWIND_VWIND, 
                                         F.COLP, F.COLP_NEW, F.PHI, F.POTT,
                                         F.PVTF, F.PVTFVB)
-            print(time.time() - t0)
+            #print(time.time() - t0)
             #quit()
 
 

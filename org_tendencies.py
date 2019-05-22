@@ -5,7 +5,7 @@
 File name:          org_tendencies.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190521
+Last modified:      20190522
 License:            MIT
 
 Organise the computation of all tendencies in dynamical core:
@@ -21,14 +21,15 @@ import numpy as np
 from numba import cuda
 
 from tendency_POTT import POTT_tendency_gpu, POTT_tendency_cpu
-from tendency_UVFLX_prepare import (UVFLX_vert_adv_gpu,
-                            UVFLX_vert_adv_cpu)
+from tendency_UVFLX_prepare import (UVFLX_prep_adv_gpu,
+                                    UVFLX_prep_adv_cpu)
 from tendency_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
 from tendency_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
-from namelist import i_UVFLX_vert_adv
+from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
 from grid import tpb, tpb_ks, bpg
-#TODO
-from grid import nx,nxs,ny,nys,nz,nzs,nb
+
+##TODO
+#from grid import nx,nxs,ny,nys,nz,nzs,nb
 ####################################################################
 
 
@@ -73,13 +74,12 @@ class TendencyFactory:
                         lat_rad, lat_is_rad,
                         dlon_rad, dlat_rad,
                         dyis, dxjs,
-                        dsigma, sigma_vb):
+                        dsigma, sigma_vb, GR):
 
         if self.target == 'GPU':
-            # PREPARE
-
-            if i_UVFLX_vert_adv:
-                UVFLX_vert_adv_gpu[bpg, tpb_ks](
+            # PREPARE ADVECTIVE FLUXES
+            if i_UVFLX_hor_adv or i_UVFLX_vert_adv:
+                UVFLX_prep_adv_gpu[bpg, tpb_ks](
                             WWIND_UWIND, WWIND_VWIND,
                             UWIND, VWIND, WWIND,
                             UFLX, VFLX,
@@ -91,6 +91,7 @@ class TendencyFactory:
             # UFLX
             UFLX_tendency_gpu[bpg, tpb](
                         dUFLXdt, UFLX, UWIND, VWIND,
+                        BFLX, CFLX, DFLX, EFLX,
                         PHI, COLP, POTT,
                         PVTF, PVTFVB, WWIND_UWIND,
                         corf_is, lat_is_rad,
@@ -101,7 +102,8 @@ class TendencyFactory:
 
             # VFLX
             VFLX_tendency_gpu[bpg, tpb](
-                        dVFLXdt, VFLX, UWIND,
+                        dVFLXdt, VFLX, UWIND, VWIND,
+                        RFLX, SFLX, TFLX, QFLX,
                         PHI, COLP, POTT,
                         PVTF, PVTFVB, WWIND_VWIND,
                         corf, lat_rad,
@@ -111,10 +113,14 @@ class TendencyFactory:
             cuda.synchronize()
 
 
+
+
+
+
         elif self.target == 'CPU':
             # PREPARE
-            if i_UVFLX_vert_adv:
-                UVFLX_vert_adv_cpu(
+            if i_UVFLX_hor_adv or i_UVFLX_vert_adv:
+                UVFLX_prep_adv_cpu(
                             WWIND_UWIND, WWIND_VWIND,
                             UWIND, VWIND, WWIND,
                             COLP_NEW, A, dsigma)
@@ -130,7 +136,7 @@ class TendencyFactory:
 
             # VFLX
             VFLX_tendency_cpu(
-                        dVFLXdt, VFLX, UWIND,
+                        dVFLXdt, VFLX, UWIND, VWIND,
                         PHI, COLP, POTT,
                         PVTF, PVTFVB, WWIND_VWIND,
                         corf, lat_rad,
