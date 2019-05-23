@@ -4,7 +4,7 @@
 File name:          tendency_POTT.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190509
+Last modified:      20190523
 License:            MIT
 
 Computation of potential virtual temperature (POTT) tendency
@@ -132,9 +132,9 @@ add_up_tendencies = njit(add_up_tendencies_py)
 def launch_numba_cpu(dPOTTdt, POTT, UFLX, VFLX, COLP, A,
                  POTTVB, WWIND, COLP_NEW, dsigma):
 
-    for i in prange(nb,nx+nb):
-        for j in range(nb,ny+nb):
-            for k in range(wp_int(0),nz):
+    for k in prange(wp_int(0),nz):
+        for i in range(nb,nx+nb):
+            for j in range(nb,ny+nb):
 
                 dPOTTdt[i  ,j  ,k] = \
                     add_up_tendencies(POTT[i  ,j  ,k],

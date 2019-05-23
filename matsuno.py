@@ -21,7 +21,7 @@ if wp_old == 'float64':
 ######################################################################################
 ######################################################################################
 
-def step_matsuno(GR, subgrids, F):
+def step_matsuno(GR, GR_NEW, subgrids, F):
 
 
     ##############################
@@ -54,7 +54,7 @@ def step_matsuno(GR, subgrids, F):
 
     ##############################
     ##############################
-    tendencies_jacobson(GR, F, subgrids)
+    tendencies_jacobson(GR, GR_NEW, F, subgrids)
     if comp_mode in [0,1]:
         F.COLP[:] = F.COLP_NEW[:]
     elif comp_mode == 2:
@@ -123,7 +123,7 @@ def step_matsuno(GR, subgrids, F):
 
     ##############################
     ##############################
-    tendencies_jacobson(GR, F, subgrids)
+    tendencies_jacobson(GR, GR_NEW, F, subgrids)
     if comp_mode in [0,1]:
         F.COLP[:] = F.COLP_NEW[:]
     elif comp_mode == 2:

@@ -5,7 +5,7 @@
 File name:          tendency_VFLX.py  
 Author:             Christoph Heim (CH)
 Date created:       20190511
-Last modified:      20190522
+Last modified:      20190523
 License:            MIT
 
 Computation of horizontal momentum flux in latitude
@@ -180,51 +180,57 @@ def launch_cuda_main_kernel(dVFLXdt, VFLX,
 
     i, j, k = cuda.grid(3)
 
-    SFLX_jm1        = SFLX_3D[i  ,j-1,k  ]
-    SFLX_ip1        = SFLX_3D[i+1,j  ,k  ]
-    TFLX            = TFLX_3D[i  ,j  ,k  ]
-    TFLX_jm1_ip1    = TFLX_3D[i+1,j-1,k  ]
-    RFLX            = RFLX_3D[i  ,j  ,k  ]
-    RFLX_jm1        = RFLX_3D[i  ,j-1,k  ]
-    QFLX            = QFLX_3D[i  ,j  ,k  ]
-    QFLX_ip1        = QFLX_3D[i+1,j  ,k  ]
+    # Prepare momentum fluxes and set boundary conditions if
+    # necessary
+    RFLX            =  RFLX_3D[i  ,j  ,k  ]
+    QFLX            =  QFLX_3D[i  ,j  ,k  ]
+    TFLX            =  TFLX_3D[i  ,j  ,k  ]
+    RFLX_jm1        =  RFLX_3D[i  ,j-1,k  ]
+    SFLX_jm1        =  SFLX_3D[i  ,j-1,k  ]
 
-    # no BC necessary because fluxes are set to zero
-    # at rigid wall at poles
+    # BCx is
+    if i == nxs - 1:
+        QFLX_ip1        =  QFLX_3D[1  ,j  ,k  ]
+        TFLX_ip1_jm1    =  TFLX_3D[1  ,j-1,k  ]
+        SFLX_ip1        =  SFLX_3D[1  ,j  ,k  ]
+    else:
+        QFLX_ip1        =  QFLX_3D[i+1,j  ,k  ]
+        TFLX_ip1_jm1    =  TFLX_3D[i+1,j-1,k  ]
+        SFLX_ip1        =  SFLX_3D[i+1,j  ,k  ]
 
     if i >= nb and i < nx+nb and j >= nb and j < nys+nb:
         dVFLXdt[i  ,j  ,k  ] = \
             add_up_tendencies(
             # 3D
             VFLX        [i  ,j  ,k  ],
-            VFLX        [i-1,j  ,k  ], VFLX         [i+1,j  ,k  ],
-            VFLX        [i  ,j-1,k  ], VFLX         [i  ,j+1,k  ],
-            UWIND       [i  ,j  ,k  ], UWIND        [i  ,j-1,k  ],
-            UWIND       [i+1,j  ,k  ], UWIND        [i+1,j-1,k  ],
-            VWIND       [i  ,j  ,k  ], VWIND        [i  ,j-1,k  ],
-            VWIND       [i  ,j+1,k  ], VWIND        [i-1,j  ,k  ],
-            VWIND       [i+1,j  ,k  ], VWIND        [i-1,j-1,k  ],
-            VWIND       [i+1,j-1,k  ], VWIND        [i-1,j+1,k  ],
+            VFLX        [i-1,j  ,k  ], VFLX        [i+1,j  ,k  ],
+            VFLX        [i  ,j-1,k  ], VFLX        [i  ,j+1,k  ],
+            UWIND       [i  ,j  ,k  ], UWIND       [i  ,j-1,k  ],
+            UWIND       [i+1,j  ,k  ], UWIND       [i+1,j-1,k  ],
+            VWIND       [i  ,j  ,k  ], VWIND       [i  ,j-1,k  ],
+            VWIND       [i  ,j+1,k  ], VWIND       [i-1,j  ,k  ],
+            VWIND       [i+1,j  ,k  ], VWIND       [i-1,j-1,k  ],
+            VWIND       [i+1,j-1,k  ], VWIND       [i-1,j+1,k  ],
             VWIND       [i+1,j+1,k  ], 
-            RFLX                     , RFLX_jm1                  ,
-            QFLX                     , QFLX_ip1                  ,
-            SFLX_jm1                 , SFLX_ip1                  ,
-            TFLX                     , TFLX_jm1_ip1              ,
-            PHI         [i  ,j  ,k  ], PHI          [i  ,j-1,k  ],
-            POTT        [i  ,j  ,k  ], POTT         [i  ,j-1,k  ],
-            PVTF        [i  ,j  ,k  ], PVTF         [i  ,j-1,k  ],
-            PVTFVB      [i  ,j  ,k  ], PVTFVB       [i  ,j-1,k  ],
-            PVTFVB      [i  ,j-1,k+1], PVTFVB       [i  ,j  ,k+1],
-            WWIND_VWIND [i  ,j  ,k  ], WWIND_VWIND  [i  ,j  ,k+1],
+            RFLX                     , RFLX_jm1                 ,
+            QFLX                     , QFLX_ip1                 ,
+            SFLX_jm1                 , SFLX_ip1                 ,
+            TFLX                     , TFLX_ip1_jm1             ,
+            PHI         [i  ,j  ,k  ], PHI         [i  ,j-1,k  ],
+            POTT        [i  ,j  ,k  ], POTT        [i  ,j-1,k  ],
+            PVTF        [i  ,j  ,k  ], PVTF        [i  ,j-1,k  ],
+            PVTFVB      [i  ,j  ,k  ], PVTFVB      [i  ,j-1,k  ],
+            PVTFVB      [i  ,j-1,k+1], PVTFVB      [i  ,j  ,k+1],
+            WWIND_VWIND [i  ,j  ,k  ], WWIND_VWIND [i  ,j  ,k+1],
             # 2D
-            COLP        [i  ,j  ,0  ], COLP         [i  ,j-1,0  ],
+            COLP        [i  ,j  ,0  ], COLP        [i  ,j-1,0  ],
             # GR horizontal
-            corf        [i  ,j  ,0  ], corf         [i  ,j-1,0  ],
-            lat_rad     [i  ,j  ,0  ], lat_rad      [i  ,j-1,0  ],
-            dlon_rad    [i  ,j  ,0  ], dlat_rad     [i  ,j  ,0  ],
+            corf        [i  ,j  ,0  ], corf        [i  ,j-1,0  ],
+            lat_rad     [i  ,j  ,0  ], lat_rad     [i  ,j-1,0  ],
+            dlon_rad    [i  ,j  ,0  ], dlat_rad    [i  ,j  ,0  ],
             dxjs        [i  ,j  ,0  ],
             # GR vertical
-            dsigma      [0  ,0  ,k  ], sigma_vb     [0  ,0  ,k  ],
+            dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
             sigma_vb    [0  ,0  ,k+1])
 
 
@@ -236,13 +242,15 @@ VFLX_tendency_gpu = cuda.jit(cuda_kernel_decorator(
 ####################################################################
 ### SPECIALIZE FOR CPU
 ####################################################################
-num_dif = njit(num_dif_py)
-pre_grad = njit(pre_grad_py)
-add_up_tendencies = njit(add_up_tendencies_py)
+UVFLX_hor_adv = njit(UVFLX_hor_adv_py)
 coriolis_and_spherical_VWIND = njit(coriolis_and_spherical_VWIND_py)
+pre_grad = njit(pre_grad_py)
+num_dif = njit(num_dif_py)
+add_up_tendencies = njit(add_up_tendencies_py)
 
 def launch_numba_cpu_main(dVFLXdt, VFLX,
-                    UWIND, 
+                    UWIND, VWIND,
+                    RFLX_3D, SFLX_3D, TFLX_3D, QFLX_3D,
                     PHI, COLP, POTT,
                     PVTF, PVTFVB, WWIND_VWIND,
                     corf, lat_rad,
@@ -250,32 +258,59 @@ def launch_numba_cpu_main(dVFLXdt, VFLX,
                     dxjs,
                     dsigma, sigma_vb):
 
-    for i in prange(nb,nx+nb):
-        for j in range(nb,nys+nb):
-            for k in range(wp_int(0),nz):
-                dVFLXdt[i  ,j  ,k] = \
-                    add_up_tendencies(
+    for k in prange(wp_int(0),nz):
+        for i in range(nb,nx+nb):
+            for j in range(nb,nys+nb):
+
+                # Prepare momentum fluxes and set boundary conditions if
+                # necessary
+                RFLX            =  RFLX_3D[i  ,j  ,k  ]
+                QFLX            =  QFLX_3D[i  ,j  ,k  ]
+                TFLX            =  TFLX_3D[i  ,j  ,k  ]
+                RFLX_jm1        =  RFLX_3D[i  ,j-1,k  ]
+                SFLX_jm1        =  SFLX_3D[i  ,j-1,k  ]
+
+                # BCx is
+                if i == nxs - 1:
+                    QFLX_ip1        =  QFLX_3D[1  ,j  ,k  ]
+                    TFLX_ip1_jm1    =  TFLX_3D[1  ,j-1,k  ]
+                    SFLX_ip1        =  SFLX_3D[1  ,j  ,k  ]
+                else:
+                    QFLX_ip1        =  QFLX_3D[i+1,j  ,k  ]
+                    TFLX_ip1_jm1    =  TFLX_3D[i+1,j-1,k  ]
+                    SFLX_ip1        =  SFLX_3D[i+1,j  ,k  ]
+
+                dVFLXdt[i  ,j  ,k] = add_up_tendencies(
             # 3D
-            VFLX    [i  ,j  ,k  ],
-            VFLX    [i-1,j  ,k  ], VFLX    [i+1,j  ,k  ],
-            VFLX    [i  ,j-1,k  ], VFLX    [i  ,j+1,k  ],
-            UWIND   [i  ,j  ,k  ], UWIND   [i  ,j-1,k  ],
-            UWIND   [i+1,j  ,k  ], UWIND   [i+1,j-1,k  ],
-            PHI     [i  ,j  ,k  ], PHI     [i  ,j-1,k  ],
-            POTT    [i  ,j  ,k  ], POTT    [i  ,j-1,k  ],
-            PVTF    [i  ,j  ,k  ], PVTF    [i  ,j-1,k  ],
-            PVTFVB  [i  ,j  ,k  ], PVTFVB  [i  ,j-1,k  ],
-            PVTFVB  [i  ,j-1,k+1], PVTFVB  [i  ,j  ,k+1],
-            WWIND_VWIND[i  ,j  ,k  ], WWIND_VWIND[i  ,j  ,k+1],
+            VFLX        [i  ,j  ,k  ],
+            VFLX        [i-1,j  ,k  ], VFLX        [i+1,j  ,k  ],
+            VFLX        [i  ,j-1,k  ], VFLX        [i  ,j+1,k  ],
+            UWIND       [i  ,j  ,k  ], UWIND       [i  ,j-1,k  ],
+            UWIND       [i+1,j  ,k  ], UWIND       [i+1,j-1,k  ],
+            VWIND       [i  ,j  ,k  ], VWIND       [i  ,j-1,k  ],
+            VWIND       [i  ,j+1,k  ], VWIND       [i-1,j  ,k  ],
+            VWIND       [i+1,j  ,k  ], VWIND       [i-1,j-1,k  ],
+            VWIND       [i+1,j-1,k  ], VWIND       [i-1,j+1,k  ],
+            VWIND       [i+1,j+1,k  ], 
+            RFLX                     , RFLX_jm1                 ,
+            QFLX                     , QFLX_ip1                 ,
+            SFLX_jm1                 , SFLX_ip1                 ,
+            TFLX                     , TFLX_ip1_jm1             ,
+            PHI         [i  ,j  ,k  ], PHI         [i  ,j-1,k  ],
+            POTT        [i  ,j  ,k  ], POTT        [i  ,j-1,k  ],
+            PVTF        [i  ,j  ,k  ], PVTF        [i  ,j-1,k  ],
+            PVTFVB      [i  ,j  ,k  ], PVTFVB      [i  ,j-1,k  ],
+            PVTFVB      [i  ,j-1,k+1], PVTFVB      [i  ,j  ,k+1],
+            WWIND_VWIND [i  ,j  ,k  ], WWIND_VWIND [i  ,j  ,k+1],
             # 2D
-            COLP    [i  ,j  ,0  ], COLP    [i  ,j-1,0  ],
+            COLP        [i  ,j  ,0  ], COLP        [i  ,j-1,0  ],
             # GR horizontal
-            corf    [i  ,j  ,0  ], corf    [i  ,j-1,0  ],
-            lat_rad [i  ,j  ,0  ], lat_rad [i  ,j-1,0  ],
-            dlon_rad[i  ,j  ,0  ], dlat_rad[i  ,j  ,0  ],
-            dxjs    [i  ,j  ,0  ],
+            corf        [i  ,j  ,0  ], corf        [i  ,j-1,0  ],
+            lat_rad     [i  ,j  ,0  ], lat_rad     [i  ,j-1,0  ],
+            dlon_rad    [i  ,j  ,0  ], dlat_rad    [i  ,j  ,0  ],
+            dxjs        [i  ,j  ,0  ],
             # GR vertical
-            dsigma  [0  ,0  ,k  ], sigma_vb[0  ,0  ,k  ],
-            sigma_vb[0  ,0  ,k+1])
+            dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
+            sigma_vb    [0  ,0  ,k+1])
 
 VFLX_tendency_cpu = njit(parallel=True)(launch_numba_cpu_main)

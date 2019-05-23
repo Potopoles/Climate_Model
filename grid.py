@@ -5,7 +5,7 @@
 File name:          grid.py  
 Author:             Christoph Heim (CH)
 Date created:       20181001
-Last modified:      20190521
+Last modified:      20190523
 License:            MIT
 
 Setup computational and geographical grid for simulation.
@@ -20,8 +20,9 @@ from namelist import *
 from org_namelist import wp_int, wp
 from constants import con_rE, con_omega
 from boundaries import exchange_BC, exchange_BC_periodic_x
-from IO import load_restart_grid
+from IO import (load_restart_grid, set_up_sigma_levels)
 
+####################################################################
 
 # FIXED GPU SETTINGS (have to here in code to be able to import them in another module)
 tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
@@ -38,13 +39,15 @@ nb = wp_int(nb)
 
 
 # GPU computation
+if nz > 32:
+    raise: NotImplementedError
 tpb     = (2,       2,      nz )
 tpb_ks  = (tpb[0],  tpb[1], nzs)
 bpg = (math.ceil((nxs+2*nb)/tpb[0]), math.ceil((nys+2*nb)/tpb[1]), 1)
 
 class Grid:
 
-    def __init__(self, i_subgrid=0, specs=None):
+    def __init__(self, i_subgrid=0, specs=None, new=False):
 
         if i_load_from_restart:
             loadGR = load_restart_grid(dlat_deg, dlat_deg, nz)
@@ -57,6 +60,7 @@ class Grid:
             self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
                                 self.i_out_nth_hour*self.i_out_nth_ts
         else:
+            self.new = new
 
             # TIMERS
             self.total_comp_time = 0
@@ -279,6 +283,37 @@ class Grid:
         self.rad_swsolv = 0
 
 
+
+        # NEW GRID STYLE
+        if self.new:
+            self.corf         = np.expand_dims(self.corf,       axis=2)
+            self.corf_is      = np.expand_dims(self.corf_is,    axis=2)
+            self.lat_rad      = np.expand_dims(self.lat_rad,    axis=2)
+            self.lat_is_rad   = np.expand_dims(self.lat_is_rad, axis=2)
+            self.dlon_rad     = np.expand_dims(self.dlon_rad_2D,axis=2)
+            self.dlat_rad     = np.expand_dims(self.dlat_rad_2D,axis=2)
+            self.A            = np.expand_dims(self.A,          axis=2)
+            self.dyis         = np.expand_dims(self.dyis,       axis=2)
+            self.dxjs         = np.expand_dims(self.dxjs,       axis=2)
+
+            set_up_sigma_levels(self)
+
+            self.dsigma       = np.expand_dims(
+                                np.expand_dims(self.dsigma   , 0),0)
+            self.sigma_vb     = np.expand_dims(
+                                np.expand_dims(self.sigma_vb , 0),0)
+
+            self.corfd        = cuda.to_device(self.corf       )
+            self.corf_isd     = cuda.to_device(self.corf_is    )
+            self.lat_radd     = cuda.to_device(self.lat_rad    )
+            self.lat_is_radd  = cuda.to_device(self.lat_is_rad )
+            self.dlon_radd    = cuda.to_device(self.dlon_rad   )
+            self.dlat_radd    = cuda.to_device(self.dlat_rad   )
+            self.Ad           = cuda.to_device(self.A          )
+            self.dyisd        = cuda.to_device(self.dyis       )
+            self.dxjsd        = cuda.to_device(self.dxjs       )
+            self.dsigmad      = cuda.to_device(self.dsigma     )
+            self.sigma_vbd    = cuda.to_device(self.sigma_vb   )
 
 
 

@@ -82,8 +82,6 @@ def print_ts_info(GR, CF, GF):
         # test for crash
         if (np.sum(np.isnan(CF.UWIND[GR.iisjj])) > 0) | (np.max(CF.UWIND[GR.iisjj]) > 500):
             raise ValueError('MODEL CRASH')
-    #else:
-    #    print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,3))  + '\t day' )
 
     if GR.ts % nth_ts_time_step_diag == 0:
         try:

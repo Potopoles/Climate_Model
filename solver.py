@@ -4,13 +4,15 @@
 File name:          solver.py  
 Author:             Christoph Heim (CH)
 Date created:       20181001
-Last modified:      20190509
+Last modified:      20190523
 License:            MIT
 
 Python version of latest successful run: 3.7.3
 
 Simple global climate model, hydrostatic and on a lat-lon grid.
 Still in construction.
+
+solver.py is the entry point to the program.
 
 Implementation of dynamical core according to:
 Jacobson 2005
@@ -48,6 +50,7 @@ import _thread
 ####################################################################
 # main grid
 GR = Grid()
+GR_NEW = Grid(new=True)
 # optional subgrids for domain decomposition (not completly implemented)
 #GR, subgrids = create_subgrids(GR, njobs)
 subgrids = {} # option
@@ -161,9 +164,9 @@ while GR.ts < GR.nts:
     ####################################################################
     t_dyn_start = time.time()
     if comp_mode in [0,1]:
-        time_stepper(GR, subgrids, CF)
+        time_stepper(GR, GR_NEW, subgrids, CF)
     elif comp_mode == 2:
-        time_stepper(GR, subgrids, GF)
+        time_stepper(GR, GR_NEW, subgrids, GF)
     t_dyn_end = time.time()
     GR.dyn_comp_time += t_dyn_end - t_dyn_start
 

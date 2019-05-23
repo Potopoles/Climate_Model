@@ -169,6 +169,23 @@ if i_simulation_mode == 1:
     i_microphysics = 0
     i_turbulence = 0
 
+
+## LONGTIME RUN
+elif i_simulation_mode == 2:
+    nz = 32
+    lat0_deg = -80
+    lat1_deg = 80
+    dlat_deg = 1.0
+    dlon_deg = 1.0
+    output_path = '../output'
+    i_sim_n_days = 0.1#*365.00
+    i_out_nth_hour = 24
+    i_surface = 0
+    i_radiation = 0
+    i_microphysics = 0
+    i_turbulence = 0
+
+
 ## BENCHMARK EXPERIMENT
 elif i_simulation_mode == 10:
     nz = 16
@@ -184,20 +201,6 @@ elif i_simulation_mode == 10:
     i_microphysics = 0
     i_turbulence = 0
 
-## LONGTIME RUN
-elif i_simulation_mode == 2:
-    nz = 32
-    lat0_deg = -80
-    lat1_deg = 80
-    dlat_deg = 1.0
-    dlon_deg = 1.0
-    output_path = '../output'
-    i_sim_n_days = 2*365.00
-    i_out_nth_hour = 24
-    i_surface = 0
-    i_radiation = 0
-    i_microphysics = 0
-    i_turbulence = 0
 
 
 

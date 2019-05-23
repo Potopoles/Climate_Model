@@ -5,7 +5,7 @@
 File name:          tendency_UFLX.py  
 Author:             Christoph Heim (CH)
 Date created:       20190510
-Last modified:      20190522
+Last modified:      20190523
 License:            MIT
 
 Computation of horizontal momentum flux in longitude
@@ -72,10 +72,9 @@ def coriolis_and_spherical_UWIND_py(
 def add_up_tendencies_py(
             UFLX,
             UFLX_im1, UFLX_ip1, UFLX_jm1, UFLX_jp1,
-            VWIND, VWIND_im1,
+            VWIND        , VWIND_im1,
             VWIND_jp1    , VWIND_im1_jp1 ,
             UWIND        , UWIND_im1     ,
-
             UWIND_ip1    , UWIND_jm1     ,
             UWIND_jp1    , UWIND_im1_jm1 ,
             UWIND_im1_jp1, UWIND_ip1_jm1 ,
@@ -84,21 +83,17 @@ def add_up_tendencies_py(
             CFLX         , CFLX_jp1      ,
             DFLX_im1     , DFLX_jp1      ,
             EFLX         , EFLX_im1_jp1  ,
-
             PHI, PHI_im1,
             POTT, POTT_im1,
             PVTF, PVTF_im1,
             PVTFVB, PVTFVB_im1, 
             PVTFVB_im1_kp1, PVTFVB_kp1,
             WWIND_UWIND, WWIND_UWIND_kp1,
-
             COLP, COLP_im1,
-
             corf_is,
             lat_is_rad,
             dlon_rad, dlat_rad,
             dyis,
-
             dsigma, sigma_vb, sigma_vb_kp1):
     """
     Compute and add up all tendency contributions of UFLUX.
@@ -189,6 +184,10 @@ def launch_cuda_main_kernel(dUFLXdt, UFLX,
     DFLX_jp1     = DFLX_3D[i  ,j+1,k  ]                 
     CFLX_jp1     = CFLX_3D[i  ,j+1,k  ]                 
 
+    #BFLX_im1     = BFLX_3D[i-1,j  ,k  ]                 
+    #DFLX_im1     = DFLX_3D[i-1,j  ,k  ]                 
+    #EFLX_im1_jp1 = EFLX_3D[i-1,j+1,k  ]                 
+
     # BCx i
     if i == nb:
         BFLX_im1     = BFLX_3D[nx ,j  ,k  ]
@@ -214,35 +213,35 @@ def launch_cuda_main_kernel(dUFLXdt, UFLX,
         dUFLXdt[i  ,j  ,k] = \
             add_up_tendencies(
             # 3D
-            UFLX       [i  ,j  ,k  ],
-            UFLX       [i-1,j  ,k  ], UFLX       [i+1,j  ,k  ],
-            UFLX       [i  ,j-1,k  ], UFLX       [i  ,j+1,k  ],
-            VWIND      [i  ,j  ,k  ], VWIND      [i-1,j  ,k  ],
-            VWIND      [i  ,j+1,k  ], VWIND      [i-1,j+1,k  ],
-            UWIND      [i  ,j  ,k  ], UWIND      [i-1,j  ,k  ],
-            UWIND      [i+1,j  ,k  ], UWIND      [i  ,j-1,k  ], 
-            UWIND      [i  ,j+1,k  ], UWIND      [i-1,j-1,k  ], 
-            UWIND      [i-1,j+1,k  ], UWIND      [i+1,j-1,k  ], 
-            UWIND      [i+1,j+1,k  ], 
-            BFLX                    , BFLX_im1                ,
-            CFLX                    , CFLX_jp1                ,
-            DFLX_im1                , DFLX_jp1                ,
-            EFLX                    , EFLX_im1_jp1            ,
-            PHI        [i  ,j  ,k  ], PHI        [i-1,j  ,k  ],
-            POTT       [i  ,j  ,k  ], POTT       [i-1,j  ,k  ],
-            PVTF       [i  ,j  ,k  ], PVTF       [i-1,j  ,k  ],
-            PVTFVB     [i  ,j  ,k  ], PVTFVB     [i-1,j  ,k  ],
-            PVTFVB     [i-1,j  ,k+1], PVTFVB     [i  ,j  ,k+1],
-            WWIND_UWIND[i  ,j  ,k  ], WWIND_UWIND[i  ,j  ,k+1],
+            UFLX        [i  ,j  ,k  ],
+            UFLX        [i-1,j  ,k  ], UFLX        [i+1,j  ,k  ],
+            UFLX        [i  ,j-1,k  ], UFLX        [i  ,j+1,k  ],
+            VWIND       [i  ,j  ,k  ], VWIND       [i-1,j  ,k  ],
+            VWIND       [i  ,j+1,k  ], VWIND       [i-1,j+1,k  ],
+            UWIND       [i  ,j  ,k  ], UWIND       [i-1,j  ,k  ],
+            UWIND       [i+1,j  ,k  ], UWIND       [i  ,j-1,k  ], 
+            UWIND       [i  ,j+1,k  ], UWIND       [i-1,j-1,k  ], 
+            UWIND       [i-1,j+1,k  ], UWIND       [i+1,j-1,k  ], 
+            UWIND       [i+1,j+1,k  ], 
+            BFLX                     , BFLX_im1                 ,
+            CFLX                     , CFLX_jp1                 ,
+            DFLX_im1                 , DFLX_jp1                 ,
+            EFLX                     , EFLX_im1_jp1             ,
+            PHI         [i  ,j  ,k  ], PHI         [i-1,j  ,k  ],
+            POTT        [i  ,j  ,k  ], POTT        [i-1,j  ,k  ],
+            PVTF        [i  ,j  ,k  ], PVTF        [i-1,j  ,k  ],
+            PVTFVB      [i  ,j  ,k  ], PVTFVB      [i-1,j  ,k  ],
+            PVTFVB      [i-1,j  ,k+1], PVTFVB      [i  ,j  ,k+1],
+            WWIND_UWIND [i  ,j  ,k  ], WWIND_UWIND [i  ,j  ,k+1],
             # 2D
-            COLP       [i  ,j  ,0  ], COLP       [i-1,j  ,0  ],
+            COLP        [i  ,j  ,0  ], COLP        [i-1,j  ,0  ],
             # GR horizontal
-            corf_is    [i  ,j  ,0  ], lat_is_rad [i  ,j  ,0  ],
-            dlon_rad   [i  ,j  ,0  ], dlat_rad   [i  ,j  ,0  ],
-            dyis       [i  ,j  ,0  ],
+            corf_is     [i  ,j  ,0  ], lat_is_rad  [i  ,j  ,0  ],
+            dlon_rad    [i  ,j  ,0  ], dlat_rad    [i  ,j  ,0  ],
+            dyis        [i  ,j  ,0  ],
             # GR vertical
-            dsigma     [0  ,0  ,k  ], sigma_vb   [0  ,0  ,k  ],
-            sigma_vb   [0  ,0  ,k+1])
+            dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
+            sigma_vb    [0  ,0  ,k+1])
 
 UFLX_tendency_gpu = cuda.jit(cuda_kernel_decorator(
                             launch_cuda_main_kernel))(
@@ -254,13 +253,16 @@ UFLX_tendency_gpu = cuda.jit(cuda_kernel_decorator(
 ####################################################################
 ### SPECIALIZE FOR CPU
 ####################################################################
-num_dif = njit(num_dif_py)
-pre_grad = njit(pre_grad_py)
-add_up_tendencies = njit(add_up_tendencies_py)
+UVFLX_hor_adv = njit(UVFLX_hor_adv_py)
 coriolis_and_spherical_UWIND = njit(coriolis_and_spherical_UWIND_py)
+pre_grad = njit(pre_grad_py)
+num_dif = njit(num_dif_py)
+add_up_tendencies = njit(add_up_tendencies_py)
+
 
 def launch_numba_cpu_main(dUFLXdt, UFLX,
                         UWIND, VWIND, 
+                        BFLX_3D, CFLX_3D, DFLX_3D, EFLX_3D,
                         PHI, COLP, POTT,
                         PVTF, PVTFVB, WWIND_UWIND,
                         corf_is, lat_is_rad,
@@ -268,33 +270,72 @@ def launch_numba_cpu_main(dUFLXdt, UFLX,
                         dyis,
                         dsigma, sigma_vb):
 
-    for i in prange(nb,nxs+nb):
-        for j in range(nb,ny+nb):
-            for k in range(wp_int(0),nz):
-                dUFLXdt[i  ,j  ,k] = \
-                    add_up_tendencies(
+
+
+    for k in prange(wp_int(0),nz):
+        for i in range(nb,nxs+nb):
+            for j in range(nb,ny+nb):
+
+                # Prepare momentum fluxes and set boundary conditions if
+                # necessary
+                BFLX            = BFLX_3D[i  ,j  ,k  ]                 
+                CFLX            = CFLX_3D[i  ,j  ,k  ]                 
+                EFLX            = EFLX_3D[i  ,j  ,k  ]                 
+                DFLX_jp1        = DFLX_3D[i  ,j+1,k  ]                 
+                CFLX_jp1        = CFLX_3D[i  ,j+1,k  ]                 
+
+                # BCx i
+                if i == nb:
+                    BFLX_im1        = BFLX_3D[nx ,j  ,k  ]
+                    DFLX_im1        = DFLX_3D[nx ,j  ,k  ] 
+                    EFLX_im1_jp1    = EFLX_3D[nx ,j+1,k  ]                 
+                else:
+                    BFLX_im1        = BFLX_3D[i-1,j  ,k  ]                 
+                    DFLX_im1        = DFLX_3D[i-1,j  ,k  ]                 
+                    EFLX_im1_jp1    = EFLX_3D[i-1,j+1,k  ]                 
+
+                # BCy js
+                if j == nb:
+                    DFLX_im1     = wp(0.)                 
+                    CFLX         = wp(0.)                 
+                    EFLX         = wp(0.)                 
+                if j == ny+nb-1:
+                    DFLX_jp1     = wp(0.)                 
+                    CFLX_jp1     = wp(0.)                 
+                    EFLX_im1_jp1 = wp(0.)                 
+
+
+
+                dUFLXdt[i  ,j  ,k] = add_up_tendencies(
             # 3D
-            UFLX[i  ,j  ,k],
-            UFLX       [i-1,j  ,k  ], UFLX       [i+1,j  ,k  ],
-            UFLX       [i  ,j-1,k  ], UFLX       [i  ,j+1,k  ],
-            VWIND      [i  ,j  ,k  ], VWIND      [i-1,j  ,k  ],
-            VWIND      [i  ,j+1,k  ], VWIND      [i-1,j+1,k  ],
-            UWIND      [i  ,j  ,k  ], UWIND      [i-1,j  ,k  ],
-            UWIND      [i+1,j  ,k  ], 
-            PHI        [i  ,j  ,k  ], PHI        [i-1,j  ,k  ],
-            POTT       [i  ,j  ,k  ], POTT       [i-1,j  ,k  ],
-            PVTF       [i  ,j  ,k  ], PVTF       [i-1,j  ,k  ],
-            PVTFVB     [i  ,j  ,k  ], PVTFVB     [i-1,j  ,k  ],
-            PVTFVB     [i-1,j  ,k+1], PVTFVB     [i  ,j  ,k+1],
-            WWIND_UWIND[i  ,j  ,k  ], WWIND_UWIND[i  ,j  ,k+1],
+            UFLX        [i  ,j  ,k  ],
+            UFLX        [i-1,j  ,k  ], UFLX        [i+1,j  ,k  ],
+            UFLX        [i  ,j-1,k  ], UFLX        [i  ,j+1,k  ],
+            VWIND       [i  ,j  ,k  ], VWIND       [i-1,j  ,k  ],
+            VWIND       [i  ,j+1,k  ], VWIND       [i-1,j+1,k  ],
+            UWIND       [i  ,j  ,k  ], UWIND       [i-1,j  ,k  ],
+            UWIND       [i+1,j  ,k  ], UWIND       [i  ,j-1,k  ], 
+            UWIND       [i  ,j+1,k  ], UWIND       [i-1,j-1,k  ], 
+            UWIND       [i-1,j+1,k  ], UWIND       [i+1,j-1,k  ], 
+            UWIND       [i+1,j+1,k  ], 
+            BFLX                     , BFLX_im1                 ,
+            CFLX                     , CFLX_jp1                 ,
+            DFLX_im1                 , DFLX_jp1                 ,
+            EFLX                     , EFLX_im1_jp1             ,
+            PHI         [i  ,j  ,k  ], PHI         [i-1,j  ,k  ],
+            POTT        [i  ,j  ,k  ], POTT        [i-1,j  ,k  ],
+            PVTF        [i  ,j  ,k  ], PVTF        [i-1,j  ,k  ],
+            PVTFVB      [i  ,j  ,k  ], PVTFVB      [i-1,j  ,k  ],
+            PVTFVB      [i-1,j  ,k+1], PVTFVB      [i  ,j  ,k+1],
+            WWIND_UWIND [i  ,j  ,k  ], WWIND_UWIND [i  ,j  ,k+1],
             # 2D
-            COLP       [i  ,j  ,0  ], COLP       [i-1,j  ,0  ],
+            COLP        [i  ,j  ,0  ], COLP        [i-1,j  ,0  ],
             # GR horizontal
-            corf_is    [i  ,j  ,0  ], lat_is_rad [i  ,j  ,0  ],
-            dlon_rad   [i  ,j  ,0  ], dlat_rad   [i  ,j  ,0  ],
-            dyis       [i  ,j  ,0  ],
+            corf_is     [i  ,j  ,0  ], lat_is_rad  [i  ,j  ,0  ],
+            dlon_rad    [i  ,j  ,0  ], dlat_rad    [i  ,j  ,0  ],
+            dyis        [i  ,j  ,0  ],
             # GR vertical
-            dsigma     [0  ,0  ,k  ], sigma_vb   [0  ,0  ,k  ],
-            sigma_vb   [0  ,0  ,k+1])
+            dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
+            sigma_vb    [0  ,0  ,k+1])
 
 UFLX_tendency_cpu = njit(parallel=True)(launch_numba_cpu_main)

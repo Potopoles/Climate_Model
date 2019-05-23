@@ -12,11 +12,52 @@ from scipy import interpolate
 from constants import con_g, con_Rd, con_kappa, con_cp
 from radiation.namelist_radiation import njobs_rad
 
+def set_up_sigma_levels(GR):
+    HSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), 
+                                np.nan, dtype=wp)
+    HSURF = load_topo(GR, HSURF)
+    filename = 'verticalProfileTable.dat'
+    profile = np.loadtxt(filename)
+    zsurf_test = np.mean(HSURF[GR.iijj])
+    top_ind = np.argwhere(profile[:,2] >= pTop).squeeze()[-1]
+    ztop_test = profile[top_ind,0] + (profile[top_ind,2] - pTop)/ \
+                            (profile[top_ind,4]*profile[top_ind,1])
+
+    ks = np.arange(0,GR.nzs)
+    z_vb_test   = np.zeros(GR.nzs, dtype=wp)
+    p_vb_test   = np.zeros(GR.nzs, dtype=wp)
+    rho_vb_test = np.zeros(GR.nzs, dtype=wp)
+    g_vb_test   = np.zeros(GR.nzs, dtype=wp)
+
+    z_vb_test[0] = ztop_test
+    z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)**(2)
+    #z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)
+    #print(z_vb_test)
+    #print(np.diff(z_vb_test))
+    #quit()
+
+    rho_vb_test = np.interp(z_vb_test, profile[:,0], profile[:,4]) 
+    g_vb_test = np.interp(z_vb_test, profile[:,0], profile[:,1]) 
+    p_vb_test[0] = pTop
+    ks = 1
+    for ks in range(1,GR.nzs):
+        p_vb_test[ks] = p_vb_test[ks-1] + \
+                        rho_vb_test[ks]*g_vb_test[ks] * \
+                        (z_vb_test[ks-1] - z_vb_test[ks])
+    
+    GR.sigma_vb[:] = (p_vb_test - pTop)/(p_vb_test[-1] - pTop)
+    GR.dsigma[:] = np.diff(GR.sigma_vb)
+    #for key,subgrid in subgrids.items():
+    #    subgrid.sigma_vb = GR.sigma_vb
+    #    subgrid.dsigma = GR.dsigma
+    #    subgrids[key] = subgrid
 
 
 def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
     filename = 'verticalProfileTable.dat'
     profile = np.loadtxt(filename)
+
+    # TODO remove this with new GRID
     zsurf_test = np.mean(HSURF[GR.iijj])
     top_ind = np.argwhere(profile[:,2] >= pTop).squeeze()[-1]
     ztop_test = profile[top_ind,0] + (profile[top_ind,2] - pTop)/ \
