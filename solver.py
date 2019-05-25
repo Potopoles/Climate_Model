@@ -27,6 +27,7 @@ import numpy as np
 
 from grid import Grid
 from fields import initialize_fields, CPU_Fields, GPU_Fields
+from ModelFields import ModelFields
 from nc_IO import constant_fields_to_NC, output_to_NC
 from org_model_physics import secondary_diagnostics
 from IO import write_restart
@@ -34,7 +35,8 @@ from multiproc import create_subgrids
 from namelist import (i_time_stepping,
                     i_load_from_restart, i_save_to_restart,
                     i_radiation, njobs, comp_mode,
-                    i_microphysics, i_surface)
+                    i_microphysics, i_surface_scheme)
+from org_namelist import (gpu_enable)
 from IO_helper_functions import (print_ts_info, 
                                 print_computation_time_info)
 if i_time_stepping == 'MATSUNO':
@@ -64,6 +66,10 @@ if comp_mode == 2:
     GF = GPU_Fields(GR, subgrids, CF)
 else:
     GF = None
+
+F = ModelFields(GR_NEW, gpu_enable)
+print(GR_NEW.timings['copy'])
+
 
 ####################################################################
 # OUTPUT AT TIMESTEP 0 (before start of simulation)
@@ -142,7 +148,7 @@ while GR.ts < GR.nts:
     ####################################################################
     # EARTH SURFACE
     ####################################################################
-    if i_surface:
+    if i_surface_scheme:
         t_start = time.time()
         SURF.advance_timestep(GR, CF, GF, RAD)
         t_end = time.time()
@@ -164,9 +170,9 @@ while GR.ts < GR.nts:
     ####################################################################
     t_dyn_start = time.time()
     if comp_mode in [0,1]:
-        time_stepper(GR, GR_NEW, subgrids, CF)
+        time_stepper(GR, GR_NEW, subgrids, CF, F)
     elif comp_mode == 2:
-        time_stepper(GR, GR_NEW, subgrids, GF)
+        time_stepper(GR, GR_NEW, subgrids, GF, F)
     t_dyn_end = time.time()
     GR.dyn_comp_time += t_dyn_end - t_dyn_start
 

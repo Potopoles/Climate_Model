@@ -21,7 +21,7 @@ if wp_old == 'float64':
 ######################################################################################
 ######################################################################################
 
-def step_matsuno(GR, GR_NEW, subgrids, F):
+def step_matsuno(GR, GR_NEW, subgrids, F, NF):
 
 
     ##############################
@@ -54,7 +54,7 @@ def step_matsuno(GR, GR_NEW, subgrids, F):
 
     ##############################
     ##############################
-    tendencies_jacobson(GR, GR_NEW, F, subgrids)
+    tendencies_jacobson(GR, GR_NEW, F, subgrids, NF)
     if comp_mode in [0,1]:
         F.COLP[:] = F.COLP_NEW[:]
     elif comp_mode == 2:
@@ -97,7 +97,8 @@ def step_matsuno(GR, GR_NEW, subgrids, F):
                             F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
                             F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
                             F.QV_OLD, F.QV, F.QC_OLD, F.QC,
-                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt, GR.Ad)
+                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt,
+                            F.dQCdt, GR.Ad)
 
     t_end = time.time()
     GR.step_comp_time += t_end - t_start
@@ -123,7 +124,7 @@ def step_matsuno(GR, GR_NEW, subgrids, F):
 
     ##############################
     ##############################
-    tendencies_jacobson(GR, GR_NEW, F, subgrids)
+    tendencies_jacobson(GR, GR_NEW, F, subgrids, NF)
     if comp_mode in [0,1]:
         F.COLP[:] = F.COLP_NEW[:]
     elif comp_mode == 2:

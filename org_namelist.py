@@ -12,7 +12,7 @@ they can be imported form here in other files.
 """
 import numpy as np
 from namelist import (working_precision, UVFLX_dif_coef,
-                    POTT_dif_coef)
+                    POTT_dif_coef, comp_mode)
 ####################################################################
 
 ####################################################################
@@ -32,6 +32,15 @@ elif working_precision == 'float64':
     wp_old = 'float64'
 
 
+if comp_mode == 2:
+    gpu_enable = True
+else:
+    gpu_enable = False
+
+
+# names of host and device
+HOST = 'host'
+DEVICE = 'device'
 
 
 UVFLX_dif_coef = wp(UVFLX_dif_coef)

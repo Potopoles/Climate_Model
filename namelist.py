@@ -40,20 +40,25 @@ tau_topo_smooth = 0.1
 # VERTICAL PROFILE
 pTop = 10000.
 pSurf = 101350.
+pair_top = 10000.
+#pair_surf = 101350. 
 
 # ATMOSPHERIC PERTURBATIONS
 gaussian_dlon = np.pi/10
 gaussian_dlat = np.pi/10
-u0 = 0
+uwind_0 = 0
+vwind_0 = 0
 UWIND_gaussian_pert = 10
 UWIND_random_pert = 0
-v0 = 0
 VWIND_gaussian_pert = 10
 VWIND_random_pert = 0
 COLP_gaussian_pert = -00000
 COLP_random_pert = 000
 POTT_gaussian_pert = 00
 POTT_random_pert = 0.0
+
+u0 = 0
+v0 = 0
 
 ####################################################################
 # SIMULATION SETTINGS
@@ -64,7 +69,7 @@ i_temperature_tendency = 1
 i_colp_tendency = 1
 
 # ADDITIONAL MODEL COMPONENTS
-i_surface = 0
+i_surface_scheme = 0
 
 # PHYSICS
 i_radiation = 0
@@ -164,7 +169,7 @@ if i_simulation_mode == 1:
     output_path = '../output_test'
     i_sim_n_days = 0.36*1
     i_out_nth_hour = 4*1
-    i_surface = 0
+    i_surface_scheme = 0
     i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0
@@ -180,7 +185,7 @@ elif i_simulation_mode == 2:
     output_path = '../output'
     i_sim_n_days = 0.1#*365.00
     i_out_nth_hour = 24
-    i_surface = 0
+    i_surface_scheme = 0
     i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0
@@ -196,7 +201,7 @@ elif i_simulation_mode == 10:
     output_path = '../output'
     i_sim_n_days = 1.05
     i_out_nth_hour = 1.0
-    i_surface = 1
+    i_surface_scheme = 1
     i_radiation = 1
     i_microphysics = 0
     i_turbulence = 0

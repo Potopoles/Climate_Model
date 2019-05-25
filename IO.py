@@ -4,6 +4,7 @@ import pickle
 from netCDF4 import Dataset
 from scipy.interpolate import interp2d
 from boundaries import exchange_BC_rigid_y, exchange_BC_periodic_x
+from boundaries import exchange_BC
 from namelist import pTop, n_topo_smooth, tau_topo_smooth, comp_mode
 from org_namelist import wp
 from geopotential import diag_pvt_factor
@@ -15,7 +16,7 @@ from radiation.namelist_radiation import njobs_rad
 def set_up_sigma_levels(GR):
     HSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb         ), 
                                 np.nan, dtype=wp)
-    HSURF = load_topo(GR, HSURF)
+    HSURF = load_topo_old(GR, HSURF)
     filename = 'verticalProfileTable.dat'
     profile = np.loadtxt(filename)
     zsurf_test = np.mean(HSURF[GR.iijj])
@@ -53,7 +54,7 @@ def set_up_sigma_levels(GR):
     #    subgrids[key] = subgrid
 
 
-def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
+def load_profile_old(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
     filename = 'verticalProfileTable.dat'
     profile = np.loadtxt(filename)
 
@@ -113,6 +114,11 @@ def load_profile(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR):
                 np.power(100000/PAIR[:,:,k][GR.iijj], con_kappa)
 
     return(GR, COLP, PSURF, POTT, TAIR)
+
+
+
+
+
 
 
 def write_restart(GR, CF, RAD, SOIL, MIC, TURB):
@@ -222,7 +228,9 @@ def load_restart_fields(GR):
     TURB = inp['TURB'] 
     return(CF, RAD, SOIL, MIC, TURB)
 
-def load_topo(GR, HSURF):
+
+
+def load_topo_old(GR, HSURF):
     filename = '../elevation/elev.1-deg.nc'
     ncf = Dataset(filename, 'r', format='NETCDF4')
     lon_inp = ncf['lon'][:]
@@ -243,5 +251,8 @@ def load_topo(GR, HSURF):
         HSURF = exchange_BC_rigid_y(GR, HSURF)
 
     return(HSURF)
+
+
+    
 
 

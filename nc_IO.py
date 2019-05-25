@@ -3,7 +3,7 @@ import time
 from netCDF4 import Dataset
 from namelist import output_path, output_fields, pTop
 from namelist import i_radiation, \
-                     i_microphysics, i_surface
+                     i_microphysics, i_surface_scheme
 from IO_helper_functions import NC_output_diagnostics
 
 
@@ -231,7 +231,7 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
         #LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # SURF VARIABLES
-    if i_surface:
+    if i_surface_scheme:
         if output_fields['SURFTEMP']:
             SURFTEMP_out = ncf.createVariable('SURFTEMP', 'f4', ('time', 'lat', 'lon',) )
             SURFTEMP_out[-1,:,:] = F.SOILTEMP[:,:,0].T
@@ -267,7 +267,7 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
     ################################################################################
     ################################################################################
 
-    if i_surface:
+    if i_surface_scheme:
         pass
         #if i_microphysics:
         #    SOILMOIST_out[-1,:,:] = SURF.MOIST.T
@@ -357,7 +357,7 @@ def constant_fields_to_NC(GR, F, RAD, SURF):
     HSURF_out[:,:] = F.HSURF[GR.iijj].T
 
     # SURF VARIABLES
-    if i_surface:
+    if i_surface_scheme:
         OCEANMASK_out = ncf.createVariable('OCEANMASK', 'f4', ('lat', 'lon',) )
         OCEANMASK_out[:,:] = F.OCEANMASK.T
 

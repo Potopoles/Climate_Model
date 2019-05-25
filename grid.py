@@ -40,7 +40,7 @@ nb = wp_int(nb)
 
 # GPU computation
 if nz > 32:
-    raise: NotImplementedError
+    raise NotImplementedError
 tpb     = (2,       2,      nz )
 tpb_ks  = (tpb[0],  tpb[1], nzs)
 bpg = (math.ceil((nxs+2*nb)/tpb[0]), math.ceil((nys+2*nb)/tpb[1]), 1)
@@ -225,7 +225,8 @@ class Grid:
                 maxdx = np.max(self.dx[self.iijj])
                 self.dx[self.iijj] = maxdx
 
-            self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb), np.nan, dtype=wp)
+            self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb),
+                                np.nan, dtype=wp)
             for i in self.ii:
                 for j in self.jj:
                     self.A[i,j] = lat_lon_recangle_area(self.lat_rad[i,j],
@@ -288,6 +289,7 @@ class Grid:
         if self.new:
             self.corf         = np.expand_dims(self.corf,       axis=2)
             self.corf_is      = np.expand_dims(self.corf_is,    axis=2)
+            self.lon_rad      = np.expand_dims(self.lat_rad,    axis=2)
             self.lat_rad      = np.expand_dims(self.lat_rad,    axis=2)
             self.lat_is_rad   = np.expand_dims(self.lat_is_rad, axis=2)
             self.dlon_rad     = np.expand_dims(self.dlon_rad_2D,axis=2)
@@ -315,6 +317,17 @@ class Grid:
             self.dsigmad      = cuda.to_device(self.dsigma     )
             self.sigma_vbd    = cuda.to_device(self.sigma_vb   )
 
+
+        
+            self.i   = np.arange((self.nb),(self.nx +self.nb)) 
+            self.i_s = np.arange((self.nb),(self.nxs+self.nb)) 
+            self.j   = np.arange((self.nb),(self.ny +self.nb)) 
+            self.js  = np.arange((self.nb),(self.nys+self.nb)) 
+            self.ii,  self.jj  = np.ix_(self.i    ,self.j)
+            self.iis, self.jjs = np.ix_(self.i_s  ,self.js)
+
+            self.timings = {}
+            self.timings['copy'] = 0
 
 
 def lat_lon_recangle_area(lat,dlon,dlat, i_curved_earth):

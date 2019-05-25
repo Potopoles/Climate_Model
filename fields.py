@@ -14,9 +14,9 @@ Setup fields for dynamical core of model.
 import numpy as np
 import time
 from namelist import *
-from org_namelist import wp
+from org_namelist import wp, HOST, DEVICE
 from boundaries import exchange_BC
-from IO import load_topo, load_restart_fields, load_profile
+from IO import load_topo_old, load_restart_fields, load_profile_old
 from diagnostics import diagnose_secondary_fields, diagnose_POTTVB_jacobson
 from geopotential import diag_geopotential_jacobson, diag_pvt_factor
 from radiation.org_radiation import radiation
@@ -98,10 +98,6 @@ class CPU_Fields:
                             np.nan, dtype=wp)
         self.TFLX        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                             np.nan, dtype=wp)
-        self.WWIND_UWIND = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                            0., dtype=wp)
-        self.WWIND_VWIND = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs ), 
-                            0., dtype=wp)
 
         # velocity field
         ##############################################################################
@@ -117,6 +113,10 @@ class CPU_Fields:
                             np.nan, dtype=wp)
         self.WWIND       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
                             np.nan, dtype=wp)
+        self.WWIND_UWIND = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
+                            0., dtype=wp)
+        self.WWIND_VWIND = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs ), 
+                            0., dtype=wp)
 
         # temperature fields
         ##############################################################################
@@ -154,7 +154,7 @@ class CPU_Fields:
         ##############################################################################
         # SURFACE
         ##############################################################################
-        if i_surface: 
+        if i_surface_scheme: 
             self.OCEANMASK   = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp)
             self.SOILDEPTH   = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp)
             self.SOILCP      = np.full( ( GR.nx, GR.ny          ), np.nan, dtype=wp)
@@ -346,7 +346,7 @@ class GPU_Fields:
         ##############################################################################
         # SURFACE
         ##############################################################################
-        if i_surface: 
+        if i_surface_scheme: 
             self.OCEANMASK    = cuda.to_device(CF.OCEANMASK,    GR.stream) 
             self.SOILDEPTH    = cuda.to_device(CF.SOILDEPTH,    GR.stream) 
             self.SOILCP       = cuda.to_device(CF.SOILCP,       GR.stream) 
@@ -476,7 +476,7 @@ class GPU_Fields:
         ##############################################################################
         # SURFACE
         ##############################################################################
-        if i_surface: 
+        if i_surface_scheme: 
             self.OCEANMASK     .to_host(GR.stream) 
             self.SOILDEPTH     .to_host(GR.stream) 
             self.SOILCP        .to_host(GR.stream) 
@@ -512,14 +512,14 @@ def initialize_fields(GR, subgrids, CF):
         CF.WWIND[:] = 0
 
         #  LOAD TOPOGRAPHY (HSURF)
-        CF.HSURF = load_topo(GR, CF.HSURF) 
+        CF.HSURF = load_topo_old(GR, CF.HSURF) 
         if not i_use_topo:
             CF.HSURF[GR.iijj] = 0.
             CF.HSURF = exchange_BC(GR, CF.HSURF)
 
         # INITIALIZE PROFILE
         GR, CF.COLP, CF.PSURF, CF.POTT, CF.TAIR \
-                = load_profile(GR, subgrids, CF.COLP, CF.HSURF, CF.PSURF, CF.PVTF, \
+                = load_profile_old(GR, subgrids, CF.COLP, CF.HSURF, CF.PSURF, CF.PVTF, \
                                 CF.PVTFVB, CF.POTT, CF.TAIR)
 
 
@@ -563,7 +563,7 @@ def initialize_fields(GR, subgrids, CF):
         ####################################################################
 
         # SURF MODEL
-        if i_surface:
+        if i_surface_scheme:
             SURF = surface(GR, CF)
         else:
             SURF = None

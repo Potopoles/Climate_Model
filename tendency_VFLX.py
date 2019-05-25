@@ -258,6 +258,9 @@ def launch_numba_cpu_main(dVFLXdt, VFLX,
                     dxjs,
                     dsigma, sigma_vb):
 
+    #for i in range(nb,nx+nb):
+    #    for j in range(nb,nys+nb):
+    #        for k in prange(wp_int(0),nz):
     for k in prange(wp_int(0),nz):
         for i in range(nb,nx+nb):
             for j in range(nb,nys+nb):

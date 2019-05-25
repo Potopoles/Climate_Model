@@ -5,6 +5,7 @@ import cupy as cp
 import time
 from namelist import pTop, njobs, comp_mode
 from namelist import i_run_new_style
+from org_namelist import HOST, DEVICE
 from constants import con_Rd
 
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
@@ -44,7 +45,7 @@ from numba import cuda
 import numba
 
 
-def tendencies_jacobson(GR, GR_NEW, F, subgrids):
+def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
 
     ##############################
@@ -109,6 +110,48 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids):
     ##############################
     ##############################
 
+
+    def old_to_new(F, NF_src):
+        NF_src['dPOTTdt']       = F.dPOTTdt
+        NF_src['POTT']          = F.POTT
+        NF_src['POTTVB']        = F.POTTVB
+        NF_src['UFLX']          = F.UFLX
+        NF_src['VFLX']          = F.VFLX
+        NF_src['WWIND']         = F.WWIND
+        NF_src['COLP_NEW']      = F.COLP_NEW
+        NF_src['COLP']          = F.COLP
+
+        NF_src['dUFLXdt']       = F.dUFLXdt
+        NF_src['dVFLXdt']       = F.dVFLXdt
+        NF_src['UWIND']         = F.UWIND
+        NF_src['VWIND']         = F.VWIND
+
+        NF_src['CFLX']          = F.CFLX
+        NF_src['QFLX']          = F.QFLX
+        NF_src['DFLX']          = F.DFLX
+        NF_src['EFLX']          = F.EFLX
+        NF_src['RFLX']          = F.RFLX
+        NF_src['SFLX']          = F.SFLX
+        NF_src['TFLX']          = F.TFLX
+        NF_src['BFLX']          = F.BFLX
+
+        NF_src['PHI']           = F.PHI
+        NF_src['PVTF']          = F.PVTF
+        NF_src['PVTFVB']        = F.PVTFVB
+        NF_src['WWIND_UWIND']   = F.WWIND_VWIND
+
+
+
+
+    def new_to_old(F, NF_src):
+        F.dPOTTdt     = NF_src['dPOTTdt']
+        F.POTT        = NF_src['POTT']
+        F.POTTVB      = NF_src['POTTVB']
+        F.UFLX        = NF_src['UFLX']
+        F.VFLX        = NF_src['VFLX']
+        F.WWIND       = NF_src['WWIND']
+        F.COLP_NEW    = NF_src['COLP_NEW']
+        F.COLP        = NF_src['COLP']
 
 
     ##############################
@@ -193,6 +236,22 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids):
             F.COLP          = cp.expand_dims(F.COLP, axis=2)
             F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
 
+            #F.dUFLXdt, F.dVFLXdt = Tendencies_GPU.UVFLX_tendency(GR_NEW,
+            #                F.dUFLXdt, F.dVFLXdt,
+            #                F.UWIND, F.VWIND, F.WWIND,
+            #                F.UFLX, F.VFLX,
+            #                F.CFLX, F.QFLX, F.DFLX, F.EFLX,
+            #                F.SFLX, F.TFLX, F.BFLX, F.RFLX,
+            #                F.PHI, F.COLP, F.COLP_NEW, F.POTT,
+            #                F.PVTF, F.PVTFVB,
+            #                F.WWIND_UWIND, F.WWIND_VWIND)
+            if GR.ts > 1:
+                old_to_new(F, NF.device)
+            else:
+                NF.device['UFLX']      = F.UFLX
+                NF.device['VFLX']      = F.VFLX
+                NF.device['WWIND']     = F.WWIND
+                NF.device['COLP_NEW']  = F.COLP_NEW
             F.dUFLXdt, F.dVFLXdt = Tendencies_GPU.UVFLX_tendency(
                             F.dUFLXdt, F.dVFLXdt,
                             F.UWIND, F.VWIND, F.WWIND,
@@ -202,7 +261,8 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids):
                             F.PHI, F.COLP, F.COLP_NEW, F.POTT,
                             F.PVTF, F.PVTFVB,
                             F.WWIND_UWIND, F.WWIND_VWIND, GR_NEW)
-            cuda.synchronize()
+            new_to_old(F, NF.device)
+
             #print('GPU')
             #n_iter = 10
             #t0 = time.time()
@@ -216,7 +276,6 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids):
             #                    F.PHI, F.COLP, F.COLP_NEW, F.POTT,
             #                    F.PVTF, F.PVTFVB,
             #                    F.WWIND_UWIND, F.WWIND_VWIND, GR_NEW)
-            #    cuda.synchronize()
             #print((time.time() - t0)/n_iter)
             ##TODO
 
@@ -232,7 +291,6 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids):
             #                            F.WWIND_UWIND, F.WWIND_VWIND, 
             #                            F.COLP, F.COLP_NEW, F.PHI, F.POTT,
             #                            F.PVTF, F.PVTFVB)
-            #cuda.synchronize()
             #t0 = time.time()
             #for i in range(n_iter):
             #    F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
@@ -243,7 +301,6 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids):
             #                                F.WWIND_UWIND, F.WWIND_VWIND, 
             #                                F.COLP, F.COLP_NEW, F.PHI, F.POTT,
             #                                F.PVTF, F.PVTFVB)
-            #    cuda.synchronize()
             #print((time.time() - t0)/n_iter)
             ##quit()
 
@@ -273,9 +330,22 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids):
             # TODO
             F.COLP = np.expand_dims(F.COLP, axis=2)
             F.COLP_NEW = np.expand_dims(F.COLP_NEW, axis=2)
-            F.dPOTTdt = Tendencies_CPU.POTT_tendency(
-                            F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP,
-                            F.POTTVB, F.WWIND, F.COLP_NEW, GR_NEW)
+
+            #F.dPOTTdt = Tendencies_CPU.POTT_tendency(
+            #                F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP,
+            #                F.POTTVB, F.WWIND, F.COLP_NEW, GR_NEW)
+            if GR.ts > 1:
+                old_to_new(F, NF.host)
+            else:
+                NF.host['UFLX']      = F.UFLX
+                NF.host['VFLX']      = F.VFLX
+                NF.host['WWIND']     = F.WWIND
+                NF.host['COLP_NEW']  = F.COLP_NEW
+            F.dPOTTdt = Tendencies_GPU.POTT_tendency(HOST, GR_NEW,
+                                **NF.get(Tendencies_GPU.fields_POTT,
+                                        target=HOST))
+            new_to_old(F, NF.host)
+
             F.COLP = F.COLP.squeeze()
             F.COLP_NEW = F.COLP_NEW.squeeze()
         else:
@@ -291,9 +361,20 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids):
         F.COLP = cp.expand_dims(F.COLP, axis=2)
         F.COLP_NEW = cp.expand_dims(F.COLP_NEW, axis=2)
 
-        F.dPOTTdt = Tendencies_GPU.POTT_tendency(
-                        F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP,
-                        F.POTTVB, F.WWIND, F.COLP_NEW, GR_NEW)
+        #F.dPOTTdt = Tendencies_GPU.POTT_tendency(DEVICE, GR_NEW,
+        #                F.dPOTTdt, F.POTT, F.UFLX, F.VFLX, F.COLP,
+        #                F.POTTVB, F.WWIND, F.COLP_NEW)
+        if GR.ts > 1:
+            old_to_new(F, NF.device)
+        else:
+            NF.device['UFLX']      = F.UFLX
+            NF.device['VFLX']      = F.VFLX
+            NF.device['WWIND']     = F.WWIND
+            NF.device['COLP_NEW']  = F.COLP_NEW
+        F.dPOTTdt = Tendencies_GPU.POTT_tendency(DEVICE, GR_NEW,
+                            **NF.get(Tendencies_GPU.fields_POTT,
+                                    target=DEVICE))
+        new_to_old(F, NF.device)
 
         F.COLP = F.COLP.squeeze()
         F.COLP_NEW = F.COLP_NEW.squeeze()
