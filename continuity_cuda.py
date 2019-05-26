@@ -1,5 +1,5 @@
 import numpy as np
-from namelist import  i_colp_tendency, COLP_hor_dif_tau
+from namelist import  i_colp_tendency, COLP_dif_coef
 from org_namelist import wp_old
 from grid import tpbv, tpbvs
 from boundaries_cuda import exchange_BC_gpu
@@ -85,7 +85,7 @@ def calc_dCOLPdt(dCOLPdt, FLXDIV):
         if tz == 0:
             dCOLPdt[i,j] = - vert_sum[0]
 
-        if COLP_hor_dif_tau > 0:
+        if COLP_dif_coef > 0:
             raise NotImplementedError('no pressure difusion in gpu implemented')
     else:
         dCOLPdt[i,j] = 0.

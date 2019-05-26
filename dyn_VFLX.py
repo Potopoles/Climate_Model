@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
-####################################################################
+###############################################################################
 File name:          tendency_VFLX.py  
 Author:             Christoph Heim (CH)
 Date created:       20190511
-Last modified:      20190523
+Last modified:      20190526
 License:            MIT
 
 Computation of horizontal momentum flux in latitude
@@ -13,7 +13,7 @@ Computation of horizontal momentum flux in latitude
 Jacobson 2005
 Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 214ff
-####################################################################
+###############################################################################
 """
 import time
 import numpy as np
@@ -31,14 +31,13 @@ from org_namelist import (wp, wp_int, wp_old)
 from grid import nx,nxs,ny,nys,nz,nzs,nb
 from GPU import cuda_kernel_decorator
 
-from tendency_functions import (num_dif_py, pre_grad_py,
-                               UVFLX_hor_adv_py)
-####################################################################
+from dyn_functions import (num_dif_py, pre_grad_py, UVFLX_hor_adv_py)
+###############################################################################
 
 
-####################################################################
+###############################################################################
 ### DEVICE UNSPECIFIC PYTHON FUNCTIONS
-####################################################################
+###############################################################################
 def coriolis_and_spherical_VWIND_py(
         COLP, COLP_jm1,
         UWIND, UWIND_jm1,
@@ -157,9 +156,9 @@ def add_up_tendencies_py(
 
 
 
-####################################################################
+###############################################################################
 ### SPECIALIZE FOR GPU
-####################################################################
+###############################################################################
 UVFLX_hor_adv = njit(UVFLX_hor_adv_py, device=True, inline=True)
 coriolis_and_spherical_VWIND = njit(coriolis_and_spherical_VWIND_py,
                         device=True, inline=True)

@@ -214,7 +214,7 @@ elif i_simulation_mode == 10:
 ####################################################################
 UVFLX_dif_coef = 0 # important
 POTT_dif_coef = 1E-6 # creates instabilities and acceleration in steep terrain
-COLP_hor_dif_tau = 0 # not tested (but likely not good because of same reasons as for POTT)
+COLP_dif_coef = 0 # not tested (but likely not good because of same reasons as for POTT)
 QV_hor_dif_tau   = 0
 if i_diffusion_on:
     if dlat_deg == 10:
@@ -244,6 +244,8 @@ UVFLX_dif_coef = UVFLX_dif_coef * 1.0
 
 
 ## TENDENCIES
+i_COLP_main_switch  = 1
+
 i_POTT_main_switch  = 1
 i_POTT_hor_adv      = 1
 i_POTT_vert_adv     = 1

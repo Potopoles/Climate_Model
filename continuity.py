@@ -1,5 +1,5 @@
 import numpy as np
-from namelist import  i_colp_tendency, COLP_hor_dif_tau
+from namelist import  i_colp_tendency, COLP_dif_coef
 from boundaries import exchange_BC
 
 
@@ -29,8 +29,8 @@ def colp_tendency_jacobson(GR, COLP, UWIND, VWIND, \
     if i_colp_tendency:
         dCOLPdt[GR.iijj] = - np.sum(FLXDIV[GR.iijj], axis=2)
 
-        if COLP_hor_dif_tau > 0:
-            num_diff = COLP_hor_dif_tau * \
+        if COLP_dif_coef > 0:
+            num_diff = COLP_dif_coef * \
                          ( +   COLP[GR.iijj_im1] \
                            +   COLP[GR.iijj_ip1] \
                            +   COLP[GR.iijj_jm1] \

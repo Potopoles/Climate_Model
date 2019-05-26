@@ -33,12 +33,12 @@ strings = all_par
 strings = all
 #strings = all_rad
 
-strings = ['wind_cython']
+#strings = ['wind_cython']
 #strings = ['geopotential_cython']
 #strings = ['diagnostics_cython']
 #strings = ['temperature_cython']
 #strings = ['moisture_cython']
-#strings = ['continuity_cython']
+strings = ['continuity_cython']
 #strings = ['jacobson_cython']
 
 folder = ''

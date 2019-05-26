@@ -10,24 +10,28 @@ License:            MIT
 Load namelist and process variables if necessary such that
 they can be imported form here in other files.
 """
+import numba
 import numpy as np
-from namelist import (working_precision, UVFLX_dif_coef,
-                    POTT_dif_coef, comp_mode)
+from namelist import (working_precision,
+                    UVFLX_dif_coef, POTT_dif_coef, COLP_dif_coef,
+                    comp_mode)
 ####################################################################
 
 ####################################################################
 # COMPUTATION
 ####################################################################
 if working_precision == 'float32':
-    wp_3D = 'float32[:,:,:]'
+    wp_str = 'float32'
     wp = np.float32
+    wp_numba = numba.float32
     wp_int = np.int32
     # TODO
     wp_old = 'float32'
 elif working_precision == 'float64':
-    wp_3D = 'float64[:,:,:]'
+    wp_str = 'float64'
     wp = np.float64
-    wp_int = np.int64
+    wp_numba = numba.float64
+    wp_int = np.int32
     # TODO
     wp_old = 'float64'
 
@@ -45,3 +49,5 @@ DEVICE = 'device'
 
 UVFLX_dif_coef = wp(UVFLX_dif_coef)
 POTT_dif_coef = wp(POTT_dif_coef)
+if COLP_dif_coef > 0:
+    raise NotImplementedError('no pressure difusion in gpu implemented')

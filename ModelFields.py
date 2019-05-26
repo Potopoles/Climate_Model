@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
-####################################################################
+###############################################################################
 File name:          ModelFields.py  
 Author:             Christoph Heim (CH)
 Date created:       20190525
-Last modified:      20190525
+Last modified:      20190526
 License:            MIT
 
 Setup and store model fields. Have each field in memory (for CPU)
 and if GPU enabled also on GPU.
-####################################################################
+###############################################################################
 """
 import time
 import numpy as np
@@ -43,8 +43,23 @@ class ModelFields:
     # names of field groups
     ALL_FIELDS = 'all_fields'
 
+    def old_to_new(self, OF, host=True):
+        for field_name in self.field_groups[self.ALL_FIELDS]:
+            if host:
+                exec('self.host[field_name] = OF.' + field_name)
+            else:
+                exec('self.device[field_name] = OF.' + field_name)
+
+    def new_to_old(self, OF, host=True):
+        for field_name in self.field_groups[self.ALL_FIELDS]:
+            if host:
+                exec('OF.' + field_name + ' = self.host[field_name]')
+            else:
+                exec('OF.' + field_name + ' = self.device[field_name]')
+
+
     
-    def __init__(self, GR, gpu_enable):
+    def __init__(self, GR, gpu_enable, old_fields):
 
         self.GR = GR
         self.gpu_enable = gpu_enable
@@ -62,6 +77,8 @@ class ModelFields:
                         'UWIND', 'VWIND', 'WIND', 'RHO',
                         'PHI', 'PHIVB']
         self.set(initialize_fields(GR, **self.get(field_names)))
+
+        #self.old_to_new(old_fields)
 
         if self.gpu_enable:
             self.copy_host_to_device(field_group=self.ALL_FIELDS)
@@ -213,7 +230,7 @@ class ModelFields:
         # horizontal wind speed [m/s]
         f['WIND']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                             np.nan, dtype=wp)
-        # vertical wind speed [Pa/s]
+        # vertical wind speed [sigma/s]
         f['WWIND']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
                             np.nan, dtype=wp)
         # product of UWIND and WWIND (auxiliary field)
@@ -391,11 +408,13 @@ class ModelFields:
         self.CF.WIND          =    self.WIND.copy_to_host() 
         self.CF.POTT          =    self.POTT.copy_to_host() 
         self.CF.COLP_NEW      =    self.COLP_NEW.copy_to_host() 
+        self.CF.dCOLPdt      =    self.dCOLPdt.copy_to_host() 
+        self.CF.COLP_OLD      =    self.COLP_OLD.copy_to_host() 
 
-        self.COLP_OLD          .to_host(GR.stream)
+        #self.COLP_OLD          .to_host(GR.stream)
         #self.COLP              .to_host(GR.stream)
         #self.COLP_NEW          .to_host(GR.stream)
-        self.dCOLPdt           .to_host(GR.stream)
+        #self.dCOLPdt           .to_host(GR.stream)
         self.PSURF             .to_host(GR.stream)
         self.HSURF             .to_host(GR.stream) 
         self.OCEANMSK          .to_host(GR.stream) 

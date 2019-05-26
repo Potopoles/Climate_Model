@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
-####################################################################
+###############################################################################
 File name:          initial_conditions.py  
 Author:             Christoph Heim (CH)
 Date created:       20190525
-Last modified:      20190525
+Last modified:      20190526
 License:            MIT
 
 Functions to initialize the model fields and set up an average
 atmospheric profile.
-####################################################################
+###############################################################################
 """
 import numpy as np
 from netCDF4 import Dataset

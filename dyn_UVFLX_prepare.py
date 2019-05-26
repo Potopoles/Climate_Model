@@ -28,10 +28,8 @@ from grid import nx,nxs,ny,nys,nz,nzs,nb
 from GPU import cuda_kernel_decorator
 
 from dyn_functions import (interp_WWIND_UVWIND_py,
-                            calc_momentum_fluxes_isjs_py,
-                            calc_momentum_fluxes_ijs_py,
-                            calc_momentum_fluxes_isj_py,
-                            calc_momentum_fluxes_ij_py)
+                    calc_momentum_fluxes_isjs_py, calc_momentum_fluxes_ijs_py,
+                    calc_momentum_fluxes_isj_py, calc_momentum_fluxes_ij_py)
 ###############################################################################
 
 

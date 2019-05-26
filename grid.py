@@ -29,6 +29,10 @@ tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
 tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)
 tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
 
+
+shared_nz = nz 
+shared_nzs = nz+1
+
 nz = wp_int(nz)
 nzs = wp_int(nz+1)
 nx = wp_int((lon1_deg - lon0_deg)/dlon_deg)
@@ -44,6 +48,10 @@ if nz > 32:
 tpb     = (2,       2,      nz )
 tpb_ks  = (tpb[0],  tpb[1], nzs)
 bpg = (math.ceil((nxs+2*nb)/tpb[0]), math.ceil((nys+2*nb)/tpb[1]), 1)
+tpb_sc = (1,       1,      nz )
+#tpb_sc_ks = (1,       1,      nzs)
+bpg_sc = (math.ceil((nxs+2*nb)/tpb_sc[0]),
+          math.ceil((nys+2*nb)/tpb_sc[1]), 1)
 
 class Grid:
 

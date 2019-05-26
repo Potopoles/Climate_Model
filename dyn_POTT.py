@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
-File name:          tendency_POTT.py  
+###############################################################################
+File name:          dyn_POTT.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190523
+Last modified:      20190526
 License:            MIT
 
 Computation of potential virtual temperature (POTT) tendency
@@ -12,6 +13,7 @@ Computation of potential virtual temperature (POTT) tendency
 Jacobson 2005
 Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 213
+###############################################################################
 """
 import time
 import numpy as np
@@ -26,14 +28,14 @@ from org_namelist import (wp, wp_int, wp_old)
 from grid import nx,nxs,ny,nys,nz,nzs,nb
 from GPU import cuda_kernel_decorator
 
-from tendency_functions import (hor_adv_py, vert_adv_py, 
-                                num_dif_pw_py)
-####################################################################
+from dyn_functions import (hor_adv_py, vert_adv_py, 
+                            num_dif_pw_py)
+###############################################################################
 
 
-####################################################################
+###############################################################################
 ### DEVICE UNSPECIFIC PYTHON FUNCTIONS
-####################################################################
+###############################################################################
 def radiation():
     raise NotImplementedError()
 #    dPOTTdt[i,j,k] = dPOTTdt[i,j,k] + \
@@ -89,9 +91,9 @@ def add_up_tendencies_py(
 
 
 
-####################################################################
+###############################################################################
 ### SPECIALIZE FOR GPU
-####################################################################
+###############################################################################
 hor_adv = njit(hor_adv_py, device=True, inline=True)
 num_dif = njit(num_dif_pw_py, device=True, inline=True)
 vert_adv = njit(vert_adv_py, device=True, inline=True)
@@ -122,9 +124,9 @@ POTT_tendency_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel))\
 
 
 
-####################################################################
+###############################################################################
 ### SPECIALIZE FOR CPU
-####################################################################
+###############################################################################
 hor_adv = njit(hor_adv_py)
 vert_adv = njit(vert_adv_py)
 num_dif = njit(num_dif_pw_py)

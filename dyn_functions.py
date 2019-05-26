@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
+###############################################################################
 File name:          tendency_functions.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190522
+Last modified:      20190526
 License:            MIT
 
 Collection of generally applicable finite difference tendency
@@ -13,12 +14,19 @@ or CPU using numba/cuda jit.
 Functions are based on sigma pressure vertical coordinate.
 Taken from Jacobson 2005:
 Fundamentals of Atmospheric Modeling, Second Edition Chapter 7
+###############################################################################
 """
 from org_namelist import wp, wp_int
 from grid import nx,nxs,ny,nys,nz,nzs,nb
 from constants import con_cp
-####################################################################
+###############################################################################
 
+
+def euler_forward_py(VAR, dVARdt, dt):
+    """
+    Advance time step euler forward.
+    """
+    return( VAR + dt*dVARdt )
 
 def hor_adv_py(VAR, VAR_im1, VAR_ip1, VAR_jm1, VAR_jp1,
             UFLX, UFLX_ip1, VFLX, VFLX_jp1, A):

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
-####################################################################
+###############################################################################
 File name:          org_tendencies.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190523
+Last modified:      20190526
 License:            MIT
 
 Organise the computation of all tendencies in dynamical core:
@@ -14,7 +14,7 @@ Organise the computation of all tendencies in dynamical core:
 Differentiate between computation targets:
 - GPU
 - CPU
-####################################################################
+###############################################################################
 """
 import math
 import numpy as np
@@ -22,13 +22,18 @@ from numba import cuda
 
 from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
 from org_namelist import HOST, DEVICE
-from tendency_POTT import POTT_tendency_gpu, POTT_tendency_cpu
-from tendency_UVFLX_prepare import (UVFLX_prep_adv_gpu,
-                                    UVFLX_prep_adv_cpu)
-from tendency_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
-from tendency_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
-from grid import tpb, tpb_ks, bpg
-####################################################################
+from grid import nx,nxs,ny,nys,nz,nzs,nb
+from dyn_continuity import continuity_gpu
+from dyn_POTT import POTT_tendency_gpu, POTT_tendency_cpu
+from dyn_UVFLX_prepare import (UVFLX_prep_adv_gpu,
+                               UVFLX_prep_adv_cpu)
+from dyn_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
+from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
+from grid import tpb, tpb_ks, bpg, tpb_sc, bpg_sc#, tpb_sc_ks
+from GPU import exchange_BC_gpu
+###############################################################################
+
+
 
 
 
@@ -38,13 +43,12 @@ class TendencyFactory:
     to calculate the tendencies.
     """
     
-    def __init__(self, target):
+    def __init__(self):
         """
-        INPUT:
-        - target: either 'CPU' or 'GPU'
         """
-        self.target = target
-
+        self.fields_continuity = ['UFLX', 'VFLX', 'FLXDIV',
+                                  'UWIND', 'VWIND', 'WWIND',
+                                  'COLP', 'dCOLPdt', 'COLP_NEW', 'COLP_OLD']
         self.fields_POTT = ['dPOTTdt', 'POTT', 'UFLX', 'VFLX',
                              'COLP', 'POTTVB', 'WWIND', 'COLP_NEW']
         self.fields_UVFLX= ['dUFLXdt', 'dVFLXdt',
@@ -57,6 +61,29 @@ class TendencyFactory:
                         'WWIND_UWIND', 'WWIND_VWIND']
 
 
+    def continuity(self, target, GR, UFLX, VFLX, FLXDIV,
+                    UWIND, VWIND, WWIND,
+                    COLP, dCOLPdt, COLP_NEW, COLP_OLD):
+        if target == DEVICE:
+            
+            continuity_gpu[bpg_sc, tpb_sc](UFLX, VFLX, FLXDIV,
+                    UWIND, VWIND, WWIND,
+                    COLP, dCOLPdt, COLP_NEW, COLP_OLD,
+                    GR.dyisd, GR.dxjsd, GR.dsigmad, GR.sigma_vbd,
+                    GR.Ad, GR.dt)
+            exchange_BC_gpu[bpg, tpb](UFLX)
+            exchange_BC_gpu[bpg, tpb](VFLX)
+            exchange_BC_gpu[bpg, tpb](WWIND)
+            exchange_BC_gpu[bpg, tpb](COLP_NEW)
+
+        #elif target == HOST:
+        #    COLP_tendency_WWIND_cpu(GR.A, GR.dsigma,
+        #            dPOTTdt, POTT, UFLX, VFLX, COLP,
+        #            POTTVB, WWIND, COLP_NEW)
+        #return(dPOTTdt)
+        return(COLP_NEW, WWIND, UFLX, VFLX, FLXDIV, dCOLPdt) 
+
+
     def POTT_tendency(self, target, GR,
                             dPOTTdt, POTT, UFLX, VFLX,
                             COLP, POTTVB, WWIND, COLP_NEW):
@@ -64,7 +91,6 @@ class TendencyFactory:
             POTT_tendency_gpu[bpg, tpb](GR.Ad, GR.dsigmad,
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
                     POTTVB, WWIND, COLP_NEW)
-            #cuda.synchronize()
         elif target == HOST:
             POTT_tendency_cpu(GR.A, GR.dsigma,
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
@@ -72,7 +98,8 @@ class TendencyFactory:
         return(dPOTTdt)
 
 
-    def UVFLX_tendency(self, GR, dUFLXdt, dVFLXdt,
+    def UVFLX_tendency(self, target, GR,
+                        dUFLXdt, dVFLXdt,
                         UWIND, VWIND, WWIND,
                         UFLX, VFLX,
                         CFLX, QFLX, DFLX, EFLX,
@@ -81,7 +108,7 @@ class TendencyFactory:
                         PVTF, PVTFVB,
                         WWIND_UWIND, WWIND_VWIND):
 
-        if self.target == 'GPU':
+        if target == DEVICE:
             # PREPARE ADVECTIVE FLUXES
             if i_UVFLX_hor_adv or i_UVFLX_vert_adv:
                 UVFLX_prep_adv_gpu[bpg, tpb_ks](
@@ -91,7 +118,6 @@ class TendencyFactory:
                             CFLX, QFLX, DFLX, EFLX,
                             SFLX, TFLX, BFLX, RFLX,
                             COLP_NEW, GR.Ad, GR.dsigmad)
-                #cuda.synchronize()
 
             # UFLX
             UFLX_tendency_gpu[bpg, tpb](
@@ -103,7 +129,6 @@ class TendencyFactory:
                         GR.dlon_radd, GR.dlat_radd,
                         GR.dyisd,
                         GR.dsigmad, GR.sigma_vbd)
-            #cuda.synchronize()
 
             # VFLX
             VFLX_tendency_gpu[bpg, tpb](
@@ -115,10 +140,9 @@ class TendencyFactory:
                         GR.dlon_radd,   GR.dlat_radd,
                         GR.dxjsd, 
                         GR.dsigmad,     GR.sigma_vbd)
-            #cuda.synchronize()
 
 
-        elif self.target == 'CPU':
+        elif target == HOST:
             # PREPARE ADVECTIVE FLUXES
             if i_UVFLX_hor_adv or i_UVFLX_vert_adv:
                 UVFLX_prep_adv_cpu(

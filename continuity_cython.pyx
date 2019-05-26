@@ -1,5 +1,5 @@
 import numpy as np
-from namelist import  i_colp_tendency, COLP_hor_dif_tau, njobs
+from namelist import  i_colp_tendency, COLP_dif_coef, njobs
 from boundaries import exchange_BC
 
 cimport numpy as np
@@ -33,7 +33,7 @@ cpdef colp_tendency_jacobson_c(GR, \
 
     cdef wp_cy dy = GR.dy
     cdef wp_cy num_dif
-    cdef wp_cy c_COLP_hor_dif_tau = COLP_hor_dif_tau
+    cdef wp_cy c_COLP_dif_coef = COLP_dif_coef
     cdef wp_cy flux_div_sum
 
     cdef wp_cy[     ::1] dsigma  = GR.dsigma
@@ -83,7 +83,7 @@ cpdef colp_tendency_jacobson_c(GR, \
 
 
     ## NUMERICAL DIFUSION 
-    if COLP_hor_dif_tau > 0:
+    if COLP_dif_coef > 0:
         raise NotImplementedError('No No pressure diffusion in Cython implemented!')
     #    for i   in prange(nb,nx +nb, nogil=True, num_threads=c_njobs, schedule='guided'):
     #    #for i   in range(nb,nx +nb):
@@ -92,7 +92,7 @@ cpdef colp_tendency_jacobson_c(GR, \
     #        for j   in range(nb,ny +nb):
     #            jm1 = j - 1
     #            jp1 = j + 1
-    #            num_dif = c_COLP_hor_dif_tau * \
+    #            num_dif = c_COLP_dif_coef * \
     #                         (+ COLP[im1,j  ] \
     #                          + COLP[ip1,j  ] \
     #                          + COLP[i  ,jm1] \

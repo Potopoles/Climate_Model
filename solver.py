@@ -62,14 +62,17 @@ subgrids = {} # option
 ####################################################################
 CF = CPU_Fields(GR, subgrids)
 CF, RAD, SURF, MIC, TURB = initialize_fields(GR, subgrids, CF)
+
+F = ModelFields(GR_NEW, gpu_enable, CF)
+
+
 if comp_mode == 2:
     GF = GPU_Fields(GR, subgrids, CF)
 else:
     GF = None
 
-F = ModelFields(GR_NEW, gpu_enable)
-print(GR_NEW.timings['copy'])
 
+#F.old_to_new(GF)
 
 ####################################################################
 # OUTPUT AT TIMESTEP 0 (before start of simulation)
