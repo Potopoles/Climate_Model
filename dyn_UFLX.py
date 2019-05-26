@@ -270,13 +270,9 @@ def launch_numba_cpu_main(dUFLXdt, UFLX,
 
 
 
-    #for i in prange(nb,nxs+nb):
-    #    for j in range(nb,ny+nb):
-    #        for k in range(wp_int(0),nz):
-    for k in prange(wp_int(0),nz):
-        for i in range(nb,nxs+nb):
-            for j in range(nb,ny+nb):
-
+    for i in prange(nb,nxs+nb):
+        for j in range(nb,ny+nb):
+            for k in range(wp_int(0),nz):
                 # Prepare momentum fluxes and set boundary conditions if
                 # necessary
                 BFLX            = BFLX_3D[i  ,j  ,k  ]                 
@@ -304,8 +300,6 @@ def launch_numba_cpu_main(dUFLXdt, UFLX,
                     DFLX_jp1     = wp(0.)                 
                     CFLX_jp1     = wp(0.)                 
                     EFLX_im1_jp1 = wp(0.)                 
-
-
 
                 dUFLXdt[i  ,j  ,k] = add_up_tendencies(
             # 3D

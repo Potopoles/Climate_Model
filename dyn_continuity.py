@@ -157,9 +157,9 @@ def launch_numba_cpu(UFLX, VFLX, FLXDIV,
                     dyis, dxjs, dsigma, sigma_vb, A, dt):
 
 
-    for k in prange(wp_int(0),nz):
-        for i in range(nb,nx+nb):
-            for j in range(nb,ny+nb):
+    for i in prange(nb,nx+nb):
+        for j in range(nb,ny+nb):
+            for k in range(wp_int(0),nz):
                 # MOMENTUM FLUXES
                 ###############################################################
                 UFLX_i = calc_UFLX(

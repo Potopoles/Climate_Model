@@ -1,6 +1,18 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+File name:          matsuno.py  
+Author:             Christoph Heim (CH)
+Date created:       20181001
+Last modified:      20190526
+License:            MIT
+
+Perform a matsuno time step.
+"""
 import copy
 import time
 import numpy as np
+import cupy as cp
 from namelist import comp_mode
 from org_namelist import wp_old
 from boundaries import exchange_BC
@@ -12,10 +24,14 @@ from bin.jacobson_cython import proceed_timestep_jacobson_c
 from jacobson_cuda import proceed_timestep_jacobson_gpu
 
 from diagnostics import interp_COLPA
+from namelist import i_run_new_style
 
 from numba import cuda, jit
 if wp_old == 'float64':
     from numba import float64
+
+from grid import tpb, bpg
+from GPU import set_equal
 
 ######################################################################################
 ######################################################################################
@@ -24,10 +40,24 @@ if wp_old == 'float64':
 def step_matsuno(GR, GR_NEW, subgrids, F, NF):
 
 
+    ## TODO
+    #if i_run_new_style == 1:
+    #    if comp_mode == 1:
+    #        F.COLP          = np.expand_dims(F.COLP, axis=2)
+    #        F.dCOLPdt       = np.expand_dims(F.dCOLPdt, axis=2)
+    #        F.COLP_NEW      = np.expand_dims(F.COLP_NEW, axis=2)
+    #        F.COLP_OLD      = np.expand_dims(F.COLP_OLD, axis=2)
+    #    elif comp_mode == 2:
+    #        F.COLP          = cp.expand_dims(F.COLP, axis=2)
+    #        F.dCOLPdt       = cp.expand_dims(F.dCOLPdt, axis=2)
+    #        F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
+    #        F.COLP_OLD      = cp.expand_dims(F.COLP_OLD, axis=2)
+
+
     ##############################
     ##############################
     t_start = time.time()
-    if comp_mode in [0,1]:
+    if comp_mode == 1:
         F.UWIND_OLD[:] = F.UWIND[:]
         F.VWIND_OLD[:] = F.VWIND[:]
         F.POTT_OLD[:]  = F.POTT[:]
@@ -41,10 +71,24 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
         set_equal  [GR.griddim   , GR.blockdim   , GR.stream](F.QV_OLD, F.QV)
         set_equal  [GR.griddim   , GR.blockdim   , GR.stream](F.QC_OLD, F.QC)
         set_equal2D[GR.griddim_xy, GR.blockdim_xy, GR.stream](F.COLP_OLD, F.COLP)
+        #set_equal[bpg, tpb](F.UWIND_OLD, F.UWIND)
+        #set_equal[bpg, tpb](F.VWIND_OLD, F.VWIND)
+        #set_equal[bpg, tpb](F.POTT_OLD, F.POTT)
+        #set_equal[bpg, tpb](F.QV_OLD, F.QV)
+        #set_equal[bpg, tpb](F.QC_OLD, F.QC)
+        #set_equal[bpg, tpb](F.COLP_OLD, F.COLP)
     t_end = time.time()
     GR.step_comp_time += t_end - t_start
+    GR.special += t_end - t_start
     ##############################
     ##############################
+
+    ## TODO
+    #if i_run_new_style == 1:
+    #    F.COLP          = F.COLP.squeeze()
+    #    F.dCOLPdt       = F.dCOLPdt.squeeze()
+    #    F.COLP_NEW      = F.COLP_NEW.squeeze()
+    #    F.COLP_OLD      = F.COLP_OLD.squeeze()
 
     ############################################################
     ############################################################
@@ -55,11 +99,24 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
     ##############################
     ##############################
     tendencies_jacobson(GR, GR_NEW, F, subgrids, NF)
-    if comp_mode in [0,1]:
+    ## TODO
+    #if i_run_new_style == 1:
+    #    if comp_mode == 1:
+    #        F.COLP          = np.expand_dims(F.COLP, axis=2)
+    #        F.COLP_NEW      = np.expand_dims(F.COLP_NEW, axis=2)
+    #    elif comp_mode == 2:
+    #        F.COLP          = cp.expand_dims(F.COLP, axis=2)
+    #        F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
+    if comp_mode == 1:
         F.COLP[:] = F.COLP_NEW[:]
     elif comp_mode == 2:
         set_equal2D[GR.griddim_xy, GR.blockdim_xy, GR.stream](F.COLP, F.COLP_NEW)
+        #set_equal[bpg, tpb](F.COLP, F.COLP_NEW)
         GR.stream.synchronize()
+    ## TODO
+    #if i_run_new_style == 1:
+    #    F.COLP          = F.COLP.squeeze()
+    #    F.COLP_NEW      = F.COLP_NEW.squeeze()
     ##############################
     ##############################
 
@@ -68,16 +125,7 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
     ##############################
     ##############################
     t_start = time.time()
-    if comp_mode == 0:
-        F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
-                    = proceed_timestep_jacobson(GR,
-                            F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND, 
-                            F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
-                            F.QV_OLD, F.QV, F.QC_OLD, F.QC,
-                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt)
-
-
-    elif comp_mode == 1:
+    if comp_mode == 1:
         F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
                      = proceed_timestep_jacobson_c(GR,
                             F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
@@ -115,6 +163,18 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
     ##############################
     ##############################
 
+    if i_run_new_style == 1:
+        if comp_mode == 1:
+            F.COLP          = np.expand_dims(F.COLP, axis=2)
+            F.dCOLPdt       = np.expand_dims(F.dCOLPdt, axis=2)
+            F.COLP_NEW      = np.expand_dims(F.COLP_NEW, axis=2)
+            F.COLP_OLD      = np.expand_dims(F.COLP_OLD, axis=2)
+        elif comp_mode == 2:
+            F.COLP          = cp.expand_dims(F.COLP, axis=2)
+            F.dCOLPdt       = cp.expand_dims(F.dCOLPdt, axis=2)
+            F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
+            F.COLP_OLD      = cp.expand_dims(F.COLP_OLD, axis=2)
+
 
     ############################################################
     ############################################################
@@ -125,26 +185,33 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
     ##############################
     ##############################
     tendencies_jacobson(GR, GR_NEW, F, subgrids, NF)
-    if comp_mode in [0,1]:
+    ## TODO
+    #if i_run_new_style == 1:
+    #    if comp_mode == 1:
+    #        F.COLP          = np.expand_dims(F.COLP, axis=2)
+    #        F.COLP_NEW      = np.expand_dims(F.COLP_NEW, axis=2)
+    #    elif comp_mode == 2:
+    #        F.COLP          = cp.expand_dims(F.COLP, axis=2)
+    #        F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
+    if comp_mode == 1:
         F.COLP[:] = F.COLP_NEW[:]
     elif comp_mode == 2:
         set_equal2D[GR.griddim_xy, GR.blockdim_xy, GR.stream](F.COLP, F.COLP_NEW)
+        #set_equal[bpg, tpb](F.COLP, F.COLP_NEW)
         GR.stream.synchronize()
+    ## TODO
+    #if i_run_new_style == 1:
+    #    F.COLP          = F.COLP.squeeze()
+    #    F.COLP_NEW      = F.COLP_NEW.squeeze()
     ##############################
     ##############################
+
 
 
     ##############################
     ##############################
     t_start = time.time()
-    if comp_mode == 0:
-        F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
-                     = proceed_timestep_jacobson(GR,
-                            F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
-                            F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
-                            F.QV_OLD, F.QV, F.QC_OLD, F.QC,
-                            F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt)
-    elif comp_mode == 1:
+    if comp_mode == 1:
         F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
                      = proceed_timestep_jacobson_c(GR,
                             F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
@@ -182,7 +249,6 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
     ##############################
 
     
-
 
 @jit([wp_old+'[:,:,:], '+wp_old+'[:,:,:]'],target='gpu')
 def set_equal(set_FIELD, get_FIELD):

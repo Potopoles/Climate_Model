@@ -195,9 +195,10 @@ def launch_numba_cpu_prep_adv(WWIND_UWIND, WWIND_VWIND,
                                 COLP_NEW, A, dsigma):
 
     if i_UVFLX_vert_adv:
-        for k in prange(wp_int(0),nz):
-            for i in range(nb,nxs+nb):
-                for j in range(nb,ny+nb):
+
+        for i in prange(nb,nxs+nb):
+            for j in range(nb,ny+nb):
+                for k in range(wp_int(0),nz):
                     WWIND_UWIND[i  ,j  ,k  ] = \
                         interp_WWIND_UVWIND(
                 UWIND     [i  ,j  ,k  ], UWIND     [i  ,j  ,k-1],
@@ -213,9 +214,9 @@ def launch_numba_cpu_prep_adv(WWIND_UWIND, WWIND_VWIND,
                 dsigma    [0  ,0  ,k  ], dsigma    [0  ,0  ,k-1],
                 True, j, ny, k)
 
-        for k in prange(wp_int(0),nz):
-            for i in range(nb,nx+nb):
-                for j in range(nb,nys+nb):
+        for i in prange(nb,nx+nb):
+            for j in range(nb,nys+nb):
+                for k in range(wp_int(0),nz):
                     WWIND_VWIND[i  ,j  ,k  ] = \
                         interp_WWIND_UVWIND(
                 VWIND     [i  ,j  ,k  ], VWIND     [i  ,j  ,k-1],
@@ -234,10 +235,9 @@ def launch_numba_cpu_prep_adv(WWIND_UWIND, WWIND_VWIND,
 
     if i_UVFLX_hor_adv:
 
-        for k in prange(wp_int(0),nz):
-            for i in range(nb,nxs+nb):
-                for j in range(nb,nys+nb):
-
+        for i in prange(nb,nxs+nb):
+            for j in range(nb,nys+nb):
+                for k in range(wp_int(0),nz):
                     UFLX            = UFLX_3D[i  ,j  ,k  ]
                     UFLX_im1        = UFLX_3D[i-1,j  ,k  ]
                     UFLX_im1_jm1    = UFLX_3D[i-1,j-1,k  ]

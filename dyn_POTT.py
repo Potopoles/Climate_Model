@@ -135,10 +135,9 @@ add_up_tendencies = njit(add_up_tendencies_py)
 def launch_numba_cpu(A, dsigma, dPOTTdt, POTT, UFLX, VFLX, COLP,
                          POTTVB, WWIND, COLP_NEW):
 
-    for k in prange(wp_int(0),nz):
-        for i in range(nb,nx+nb):
-            for j in range(nb,ny+nb):
-
+    for i in prange(nb,nx+nb):
+        for j in range(nb,ny+nb):
+            for k in range(wp_int(0),nz):
                 dPOTTdt[i  ,j  ,k] = \
                     add_up_tendencies(POTT[i  ,j  ,k],
                         POTT[i-1,j  ,k], POTT[i+1,j  ,k],

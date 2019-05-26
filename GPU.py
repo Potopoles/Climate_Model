@@ -35,6 +35,14 @@ def cuda_kernel_decorator(function, non_3D={}):
     return(decorator)
 
 
+def set_equal(set_FIELD, get_FIELD):
+    fnx,fny,fnz = set_FIELD.shape
+    i, j, k = cuda.grid(3)
+    if k < fnz:
+        set_FIELD[i,j,k] = get_FIELD[i,j,k] 
+set_equal = cuda.jit(cuda_kernel_decorator(set_equal))(set_equal)
+
+
 def exchange_BC_gpu(FIELD):
 
     fnx,fny,fnz = FIELD.shape

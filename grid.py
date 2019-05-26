@@ -80,6 +80,7 @@ class Grid:
             self.cont_comp_time = 0
             self.diag_comp_time = 0
             self.step_comp_time = 0
+            self.special = 0
             self.copy_time = 0
 
             self.rad_comp_time = 0

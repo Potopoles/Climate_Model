@@ -257,13 +257,9 @@ def launch_numba_cpu_main(dVFLXdt, VFLX,
                     dxjs,
                     dsigma, sigma_vb):
 
-    #for i in range(nb,nx+nb):
-    #    for j in range(nb,nys+nb):
-    #        for k in prange(wp_int(0),nz):
-    for k in prange(wp_int(0),nz):
-        for i in range(nb,nx+nb):
-            for j in range(nb,nys+nb):
-
+    for i in prange(nb,nx+nb):
+        for j in range(nb,nys+nb):
+            for k in range(wp_int(0),nz):
                 # Prepare momentum fluxes and set boundary conditions if
                 # necessary
                 RFLX            =  RFLX_3D[i  ,j  ,k  ]

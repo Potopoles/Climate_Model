@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+File name:          jacobson.py  
+Author:             Christoph Heim (CH)
+Date created:       20181001
+Last modified:      20190526
+License:            MIT
+
+TODO: Add description
+"""
 import copy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,11 +21,13 @@ from constants import con_Rd
 
 from continuity import colp_tendency_jacobson, vertical_wind_jacobson
 from bin.continuity_cython import colp_tendency_jacobson_c, vertical_wind_jacobson_c
-from continuity_cuda import colp_tendency_jacobson_gpu, vertical_wind_jacobson_gpu
+if i_run_new_style:
+    from continuity_cuda import (colp_tendency_jacobson_gpu,
+                                    vertical_wind_jacobson_gpu)
+    from wind_cuda import wind_tendency_jacobson_gpu
 
 from wind import wind_tendency_jacobson
 from bin.wind_cython import wind_tendency_jacobson_c
-from wind_cuda import wind_tendency_jacobson_gpu
 
 from bin.temperature_cython import temperature_tendency_jacobson_c
 ###### NEW
@@ -23,9 +36,9 @@ Tend = TendencyFactory()
 ###### NEW
 
 
-from moisture import water_vapor_tendency, cloud_water_tendency
-from bin.moisture_cython import water_vapor_tendency_c, cloud_water_tendency_c
-from moisture_cuda import water_vapor_tendency_gpu, cloud_water_tendency_gpu
+#from moisture import water_vapor_tendency, cloud_water_tendency
+#from bin.moisture_cython import water_vapor_tendency_c, cloud_water_tendency_c
+#from moisture_cuda import water_vapor_tendency_gpu, cloud_water_tendency_gpu
 
 from geopotential import diag_geopotential_jacobson
 from bin.geopotential_cython import diag_geopotential_jacobson_c
@@ -58,7 +71,6 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
             F.dCOLPdt       = cp.expand_dims(F.dCOLPdt, axis=2)
             F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
             F.COLP_OLD      = cp.expand_dims(F.COLP_OLD, axis=2)
-
 
 
     ##############################
@@ -222,6 +234,7 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
     ##############################
     ##############################
 
+    #TODO
     if i_run_new_style == 1:
         F.COLP          = F.COLP.squeeze()
         F.dCOLPdt       = F.dCOLPdt.squeeze()
