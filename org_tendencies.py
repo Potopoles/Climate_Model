@@ -23,7 +23,7 @@ from numba import cuda
 from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
 from org_namelist import HOST, DEVICE
 from grid import nx,nxs,ny,nys,nz,nzs,nb
-from dyn_continuity import continuity_gpu
+from dyn_continuity import (continuity_gpu, continuity_cpu)
 from dyn_POTT import POTT_tendency_gpu, POTT_tendency_cpu
 from dyn_UVFLX_prepare import (UVFLX_prep_adv_gpu,
                                UVFLX_prep_adv_cpu)
@@ -31,6 +31,7 @@ from dyn_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
 from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
 from grid import tpb, tpb_ks, bpg, tpb_sc, bpg_sc#, tpb_sc_ks
 from GPU import exchange_BC_gpu
+from CPU import exchange_BC_cpu
 ###############################################################################
 
 
@@ -64,8 +65,8 @@ class TendencyFactory:
     def continuity(self, target, GR, UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
                     COLP, dCOLPdt, COLP_NEW, COLP_OLD):
+
         if target == DEVICE:
-            
             continuity_gpu[bpg_sc, tpb_sc](UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
                     COLP, dCOLPdt, COLP_NEW, COLP_OLD,
@@ -76,12 +77,16 @@ class TendencyFactory:
             exchange_BC_gpu[bpg, tpb](WWIND)
             exchange_BC_gpu[bpg, tpb](COLP_NEW)
 
-        #elif target == HOST:
-        #    COLP_tendency_WWIND_cpu(GR.A, GR.dsigma,
-        #            dPOTTdt, POTT, UFLX, VFLX, COLP,
-        #            POTTVB, WWIND, COLP_NEW)
-        #return(dPOTTdt)
-        return(COLP_NEW, WWIND, UFLX, VFLX, FLXDIV, dCOLPdt) 
+        elif target == HOST:
+            continuity_cpu(UFLX, VFLX, FLXDIV,
+                    UWIND, VWIND, WWIND,
+                    COLP, dCOLPdt, COLP_NEW, COLP_OLD,
+                    GR.dyis, GR.dxjs, GR.dsigma, GR.sigma_vb,
+                    GR.A, GR.dt)
+            exchange_BC_cpu(UFLX)
+            exchange_BC_cpu(VFLX)
+            exchange_BC_cpu(WWIND)
+            exchange_BC_cpu(COLP_NEW)
 
 
     def POTT_tendency(self, target, GR,
@@ -95,7 +100,6 @@ class TendencyFactory:
             POTT_tendency_cpu(GR.A, GR.dsigma,
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
                     POTTVB, WWIND, COLP_NEW)
-        return(dPOTTdt)
 
 
     def UVFLX_tendency(self, target, GR,
@@ -173,5 +177,3 @@ class TendencyFactory:
                         GR.dlon_rad,    GR.dlat_rad,
                         GR.dxjs, 
                         GR.dsigma,      GR.sigma_vb)
-
-        return(dUFLXdt, dVFLXdt)

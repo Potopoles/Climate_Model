@@ -46,6 +46,20 @@ import numba
 
 def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
+    # TODO
+    if i_run_new_style == 1:
+        if comp_mode == 1:
+            F.COLP          = np.expand_dims(F.COLP, axis=2)
+            F.dCOLPdt       = np.expand_dims(F.dCOLPdt, axis=2)
+            F.COLP_NEW      = np.expand_dims(F.COLP_NEW, axis=2)
+            F.COLP_OLD      = np.expand_dims(F.COLP_OLD, axis=2)
+        elif comp_mode == 2:
+            F.COLP          = cp.expand_dims(F.COLP, axis=2)
+            F.dCOLPdt       = cp.expand_dims(F.dCOLPdt, axis=2)
+            F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
+            F.COLP_OLD      = cp.expand_dims(F.COLP_OLD, axis=2)
+
+
 
     ##############################
     ##############################
@@ -54,134 +68,24 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
         if comp_mode == 1:
 
-            # TODO
-            F.COLP          = np.expand_dims(F.COLP, axis=2)
-            F.COLP_NEW      = np.expand_dims(F.COLP_NEW, axis=2)
-
             NF.old_to_new(F, host=True)
-            (NF.host['COLP_NEW'], NF.host['WWIND'],
-             NF.host['UFLX'], NF.host['VFLX']) = \
-                                     Tend.continuity(HOST, GR_NEW,
-                                **NF.get(Tend.fields_continuity, target=HOST))
-                            
+            Tend.continuity(HOST, GR_NEW,
+                        **NF.get(Tend.fields_continuity, target=HOST))
             NF.new_to_old(F, host=True)
-
-            F.COLP          = F.COLP.squeeze()
-            F.COLP_NEW      = F.COLP_NEW.squeeze()
 
         elif comp_mode == 2:
 
-            # TODO
-            F.COLP          = cp.expand_dims(F.COLP, axis=2)
-            F.dCOLPdt       = cp.expand_dims(F.dCOLPdt, axis=2)
-            F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
-            F.COLP_OLD      = cp.expand_dims(F.COLP_OLD, axis=2)
-
             NF.old_to_new(F, host=False)
-            (NF.device['COLP_NEW'], NF.device['WWIND'],
-             NF.device['UFLX'], NF.device['VFLX'],
-             NF.device['FLXDIV'], NF.device['dCOLPdt']) = \
-                                     Tend.continuity(DEVICE, GR_NEW,
-                                **NF.get(Tend.fields_continuity, target=DEVICE))
-
-            #print('GPU')
-            #n_iter = 10
-            #t0 = time.time()
-            #for i in range(n_iter):
-            #    (NF.device['COLP_NEW'], NF.device['WWIND'],
-            #     NF.device['UFLX'], NF.device['VFLX'],
-            #     NF.device['FLXDIV'], NF.device['dCOLPdt']) = \
-            #                             Tend.continuity(DEVICE, GR_NEW,
-            #                        **NF.get(Tend.fields_continuity, target=DEVICE))
-            #print((time.time() - t0)/n_iter)
-            #NF.device['COLP_NEW'] = exchange_BC_gpu(NF.device['COLP_NEW'], GR.zonal, GR.merid,
-            #                            GR.griddim_xy, GR.blockdim_xy,
-            #                            GR.stream, array2D=False)
+            Tend.continuity(DEVICE, GR_NEW,
+                        **NF.get(Tend.fields_continuity, target=DEVICE))
             NF.new_to_old(F, host=False)
 
-            F.COLP          = F.COLP.squeeze()
-            F.dCOLPdt       = F.dCOLPdt.squeeze()
-            F.COLP_NEW      = F.COLP_NEW.squeeze()
-            F.COLP_OLD      = F.COLP_OLD.squeeze()
-
-            #FIELD1 = np.asarray(F.dCOLPdt)
-            #print(np.nanmean((FIELD1)))
-
-            #print()
-
-            #F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV = \
-            #             colp_tendency_jacobson_gpu(GR, GR.griddim, GR.blockdim, GR.stream,
-            #                                        F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV,
-            #                                        F.COLP, F.UWIND, F.VWIND,
-            #                                        GR.dy, GR.dxjsd, GR.Ad, GR.dsigmad)
-            #time_step_2D[GR.griddim, GR.blockdim, GR.stream]\
-            #                    (F.COLP_NEW, F.COLP_OLD, F.dCOLPdt, GR.dt)
-            #GR.stream.synchronize()
-            #vertical_wind_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, GR.stream]\
-            #                            (F.WWIND, F.dCOLPdt, F.FLXDIV,
-            #                            F.COLP_NEW, GR.sigma_vbd)
-            #GR.stream.synchronize()
-            #F.COLP_NEW = exchange_BC_gpu(F.COLP_NEW, GR.zonal, GR.merid,
-            #                            GR.griddim_xy, GR.blockdim_xy,
-            #                            GR.stream, array2D=True)
-            #F.WWIND = exchange_BC_gpu(F.WWIND, GR.zonalvb, GR.meridvb,
-            #                            GR.griddim_ks, GR.blockdim_ks, GR.stream)
-            #GR.stream.synchronize()
-            #t0 = time.time()
-            #for i in range(n_iter):
-            #    F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV = \
-            #                 colp_tendency_jacobson_gpu(GR, GR.griddim, GR.blockdim, GR.stream,
-            #                                            F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV,
-            #                                            F.COLP, F.UWIND, F.VWIND,
-            #                                            GR.dy, GR.dxjsd, GR.Ad, GR.dsigmad)
-            #    time_step_2D[GR.griddim, GR.blockdim, GR.stream]\
-            #                        (F.COLP_NEW, F.COLP_OLD, F.dCOLPdt, GR.dt)
-            #    GR.stream.synchronize()
-            #    vertical_wind_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, GR.stream]\
-            #                                (F.WWIND, F.dCOLPdt, F.FLXDIV,
-            #                                F.COLP_NEW, GR.sigma_vbd)
-            #    GR.stream.synchronize()
-            #    F.COLP_NEW = exchange_BC_gpu(F.COLP_NEW, GR.zonal, GR.merid,
-            #                                GR.griddim_xy, GR.blockdim_xy,
-            #                                GR.stream, array2D=True)
-            #    F.WWIND = exchange_BC_gpu(F.WWIND, GR.zonalvb, GR.meridvb,
-            #                                GR.griddim_ks, GR.blockdim_ks, GR.stream)
-            #    GR.stream.synchronize()
-            #print((time.time() - t0)/n_iter)
-
-            #FIELD2 = np.asarray(F.dCOLPdt)
-            #print(np.nanmean((FIELD2)))
-            #
-            #print()
-            ##print(np.sum(np.isnan(FIELD2[:,:,:])) - np.sum(np.isnan(FIELD1[:,:,:])))
-            ##print(np.nanmean(FIELD2[:,:,:] - FIELD1[:,:,:]))
-            #print(np.sum(np.isnan(FIELD2[:,:])) - np.sum(np.isnan(FIELD1[:,:,0])))
-            #print(np.nanmean(FIELD2[:,:] - FIELD1[:,:,0]))
-            #quit()
-
-            #
-            #import matplotlib.pyplot as plt
-            ##diff = FIELD2[:,:,k] - FIELD1[:,:,k]
-            #diff = FIELD2[:,:] - FIELD1[:,:,0]
-            #plt.contourf(diff)
-            #plt.colorbar()
-            #plt.show()
-
-            #quit()
-
-
-        ## TODO 2 NECESSARY
-        #F.COLP_NEW = exchange_BC_gpu(F.COLP_NEW, GR.zonal, GR.merid,
-        #                            GR.griddim_xy, GR.blockdim_xy,
-        #                            GR.stream, array2D=True)
-        #F.WWIND = exchange_BC_gpu(F.WWIND, GR.zonalvb, GR.meridvb,
-        #                            GR.griddim_ks, GR.blockdim_ks, GR.stream)
     else:
         # PROGNOSE COLP
         if comp_mode == 1:
             F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV = colp_tendency_jacobson_c(GR,
-                                                        F.COLP, F.UWIND, F.VWIND,
-                                                        F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV)
+                                            F.COLP, F.UWIND, F.VWIND,
+                                            F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV)
             F.dCOLPdt = np.asarray(F.dCOLPdt)
             F.UFLX = np.asarray(F.UFLX)
             F.VFLX = np.asarray(F.VFLX)
@@ -190,10 +94,10 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
         elif comp_mode == 2:
             F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV = \
-                         colp_tendency_jacobson_gpu(GR, GR.griddim, GR.blockdim, GR.stream,
-                                                    F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV,
-                                                    F.COLP, F.UWIND, F.VWIND,
-                                                    GR.dy, GR.dxjsd, GR.Ad, GR.dsigmad)
+                 colp_tendency_jacobson_gpu(GR, GR.griddim, GR.blockdim, GR.stream,
+                                        F.dCOLPdt, F.UFLX, F.VFLX, F.FLXDIV,
+                                        F.COLP, F.UWIND, F.VWIND,
+                                        GR.dy, GR.dxjsd, GR.Ad, GR.dsigmad)
             time_step_2D[GR.griddim, GR.blockdim, GR.stream]\
                                 (F.COLP_NEW, F.COLP_OLD, F.dCOLPdt, GR.dt)
             GR.stream.synchronize()
@@ -201,9 +105,9 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
         # DIAGNOSE WWIND
         if comp_mode == 1:
-            F.WWIND = vertical_wind_jacobson_c(GR, F.COLP_NEW, F.dCOLPdt, F.FLXDIV, F.WWIND)
+            F.WWIND = vertical_wind_jacobson_c(GR, F.COLP_NEW,
+                                    F.dCOLPdt, F.FLXDIV, F.WWIND)
             F.WWIND = np.asarray(F.WWIND)
-            # TODO 2 NECESSARY
             F.COLP_NEW = exchange_BC(GR, F.COLP_NEW)
             F.WWIND = exchange_BC(GR, F.WWIND)
 
@@ -212,7 +116,6 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
                                         (F.WWIND, F.dCOLPdt, F.FLXDIV,
                                         F.COLP_NEW, GR.sigma_vbd)
             GR.stream.synchronize()
-            # TODO 2 NECESSARY
             F.COLP_NEW = exchange_BC_gpu(F.COLP_NEW, GR.zonal, GR.merid,
                                         GR.griddim_xy, GR.blockdim_xy,
                                         GR.stream, array2D=True)
@@ -232,45 +135,12 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
     # PROGNOSE WIND
     if comp_mode == 1:
         if i_run_new_style == 1:
-            # TODO
-            F.COLP          = np.expand_dims(F.COLP, axis=2)
-            F.COLP_NEW      = np.expand_dims(F.COLP_NEW, axis=2)
 
             NF.old_to_new(F, host=True)
-            NF.host['dUFLXdt'], NF.host['dVFLXdt'] = \
-                                     Tend.UVFLX_tendency(HOST, GR_NEW,
-                                **NF.get(Tend.fields_UVFLX, target=HOST))
+            Tend.UVFLX_tendency(HOST, GR_NEW,
+                            **NF.get(Tend.fields_UVFLX, target=HOST))
                             
             NF.new_to_old(F, host=True)
-
-            #print('CPU')
-            #n_iter = 10
-            #t0 = time.time()
-            #for i in range(n_iter):
-            #    NF.host['dUFLXdt'], NF.host['dVFLXdt'] = \
-            #             Tend.UVFLX_tendency(HOST, GR_NEW,
-            #                        **NF.get(Tend.fields_UVFLX,
-            #                                target=HOST))
-            #print((time.time() - t0)/n_iter)
-
-            F.COLP          = F.COLP.squeeze()
-            F.COLP_NEW      = F.COLP_NEW.squeeze()
-
-            #TODO
-            #t0 = time.time()
-            #for i in range(n_iter):
-            #    F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs,
-            #                                F.UWIND, F.VWIND, F.WWIND,
-            #                                F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-            #                                F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-            #                                F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-            #                                F.WWIND_UWIND, F.WWIND_VWIND, 
-            #                                F.COLP, F.COLP_NEW, F.PHI,
-            #                                F.POTT, F.PVTF, F.PVTFVB)
-            #    F.dUFLXdt = np.asarray(F.dUFLXdt)
-            #    F.dVFLXdt = np.asarray(F.dVFLXdt)
-            #print((time.time() - t0)/n_iter)
-            #quit()
         
         else:
             F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_c(GR, njobs,
@@ -287,51 +157,12 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
     elif comp_mode == 2:
         if i_run_new_style == 1:
-            # TODO
-            F.COLP          = cp.expand_dims(F.COLP, axis=2)
-            F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
 
             NF.old_to_new(F, host=False)
-            NF.device['dUFLXdt'], NF.device['dVFLXdt'] = \
-                             Tend.UVFLX_tendency(DEVICE, GR_NEW,
-                            **NF.get(Tend.fields_UVFLX, target=DEVICE))
+            Tend.UVFLX_tendency(DEVICE, GR_NEW,
+                        **NF.get(Tend.fields_UVFLX, target=DEVICE))
                             
             NF.new_to_old(F, host=False)
-
-            #print('GPU')
-            #n_iter = 10
-            #t0 = time.time()
-            #for i in range(n_iter):
-            #    NF.device['dUFLXdt'], NF.device['dVFLXdt'] = \
-            #                     Tend.UVFLX_tendency(DEVICE, GR_NEW,
-            #                    **NF.get(Tend.fields_UVFLX, target=DEVICE))
-            #print((time.time() - t0)/n_iter)
-            ##TODO
-
-            F.COLP          = F.COLP.squeeze()
-            F.COLP_NEW      = F.COLP_NEW.squeeze()
-
-            ## TODO
-            #F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
-            #                            F.UWIND, F.VWIND, F.WWIND,
-            #                            F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-            #                            F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-            #                            F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-            #                            F.WWIND_UWIND, F.WWIND_VWIND, 
-            #                            F.COLP, F.COLP_NEW, F.PHI, F.POTT,
-            #                            F.PVTF, F.PVTFVB)
-            #t0 = time.time()
-            #for i in range(n_iter):
-            #    F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
-            #                                F.UWIND, F.VWIND, F.WWIND,
-            #                                F.UFLX, F.dUFLXdt, F.VFLX, F.dVFLXdt,
-            #                                F.BFLX, F.CFLX, F.DFLX, F.EFLX,
-            #                                F.RFLX, F.QFLX, F.SFLX, F.TFLX, 
-            #                                F.WWIND_UWIND, F.WWIND_VWIND, 
-            #                                F.COLP, F.COLP_NEW, F.PHI, F.POTT,
-            #                                F.PVTF, F.PVTFVB)
-            #print((time.time() - t0)/n_iter)
-            ##quit()
 
         else:
             F.dUFLXdt, F.dVFLXdt = wind_tendency_jacobson_gpu(GR,
@@ -356,45 +187,46 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
     # PROGNOSE POTT
     if comp_mode == 1:
         if i_run_new_style == 1:
-            # TODO
-            F.COLP = np.expand_dims(F.COLP, axis=2)
-            F.COLP_NEW = np.expand_dims(F.COLP_NEW, axis=2)
 
             NF.old_to_new(F, host=True)
-            NF.host['dPOTTdt'] = Tend.POTT_tendency(HOST, GR_NEW,
-                                **NF.get(Tend.fields_POTT,
-                                        target=HOST))
+            Tend.POTT_tendency(HOST, GR_NEW,
+                            **NF.get(Tend.fields_POTT, target=HOST))
             NF.new_to_old(F, host=True)
 
-            F.COLP = F.COLP.squeeze()
-            F.COLP_NEW = F.COLP_NEW.squeeze()
         else:
             F.dPOTTdt = temperature_tendency_jacobson_c(GR, njobs,
-                                                F.POTT, F.POTTVB, F.COLP, F.COLP_NEW,
-                                                F.UFLX, F.VFLX, F.WWIND,
-                                                F.dPOTTdt_RAD, F.dPOTTdt_MIC)
+                                    F.POTT, F.POTTVB, F.COLP, F.COLP_NEW,
+                                    F.UFLX, F.VFLX, F.WWIND,
+                                    F.dPOTTdt_RAD, F.dPOTTdt_MIC)
             F.dPOTTdt = np.asarray(F.dPOTTdt)
 
 
     elif comp_mode == 2:
-        # TODO
-        F.COLP = cp.expand_dims(F.COLP, axis=2)
-        F.COLP_NEW = cp.expand_dims(F.COLP_NEW, axis=2)
+
+        if i_run_new_style == 0:
+            F.COLP          = cp.expand_dims(F.COLP, axis=2)
+            F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
 
         NF.old_to_new(F, host=False)
-        NF.device['dPOTTdt'] = Tend.POTT_tendency(DEVICE, GR_NEW,
-                                        **NF.get(Tend.fields_POTT,
-                                        target=DEVICE))
+        Tend.POTT_tendency(DEVICE, GR_NEW,
+                        **NF.get(Tend.fields_POTT, target=DEVICE))
         NF.new_to_old(F, host=False)
 
-        F.COLP = F.COLP.squeeze()
-        F.COLP_NEW = F.COLP_NEW.squeeze()
+        if i_run_new_style == 0:
+            F.COLP          = F.COLP.squeeze()
+            F.COLP_NEW      = F.COLP_NEW.squeeze()
+
 
     t_end = time.time()
     GR.temp_comp_time += t_end - t_start
     ##############################
     ##############################
 
+    if i_run_new_style == 1:
+        F.COLP          = F.COLP.squeeze()
+        F.dCOLPdt       = F.dCOLPdt.squeeze()
+        F.COLP_NEW      = F.COLP_NEW.squeeze()
+        F.COLP_OLD      = F.COLP_OLD.squeeze()
 
 
     ###############################

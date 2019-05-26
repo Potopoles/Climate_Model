@@ -17,12 +17,12 @@ Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 208ff
 ###############################################################################
 """
-from numba import cuda, njit, prange
-#
+import numpy as np
+from numba import cuda, njit, prange, vectorize
 from namelist import (i_COLP_main_switch)
 from org_namelist import (wp_str, wp, wp_numba, wp_int, wp_old)
 from grid import nx,nxs,ny,nys,nz,nzs,nb
-from grid import shared_nz, shared_nzs
+from grid import shared_nz
 from GPU import cuda_kernel_decorator
 from dyn_functions import (euler_forward_py)
 ###############################################################################
@@ -47,7 +47,12 @@ def calc_FLXDIV_py(UFLX, UFLX_ip1, VFLX, VFLX_jp1, dsigma, A):
 calc_UFLX       = njit(calc_UFLX_py, device=True, inline=True)
 calc_VFLX       = njit(calc_VFLX_py, device=True, inline=True)
 calc_FLXDIV     = njit(calc_FLXDIV_py, device=True, inline=True)
-euler_forward       = njit(euler_forward_py, device=True, inline=True)
+euler_forward   = njit(euler_forward_py, device=True, inline=True)
+
+#sum_reduce = cuda.reduce(lambda a, b: a + b)
+@cuda.reduce
+def sum_reduce(a, b):
+    return(a+b)
 
 def launch_cuda_main_kernel(UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
@@ -135,9 +140,77 @@ def launch_cuda_main_kernel(UFLX, VFLX, FLXDIV,
 continuity_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_main_kernel,
                     non_3D={'dt':wp_str}))(launch_cuda_main_kernel)
 
-###############################################################################
 
 
 ###############################################################################
 ### SPECIALIZE FOR CPU
 ###############################################################################
+calc_UFLX       = njit(calc_UFLX_py)
+calc_VFLX       = njit(calc_VFLX_py)
+calc_FLXDIV     = njit(calc_FLXDIV_py)
+euler_forward   = vectorize()(euler_forward_py)
+
+
+def launch_numba_cpu(UFLX, VFLX, FLXDIV,
+                    UWIND, VWIND, WWIND,
+                    COLP, dCOLPdt, COLP_NEW, COLP_OLD,
+                    dyis, dxjs, dsigma, sigma_vb, A, dt):
+
+
+    for k in prange(wp_int(0),nz):
+        for i in range(nb,nx+nb):
+            for j in range(nb,ny+nb):
+                # MOMENTUM FLUXES
+                ###############################################################
+                UFLX_i = calc_UFLX(
+                    UWIND       [i  ,j  ,k  ],
+                    COLP        [i  ,j  ,0  ], COLP        [i-1,j  ,0  ],
+                    dyis        [i  ,j  ,0  ])
+                UFLX_ip1 = calc_UFLX(
+                    UWIND       [i+1,j  ,k  ],
+                    COLP        [i+1,j  ,0  ], COLP        [i  ,j  ,0  ],
+                    dyis        [i+1,j  ,0  ])
+
+                VFLX_j = calc_VFLX(
+                    VWIND       [i  ,j  ,k  ],
+                    COLP        [i  ,j  ,0  ], COLP        [i  ,j-1,0  ],
+                    dxjs        [i  ,j  ,0  ])
+                VFLX_jp1 = calc_VFLX(
+                    VWIND       [i  ,j+1,k  ],
+                    COLP        [i  ,j+1,0  ], COLP        [i  ,j  ,0  ],
+                    dxjs        [i  ,j+1,0  ])
+
+                UFLX[i  ,j  ,k] = UFLX_i
+                VFLX[i  ,j  ,k] = VFLX_j
+
+                ## MOMENTUM FLUX DIVERGENCE
+                ###############################################################
+                FLXDIV[i  ,j  ,k] = calc_FLXDIV(
+                    UFLX_i           , UFLX_ip1    ,
+                    VFLX_j           , VFLX_jp1    ,
+                    dsigma[0  ,0  ,k], A[i  ,j  ,0])
+
+    ## COLUMN PRESSURE TENDENCY
+    ############################################################################
+    if i_COLP_main_switch:
+        dCOLPdt[:,:,0] = - FLXDIV.sum(axis=2)
+    else:
+        dCOLPdt[:,:,0] = wp(0.)
+
+    ### PRESSURE TIME STEP
+    ############################################################################
+    COLP_NEW[:,:,0] = COLP_OLD[:,:,0] + dt * dCOLPdt[:,:,0]
+
+    ### VERTICAL WIND
+    ############################################################################
+    for i in prange(nb,nx+nb):
+        for j in range(nb,ny+nb):
+            flxdivsum = FLXDIV[i,j,0]
+            for k in prange(1,nz):
+                WWIND[i,j,k] = ( - flxdivsum / COLP_NEW[i,j,0] - sigma_vb[0,0,k]
+                                 * dCOLPdt[i,j,0] / COLP_NEW[i,j,0] )
+                flxdivsum += FLXDIV[i,j,k]
+
+
+
+continuity_cpu = njit(parallel=True)(launch_numba_cpu)

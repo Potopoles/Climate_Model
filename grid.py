@@ -31,7 +31,7 @@ tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
 
 
 shared_nz = nz 
-shared_nzs = nz+1
+#shared_nzs = nz+1
 
 nz = wp_int(nz)
 nzs = wp_int(nz+1)

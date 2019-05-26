@@ -11,7 +11,6 @@ License:            MIT
 Functionality not yet defined.
 Should contain:
 - GPU helper functions
-- GPU fields?
 ###############################################################################
 """
 from numba import cuda
@@ -19,6 +18,7 @@ from inspect import signature
 
 from org_namelist import wp_str
 from grid import nx,nxs,ny,nys,nz,nzs,nb
+###############################################################################
 
 
 def cuda_kernel_decorator(function, non_3D={}):
@@ -71,7 +71,3 @@ exchange_BC_gpu = cuda.jit(cuda_kernel_decorator(
 
 
 
-class GPU:
-
-    def __init__(self):
-        pass
