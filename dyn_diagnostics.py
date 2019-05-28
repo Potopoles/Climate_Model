@@ -44,54 +44,70 @@ from GPU import cuda_kernel_decorator
 ###############################################################################
 def diag_PVTF_gpu(COLP, PVTF, PVTFVB, sigma_vb):
 
-
-    nx = PVTF.shape[0] - 2
-    ny = PVTF.shape[1] - 2
-    nz = PVTF.shape[2]
     i, j, k = cuda.grid(3)
-    if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+    if i >= nb and i < nx+nb and j >= nb and j < ny+nb and k < nz:
         
         pairvb_km12 = pair_top + sigma_vb[0,0,k  ] * COLP[i,j,0]
         pairvb_kp12 = pair_top + sigma_vb[0,0,k+1] * COLP[i,j,0]
         
-        PVTF[i,j,k] = 1./(1.+con_kappa) * \
-                    ( pow( pairvb_kp12/100000. , con_kappa ) * pairvb_kp12 - \
-                      pow( pairvb_km12/100000. , con_kappa ) * pairvb_km12 ) / \
-                    ( pairvb_kp12 - pairvb_km12 )
+        PVTF[i,j,k] = wp(1.)/(wp(1.)+con_kappa) * (
+                pow( pairvb_kp12/wp(100000.) , con_kappa ) * pairvb_kp12 -
+                pow( pairvb_km12/wp(100000.) , con_kappa ) * pairvb_km12
+                        ) /( pairvb_kp12 - pairvb_km12 )
 
-        PVTFVB[i,j,k] = pow( pairvb_km12/100000. , con_kappa )
+        PVTFVB[i,j,k] = pow( pairvb_km12/wp(100000.) , con_kappa )
         if k == nz-1:
-            PVTFVB[i,j,k+1] = pow( pairvb_kp12/100000. , con_kappa )
+            PVTFVB[i,j,k+1] = pow( pairvb_kp12/wp(100000.) , con_kappa )
 
     cuda.syncthreads()
-diag_PVTF_gpu = cuda.jit(cuda_kernel_decorator(diag_PVTF_gpu))(diag_PVTF_gpu)
+diag_PVTF_gpu = cuda.jit(cuda_kernel_decorator(
+                        diag_PVTF_gpu))(diag_PVTF_gpu)
 
 
 def diag_PHI_gpu(PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF):
-    nx  = PHIVB.shape[0] - 2
-    ny  = PHIVB.shape[1] - 2
-    nzs = PHIVB.shape[2]
-    i, j, ks = cuda.grid(3)
-    if i > 0 and i < nx+1 and j > 0 and j < ny+1:
+
+    i, j, k = cuda.grid(3)
+    if i >= nb and i < nx+nb and j >= nb and j < ny+nb and k < nzs:
         kiter = nzs-1
-        if ks == kiter:
-            PHIVB[i,j,ks] = HSURF[i,j,0]*con_g
+        if k == kiter:
+            PHIVB[i,j,k] = HSURF[i,j,0]*con_g
         kiter = kiter - 1
         cuda.syncthreads()
 
         while kiter >= 0:
-            if ks == kiter:
-                PHI  [i,j,ks] = PHIVB[i,j,ks+1] - con_cp*  \
-                                        ( POTT[i,j,ks] * (   PVTF  [i,j,ks  ] \
-                                                           - PVTFVB[i,j,ks+1] ) )
-                PHIVB[i,j,ks] = PHI  [i,j,ks  ] - con_cp * \
-                                        ( POTT[i,j,ks] * (   PVTFVB[i,j,ks  ] \
-                                                           - PVTF  [i,j,ks  ] ) )
+            if k == kiter:
+                PHI  [i,j,k] = PHIVB[i,j,k+1] - con_cp* (
+                                POTT[i,j,k] * (   PVTF  [i,j,k  ]
+                                                - PVTFVB[i,j,k+1] ) )
+                PHIVB[i,j,k] = PHI  [i,j,k  ] - con_cp * (
+                                POTT[i,j,k] * (   PVTFVB[i,j,k  ]
+                                                - PVTF  [i,j,k  ] ) )
 
             kiter = kiter - 1
             cuda.syncthreads()
 diag_PHI_gpu = cuda.jit(cuda_kernel_decorator(diag_PHI_gpu))(diag_PHI_gpu)
 
+
+
+def diag_POTTVB_gpu(POTTVB, POTT, PVTF, PVTFVB):
+
+    i, j, k = cuda.grid(3)
+    if i >= nb and i < nx+nb and j >= nb and j < ny+nb and k < nzs:
+        if k > 0 and k < nzs-1:
+            POTTVB[i,j,k] =   (
+                    +   (PVTFVB[i,j,k] - PVTF  [i,j,k-1]) * POTT[i,j,k-1]
+                    +   (PVTF  [i,j,k] - PVTFVB[i,j,k  ]) * POTT[i,j,k  ]
+                            ) / (PVTF[i,j,k] - PVTF[i,j,k-1])
+            if k == 1:
+                # extrapolate model top POTTVB
+                POTTVB[i,j,k-1] = POTT[i,j,k-1] - ( 
+                                        POTTVB[i,j,k] - POTT[i,j,k-1] )
+            elif k == nzs-2:
+                # extrapolate model bottom POTTVB
+                POTTVB[i,j,k+1] = POTT[i,j,k  ] - (
+                                        POTTVB[i,j,k] - POTT[i,j,k  ] )
+diag_POTTVB_gpu = cuda.jit(cuda_kernel_decorator(
+                           diag_POTTVB_gpu))(diag_POTTVB_gpu)
 
 
 ###############################################################################

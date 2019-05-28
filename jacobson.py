@@ -334,12 +334,16 @@ def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
         F.PVTF = np.asarray(F.PVTF)
         F.PVTFVB = np.asarray(F.PVTFVB)
 
+        F.POTTVB = diagnose_POTTVB_jacobson_c(GR, njobs, F.POTTVB,
+                                                F.POTT, F.PVTF, F.PVTFVB)
+        F.POTTVB = np.asarray(F.POTTVB)
+
     elif comp_mode == 2:
         if i_run_new_style:
 
             # TODO
-            #F.COLP          = cp.expand_dims(F.COLP, axis=2)
-            #F.HSURF         = cp.expand_dims(F.HSURF, axis=2)
+            F.COLP          = cp.expand_dims(F.COLP, axis=2)
+            F.HSURF         = cp.expand_dims(F.HSURF, axis=2)
             # TODO
 
             NF.old_to_new(F, host=False)
@@ -355,22 +359,21 @@ def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
             NF.new_to_old(F, host=False)
 
             ##TODO
-            FIELD1 = np.asarray(F.PVTF)
-            print(np.nanmean((FIELD1)))
-
-
-            print()
+            #FIELD1 = np.asarray(F.PHI)
+            #print(np.nanmean((FIELD1)))
+            #print()
 
             # TODO
-            #F.COLP          = F.COLP.squeeze()
-            #F.HSURF         = F.HSURF.squeeze()
+            F.COLP          = F.COLP.squeeze()
+            F.HSURF         = F.HSURF.squeeze()
             # TODO
+
 
             #t0 = time.time()
-            F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
-                 diag_geopotential_jacobson_gpu(GR, GR.stream, F.PHI,
-                                                F.PHIVB, F.HSURF, 
-                                                F.POTT, F.COLP, F.PVTF, F.PVTFVB)
+            #F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
+            #     diag_geopotential_jacobson_gpu(GR, GR.stream, F.PHI,
+            #                                    F.PHIVB, F.HSURF, 
+            #                                    F.POTT, F.COLP, F.PVTF, F.PVTFVB)
             #for i in range(n_iter):
             #    F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
             #         diag_geopotential_jacobson_gpu(GR, GR.stream, F.PHI,
@@ -378,17 +381,17 @@ def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
             #                                        F.POTT, F.COLP, F.PVTF, F.PVTFVB)
             #print((time.time() - t0)/n_iter)
 
-            #TODO
-            FIELD2 = np.asarray(F.PVTF)
-            print(np.nanmean((FIELD2)))
-            
-            print()
-            print(np.sum(np.isnan(FIELD2[:,:,:])) -\
-                         np.sum(np.isnan(FIELD1[:,:,:])))
-            print(np.nanmean(FIELD2[:,:,:] - FIELD1[:,:,:]))
-            #print(np.sum(np.isnan(FIELD2[:,:])) - np.sum(np.isnan(FIELD1[:,:])))
-            #print(np.nanmean(FIELD2[:,:] - FIELD1[:,:]))
-            quit()
+            ##TODO
+            #FIELD2 = np.asarray(F.PHI)
+            #print(np.nanmean((FIELD2)))
+            #
+            #print()
+            #print(np.sum(np.isnan(FIELD2[:,:,:])) -\
+            #             np.sum(np.isnan(FIELD1[:,:,:])))
+            #print(np.nanmean(FIELD2[:,:,:] - FIELD1[:,:,:]))
+            ##print(np.sum(np.isnan(FIELD2[:,:])) - np.sum(np.isnan(FIELD1[:,:])))
+            ##print(np.nanmean(FIELD2[:,:] - FIELD1[:,:]))
+            #quit()
 
             
             #import matplotlib.pyplot as plt
@@ -406,27 +409,13 @@ def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
                  diag_geopotential_jacobson_gpu(GR, GR.stream, F.PHI,
                                                 F.PHIVB, F.HSURF, 
                                                 F.POTT, F.COLP, F.PVTF, F.PVTFVB)
+
+            diagnose_POTTVB_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, GR.stream] \
+                                            (F.POTTVB, F.POTT, F.PVTF, F.PVTFVB)
+            GR.stream.synchronize()
     ##############################
     ##############################
 
 
-
-    ##############################
-    ##############################
-    if comp_mode == 1:
-        F.POTTVB = diagnose_POTTVB_jacobson_c(GR, njobs, F.POTTVB,
-                                                F.POTT, F.PVTF, F.PVTFVB)
-        F.POTTVB = np.asarray(F.POTTVB)
-
-    elif comp_mode == 2:
-        diagnose_POTTVB_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, GR.stream] \
-                                        (F.POTTVB, F.POTT, F.PVTF, F.PVTFVB)
-        GR.stream.synchronize()
-    ##############################
-    ##############################
-
-
-    #TURB.diag_rho(GR, COLP, POTT, PVTF, POTTVB, PVTFVB)
-    #TURB.diag_dz(GR, PHI, PHIVB)
 
 

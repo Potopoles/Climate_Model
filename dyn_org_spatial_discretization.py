@@ -36,7 +36,11 @@ from dyn_UVFLX_prepare import (UVFLX_prep_adv_gpu, UVFLX_prep_adv_cpu)
 from dyn_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
 from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
 from dyn_diagnostics import (diag_PVTF_gpu,
-                             diag_PHI_gpu)
+                             diag_PHI_gpu,
+                             diag_POTTVB_gpu)
+
+
+#from boundaries_cuda import exchange_BC_gpu as exchange_BC_gpu_old
 ###############################################################################
 
 
@@ -191,7 +195,6 @@ class TendencyFactory:
 
 
 
-from geopotential_cuda import get_geopotential, diag_pvt_factor
 class DiagnosticsFactory:
     """
     """
@@ -200,33 +203,24 @@ class DiagnosticsFactory:
         """
         """
         self.fields_primary_diag = ['COLP', 'PVTF', 'PVTFVB',
-                                  'PHI', 'PHIVB', 'POTT',
+                                  'PHI', 'PHIVB', 'POTT', 'POTTVB',
                                   'HSURF']
 
     def primary_diag(self, target, GR_OLD, GR,
                         COLP, PVTF, PVTFVB, 
-                        PHI, PHIVB, POTT, HSURF):
+                        PHI, PHIVB, POTT, POTTVB, HSURF):
 
         if target == DEVICE:
-            #diag_PVTF_gpu[GR_OLD.griddim, GR_OLD.blockdim] \
-            #                    (COLP, PVTF, PVTFVB, GR.sigma_vbd)
-            diag_pvt_factor[GR_OLD.griddim, GR_OLD.blockdim, GR_OLD.stream] \
-                                (COLP, PVTF, PVTFVB, GR_OLD.sigma_vbd)
-            GR_OLD.stream.synchronize()
 
-            #diag_PHI_gpu[GR_OLD.griddim_ks, GR_OLD.blockdim_ks] \
-            #                   (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
-            get_geopotential[GR_OLD.griddim_ks, GR_OLD.blockdim_ks, GR_OLD.stream] \
-                               (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
-            GR_OLD.stream.synchronize()
+            diag_PVTF_gpu[bpg, tpb](COLP, PVTF, PVTFVB, GR.sigma_vbd)
 
-            #exchange_BC_gpu[bpg, tpb](PVTF)
-            #exchange_BC_gpu[bpg, tpb](PVTFVB)
-            #exchange_BC_gpu[bpg, tpb](PHI)
-            #PVTF  = exchange_BC_gpu(PVTF, GR_OLD.zonal, GR_OLD.merid,   \
-            #                        GR_OLD.griddim, GR_OLD.blockdim, GR_OLD.stream)
-            PVTFVB  = exchange_BC_gpu(PVTFVB, GR_OLD.zonalvb, GR_OLD.meridvb,   \
-                                    GR_OLD.griddim_ks, GR_OLD.blockdim_ks, GR_OLD.stream)
-            PHI  = exchange_BC_gpu(PHI, GR_OLD.zonal, GR_OLD.merid,   \
-                                    GR_OLD.griddim, GR_OLD.blockdim, GR_OLD.stream)
-            GR_OLD.stream.synchronize()
+            diag_PHI_gpu[bpg, tpb_ks] (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
+
+            exchange_BC_gpu[bpg, tpb](PVTF)
+            exchange_BC_gpu[bpg, tpb_ks](PVTFVB)
+            exchange_BC_gpu[bpg, tpb](PHI)
+
+            diag_POTTVB_gpu[bpg, tpb_ks](POTTVB, POTT, PVTF, PVTFVB)
+
+            #TURB.diag_rho(GR, COLP, POTT, PVTF, POTTVB, PVTFVB)
+            #TURB.diag_dz(GR, PHI, PHIVB)

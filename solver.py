@@ -99,13 +99,13 @@ while GR.ts < GR.nts:
     ####################################################################
     # SECONDARY DIAGNOSTICS (related to physics)
     ####################################################################
-    t_start = time.time()
-    if comp_mode in [0,1]:
-        secondary_diagnostics(GR, CF)
-    elif comp_mode == 2:
-        secondary_diagnostics(GR, GF)
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
+    #t_start = time.time()
+    #if comp_mode in [0,1]:
+    #    secondary_diagnostics(GR, CF)
+    #elif comp_mode == 2:
+    #    secondary_diagnostics(GR, GF)
+    #t_end = time.time()
+    #GR.diag_comp_time += t_end - t_start
 
 
     ####################################################################
