@@ -144,7 +144,7 @@ def print_computation_time_info(GR):
     print('soil       :  ' + str(int(100*GR.soil_comp_time/GR.total_comp_time)) + '  \t%\t' \
                            + str(int(GR.soil_comp_time)) + '\ts')
     print('specia     :  ' + str(int(100*GR.special/GR.total_comp_time)) + '  \t%\t' \
-                           + str(int(GR.special)) + '\ts')
+                           + str(np.round(GR.special,2)) + '\ts')
 
 
 

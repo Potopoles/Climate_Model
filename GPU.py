@@ -5,7 +5,7 @@
 File name:          GPU.py  
 Author:             Christoph Heim (CH)
 Date created:       20190509
-Last modified:      20190526
+Last modified:      20190528
 License:            MIT
 
 Functionality not yet defined.
@@ -38,7 +38,7 @@ def cuda_kernel_decorator(function, non_3D={}):
 def set_equal(set_FIELD, get_FIELD):
     fnx,fny,fnz = set_FIELD.shape
     i, j, k = cuda.grid(3)
-    if k < fnz:
+    if i < fnx and j < fny and k < fnz:
         set_FIELD[i,j,k] = get_FIELD[i,j,k] 
 set_equal = cuda.jit(cuda_kernel_decorator(set_equal))(set_equal)
 

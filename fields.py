@@ -3,7 +3,7 @@
 """
 ####################################################################
 File name:          fields.py  
-Author:             Christoph Heim (CH)
+Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190521
 License:            MIT
@@ -436,15 +436,16 @@ class GPU_Fields:
         self.CF.WIND          =    self.WIND.copy_to_host() 
         self.CF.POTT          =    self.POTT.copy_to_host() 
         self.CF.COLP_NEW      =    self.COLP_NEW.copy_to_host() 
-        self.CF.dCOLPdt      =    self.dCOLPdt.copy_to_host() 
-        self.CF.COLP_OLD      =    self.COLP_OLD.copy_to_host() 
+        self.CF.dCOLPdt     =    self.dCOLPdt.copy_to_host() 
+        self.CF.COLP_OLD    =    self.COLP_OLD.copy_to_host() 
+        self.CF.HSURF       =    self.HSURF.copy_to_host() 
 
         #self.COLP_OLD          .to_host(GR.stream)
         #self.COLP              .to_host(GR.stream)
         #self.COLP_NEW          .to_host(GR.stream)
         #self.dCOLPdt           .to_host(GR.stream)
         self.PSURF             .to_host(GR.stream)
-        self.HSURF             .to_host(GR.stream) 
+        #self.HSURF             .to_host(GR.stream) 
         self.OCEANMSK          .to_host(GR.stream) 
 
         self.UWIND_OLD         .to_host(GR.stream) 

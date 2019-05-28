@@ -3,7 +3,7 @@
 """
 ####################################################################
 File name:          grid.py  
-Author:             Christoph Heim (CH)
+Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190523
 License:            MIT

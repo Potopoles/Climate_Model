@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 """
 File name:          solver.py  
-Author:             Christoph Heim (CH)
+Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190523
 License:            MIT

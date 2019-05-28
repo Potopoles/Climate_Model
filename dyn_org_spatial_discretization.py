@@ -2,18 +2,22 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          org_tendencies.py  
-Author:             Christoph Heim (CH)
+File name:          dyn_org_spatial_discretization.py  
+Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190526
+Last modified:      20190528
 License:            MIT
 
 Organise the computation of all tendencies in dynamical core:
-- potential temperature POTT
+- virtual potential temperature POTT
+- horizontal momentum fluxes UFLX and VFLX
+- continuity equation resulting in column pressure COLP tendency and
+  vertical wind speed WWIND
 
-Differentiate between computation targets:
-- GPU
-- CPU
+Organise the computation of all diagnostic functions:
+- 
+
+Differentiate between computation targets GPU and CPU.
 ###############################################################################
 """
 import math
@@ -23,15 +27,16 @@ from numba import cuda
 from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
 from org_namelist import HOST, DEVICE
 from grid import nx,nxs,ny,nys,nz,nzs,nb
-from dyn_continuity import (continuity_gpu, continuity_cpu)
-from dyn_POTT import POTT_tendency_gpu, POTT_tendency_cpu
-from dyn_UVFLX_prepare import (UVFLX_prep_adv_gpu,
-                               UVFLX_prep_adv_cpu)
-from dyn_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
-from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
-from grid import tpb, tpb_ks, bpg, tpb_sc, bpg_sc#, tpb_sc_ks
+from grid import tpb, tpb_ks, bpg, tpb_sc, bpg_sc
 from GPU import exchange_BC_gpu
 from CPU import exchange_BC_cpu
+from dyn_continuity import (continuity_gpu, continuity_cpu)
+from dyn_POTT import POTT_tendency_gpu, POTT_tendency_cpu
+from dyn_UVFLX_prepare import (UVFLX_prep_adv_gpu, UVFLX_prep_adv_cpu)
+from dyn_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
+from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
+from dyn_diagnostics import (diag_PVTF_gpu,
+                             diag_PHI_gpu)
 ###############################################################################
 
 
@@ -40,8 +45,6 @@ from CPU import exchange_BC_cpu
 
 class TendencyFactory:
     """
-    Depending on computation target, calls the right function
-    to calculate the tendencies.
     """
     
     def __init__(self):
@@ -50,9 +53,9 @@ class TendencyFactory:
         self.fields_continuity = ['UFLX', 'VFLX', 'FLXDIV',
                                   'UWIND', 'VWIND', 'WWIND',
                                   'COLP', 'dCOLPdt', 'COLP_NEW', 'COLP_OLD']
-        self.fields_POTT = ['dPOTTdt', 'POTT', 'UFLX', 'VFLX',
+        self.fields_temperature = ['dPOTTdt', 'POTT', 'UFLX', 'VFLX',
                              'COLP', 'POTTVB', 'WWIND', 'COLP_NEW']
-        self.fields_UVFLX= ['dUFLXdt', 'dVFLXdt',
+        self.fields_momentum = ['dUFLXdt', 'dVFLXdt',
                         'UWIND', 'VWIND', 'WWIND',
                         'UFLX', 'VFLX',
                         'CFLX', 'QFLX', 'DFLX', 'EFLX',
@@ -65,6 +68,8 @@ class TendencyFactory:
     def continuity(self, target, GR, UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
                     COLP, dCOLPdt, COLP_NEW, COLP_OLD):
+        """
+        """
 
         if target == DEVICE:
             continuity_gpu[bpg_sc, tpb_sc](UFLX, VFLX, FLXDIV,
@@ -89,9 +94,11 @@ class TendencyFactory:
             exchange_BC_cpu(COLP_NEW)
 
 
-    def POTT_tendency(self, target, GR,
+    def temperature(self, target, GR,
                             dPOTTdt, POTT, UFLX, VFLX,
                             COLP, POTTVB, WWIND, COLP_NEW):
+        """
+        """
         if target == DEVICE:
             POTT_tendency_gpu[bpg, tpb](GR.Ad, GR.dsigmad,
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
@@ -102,7 +109,7 @@ class TendencyFactory:
                     POTTVB, WWIND, COLP_NEW)
 
 
-    def UVFLX_tendency(self, target, GR,
+    def momentum(self, target, GR,
                         dUFLXdt, dVFLXdt,
                         UWIND, VWIND, WWIND,
                         UFLX, VFLX,
@@ -111,6 +118,8 @@ class TendencyFactory:
                         PHI, COLP, COLP_NEW, POTT,
                         PVTF, PVTFVB,
                         WWIND_UWIND, WWIND_VWIND):
+        """
+        """
 
         if target == DEVICE:
             # PREPARE ADVECTIVE FLUXES
@@ -177,3 +186,47 @@ class TendencyFactory:
                         GR.dlon_rad,    GR.dlat_rad,
                         GR.dxjs, 
                         GR.dsigma,      GR.sigma_vb)
+
+
+
+
+
+from geopotential_cuda import get_geopotential, diag_pvt_factor
+class DiagnosticsFactory:
+    """
+    """
+    
+    def __init__(self):
+        """
+        """
+        self.fields_primary_diag = ['COLP', 'PVTF', 'PVTFVB',
+                                  'PHI', 'PHIVB', 'POTT',
+                                  'HSURF']
+
+    def primary_diag(self, target, GR_OLD, GR,
+                        COLP, PVTF, PVTFVB, 
+                        PHI, PHIVB, POTT, HSURF):
+
+        if target == DEVICE:
+            #diag_PVTF_gpu[GR_OLD.griddim, GR_OLD.blockdim] \
+            #                    (COLP, PVTF, PVTFVB, GR.sigma_vbd)
+            diag_pvt_factor[GR_OLD.griddim, GR_OLD.blockdim, GR_OLD.stream] \
+                                (COLP, PVTF, PVTFVB, GR_OLD.sigma_vbd)
+            GR_OLD.stream.synchronize()
+
+            #diag_PHI_gpu[GR_OLD.griddim_ks, GR_OLD.blockdim_ks] \
+            #                   (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
+            get_geopotential[GR_OLD.griddim_ks, GR_OLD.blockdim_ks, GR_OLD.stream] \
+                               (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
+            GR_OLD.stream.synchronize()
+
+            #exchange_BC_gpu[bpg, tpb](PVTF)
+            #exchange_BC_gpu[bpg, tpb](PVTFVB)
+            #exchange_BC_gpu[bpg, tpb](PHI)
+            #PVTF  = exchange_BC_gpu(PVTF, GR_OLD.zonal, GR_OLD.merid,   \
+            #                        GR_OLD.griddim, GR_OLD.blockdim, GR_OLD.stream)
+            PVTFVB  = exchange_BC_gpu(PVTFVB, GR_OLD.zonalvb, GR_OLD.meridvb,   \
+                                    GR_OLD.griddim_ks, GR_OLD.blockdim_ks, GR_OLD.stream)
+            PHI  = exchange_BC_gpu(PHI, GR_OLD.zonal, GR_OLD.merid,   \
+                                    GR_OLD.griddim, GR_OLD.blockdim, GR_OLD.stream)
+            GR_OLD.stream.synchronize()

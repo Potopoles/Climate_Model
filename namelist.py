@@ -3,7 +3,7 @@
 """
 ####################################################################
 File name:          namelist.py  
-Author:             Christoph Heim (CH)
+Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190521
 License:            MIT
@@ -210,7 +210,7 @@ elif i_simulation_mode == 10:
 
 
 ####################################################################
-# DIFFUSION
+# DIFUSION
 ####################################################################
 UVFLX_dif_coef = 0 # important
 POTT_dif_coef = 1E-6 # creates instabilities and acceleration in steep terrain
