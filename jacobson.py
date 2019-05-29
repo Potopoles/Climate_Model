@@ -62,20 +62,6 @@ import numba
 
 def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
-    ## TODO
-    #if i_run_new_style == 1:
-    #    if comp_mode == 1:
-    #        F.COLP          = np.expand_dims(F.COLP, axis=2)
-    #        F.dCOLPdt       = np.expand_dims(F.dCOLPdt, axis=2)
-    #        F.COLP_NEW      = np.expand_dims(F.COLP_NEW, axis=2)
-    #        F.COLP_OLD      = np.expand_dims(F.COLP_OLD, axis=2)
-    #    elif comp_mode == 2:
-    #        F.COLP          = cp.expand_dims(F.COLP, axis=2)
-    #        F.dCOLPdt       = cp.expand_dims(F.dCOLPdt, axis=2)
-    #        F.COLP_NEW      = cp.expand_dims(F.COLP_NEW, axis=2)
-    #        F.COLP_OLD      = cp.expand_dims(F.COLP_OLD, axis=2)
-
-
     ##############################
     ##############################
     t_start = time.time()
@@ -237,13 +223,6 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
     ##############################
     ##############################
 
-    ##TODO
-    #if i_run_new_style == 1:
-    #    F.COLP          = F.COLP.squeeze()
-    #    F.dCOLPdt       = F.dCOLPdt.squeeze()
-    #    F.COLP_NEW      = F.COLP_NEW.squeeze()
-    #    F.COLP_OLD      = F.COLP_OLD.squeeze()
-
 
     ###############################
     ###############################
@@ -283,69 +262,22 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
 
 
-
-#def proceed_timestep_jacobson(GR, UWIND_OLD, UWIND, VWIND_OLD, VWIND,
-#                    COLP_OLD, COLP, POTT_OLD, POTT, QV_OLD, QV, QC_OLD, QC,
-#                    dUFLXdt, dVFLXdt, dPOTTdt, dQVdt, dQCdt):
-#
-#    COLPA_is_OLD, COLPA_js_OLD = interp_COLPA(GR, COLP_OLD)
-#    COLPA_is_NEW, COLPA_js_NEW = interp_COLPA(GR, COLP)
-#
-#    # TIME STEPPING
-#    for k in range(0,GR.nz):
-#        UWIND[:,:,k][GR.iisjj] = UWIND_OLD[:,:,k][GR.iisjj] * COLPA_is_OLD/COLPA_is_NEW \
-#                            + GR.dt*dUFLXdt[:,:,k][GR.iisjj]/COLPA_is_NEW
-#        VWIND[:,:,k][GR.iijjs] = VWIND_OLD[:,:,k][GR.iijjs] * COLPA_js_OLD/COLPA_js_NEW \
-#                            + GR.dt*dVFLXdt[:,:,k][GR.iijjs]/COLPA_js_NEW
-#        POTT[:,:,k][GR.iijj] = POTT_OLD[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
-#                            + GR.dt*dPOTTdt[:,:,k][GR.iijj]/COLP[GR.iijj]
-#        QV[:,:,k][GR.iijj] = QV_OLD[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
-#                            + GR.dt*dQVdt[:,:,k][GR.iijj]/COLP[GR.iijj]
-#        QC[:,:,k][GR.iijj] = QC_OLD[:,:,k][GR.iijj] * COLP_OLD[GR.iijj]/COLP[GR.iijj] \
-#                            + GR.dt*dQCdt[:,:,k][GR.iijj]/COLP[GR.iijj]
-#    QV[QV < 0] = 0
-#    QC[QC < 0] = 0
-#
-#    # TODO 4 NECESSARY
-#    UWIND = exchange_BC(GR, UWIND)
-#    VWIND = exchange_BC(GR, VWIND)
-#    POTT = exchange_BC(GR, POTT)
-#    QV = exchange_BC(GR, QV)
-#    QC = exchange_BC(GR, QC)
-#
-#    return(UWIND, VWIND, COLP, POTT, QV, QC)
-
-
-
-
-
-
-
 def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
 
     ##############################
     ##############################
     if comp_mode == 1:
         if i_run_new_style:
-            # TODO
-            F.COLP          = np.expand_dims(F.COLP, axis=2)
-            F.HSURF         = np.expand_dims(F.HSURF, axis=2)
-            # TODO
 
             NF.old_to_new(F, host=True)
             Diagnostics.primary_diag(HOST, GR_NEW,
                     **NF.get(Diagnostics.fields_primary_diag, target=HOST))
             NF.new_to_old(F, host=True)
 
-            # TODO
-            F.COLP          = F.COLP.squeeze()
-            F.HSURF         = F.HSURF.squeeze()
-            # TODO
-
         else:
             F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
-                    diag_geopotential_jacobson_c(GR, njobs, F.PHI, F.PHIVB, F.HSURF, 
-                                                    F.POTT, F.COLP, F.PVTF, F.PVTFVB)
+                diag_geopotential_jacobson_c(GR, njobs, F.PHI, F.PHIVB, F.HSURF, 
+                                                F.POTT, F.COLP, F.PVTF, F.PVTFVB)
             F.PHI = np.asarray(F.PHI)
             F.PHIVB = np.asarray(F.PHIVB)
             F.PVTF = np.asarray(F.PVTF)
@@ -358,21 +290,10 @@ def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
     elif comp_mode == 2:
         if i_run_new_style:
 
-            # TODO
-            F.COLP          = cp.expand_dims(F.COLP, axis=2)
-            F.HSURF         = cp.expand_dims(F.HSURF, axis=2)
-            # TODO
-
             NF.old_to_new(F, host=False)
             Diagnostics.primary_diag(DEVICE, GR_NEW,
                     **NF.get(Diagnostics.fields_primary_diag, target=DEVICE))
             NF.new_to_old(F, host=False)
-
-            # TODO
-            F.COLP          = F.COLP.squeeze()
-            F.HSURF         = F.HSURF.squeeze()
-            # TODO
-
 
         else:
             F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
@@ -380,7 +301,8 @@ def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
                                                 F.PHIVB, F.HSURF, 
                                                 F.POTT, F.COLP, F.PVTF, F.PVTFVB)
 
-            diagnose_POTTVB_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks, GR.stream] \
+            diagnose_POTTVB_jacobson_gpu[GR.griddim_ks, GR.blockdim_ks,
+                                                        GR.stream] \
                                             (F.POTTVB, F.POTT, F.PVTF, F.PVTFVB)
             GR.stream.synchronize()
     ##############################

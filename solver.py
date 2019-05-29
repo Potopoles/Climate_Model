@@ -45,6 +45,8 @@ elif i_time_stepping == 'RK4':
     from RK4 import step_RK4 as time_stepper
 
 import _thread
+from namelist import i_run_new_style
+import cupy as cp
 ####################################################################
 
 ####################################################################
@@ -171,6 +173,20 @@ while GR.ts < GR.nts:
     ####################################################################
     # DYNAMICS
     ####################################################################
+    # TODO
+    if i_run_new_style == 1:
+        if comp_mode == 1:
+            CF.COLP          = np.expand_dims(CF.COLP, axis=2)
+            CF.dCOLPdt       = np.expand_dims(CF.dCOLPdt, axis=2)
+            CF.COLP_NEW      = np.expand_dims(CF.COLP_NEW, axis=2)
+            CF.COLP_OLD      = np.expand_dims(CF.COLP_OLD, axis=2)
+            CF.HSURF         = np.expand_dims(CF.HSURF, axis=2)
+        elif comp_mode == 2:
+            GF.COLP          = cp.expand_dims(GF.COLP, axis=2)
+            GF.dCOLPdt       = cp.expand_dims(GF.dCOLPdt, axis=2)
+            GF.COLP_NEW      = cp.expand_dims(GF.COLP_NEW, axis=2)
+            GF.COLP_OLD      = cp.expand_dims(GF.COLP_OLD, axis=2)
+            GF.HSURF         = cp.expand_dims(GF.HSURF, axis=2)
     t_dyn_start = time.time()
     if comp_mode in [0,1]:
         time_stepper(GR, GR_NEW, subgrids, CF, F)
@@ -178,6 +194,22 @@ while GR.ts < GR.nts:
         time_stepper(GR, GR_NEW, subgrids, GF, F)
     t_dyn_end = time.time()
     GR.dyn_comp_time += t_dyn_end - t_dyn_start
+    if i_run_new_style == 1:
+        if comp_mode == 1:
+            # TODO
+            CF.COLP          = CF.COLP.squeeze()
+            CF.dCOLPdt       = CF.dCOLPdt.squeeze()
+            CF.COLP_NEW      = CF.COLP_NEW.squeeze()
+            CF.COLP_OLD      = CF.COLP_OLD.squeeze()
+            CF.HSURF         = CF.HSURF.squeeze()
+        elif comp_mode == 2:
+            # TODO
+            GF.COLP          = GF.COLP.squeeze()
+            GF.dCOLPdt       = GF.dCOLPdt.squeeze()
+            GF.COLP_NEW      = GF.COLP_NEW.squeeze()
+            GF.COLP_OLD      = GF.COLP_OLD.squeeze()
+            GF.HSURF         = GF.HSURF.squeeze()
+
 
 
     ####################################################################

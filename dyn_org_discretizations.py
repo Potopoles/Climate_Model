@@ -46,7 +46,7 @@ from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
 from dyn_diagnostics import (diag_PVTF_gpu, diag_PVTF_cpu,
                              diag_PHI_gpu, diag_PHI_cpu,
                              diag_POTTVB_gpu, diag_POTTVB_cpu)
-from dyn_prognostics import make_timestep_gpu
+from dyn_prognostics import make_timestep_gpu, make_timestep_cpu
 ###############################################################################
 
 
@@ -248,13 +248,12 @@ class PrognosticsFactory:
                     'dUFLXdt', 'dVFLXdt', 'dPOTTdt']
 
 
-    def euler_forward(self, target, GR_OLD, GR, UWIND_OLD, UWIND, VWIND_OLD,
+    def euler_forward(self, target, GR, UWIND_OLD, UWIND, VWIND_OLD,
                     VWIND, COLP_OLD, COLP, POTT_OLD, POTT,
                     dUFLXdt, dVFLXdt, dPOTTdt):
         """
         """
         if target == DEVICE:
-                      
 
             make_timestep_gpu[bpg, tpb](COLP, COLP_OLD,
                       POTT, POTT_OLD, dPOTTdt,
@@ -264,5 +263,13 @@ class PrognosticsFactory:
             exchange_BC_gpu[bpg, tpb](VWIND)
             exchange_BC_gpu[bpg, tpb](UWIND)
 
+        elif target == HOST:
 
+            make_timestep_cpu(COLP, COLP_OLD,
+                      POTT, POTT_OLD, dPOTTdt,
+                      UWIND, UWIND_OLD, dUFLXdt,
+                      VWIND, VWIND_OLD, dVFLXdt, GR.A, GR.dt)
+            exchange_BC_cpu(POTT)
+            exchange_BC_cpu(VWIND)
+            exchange_BC_cpu(UWIND)
 

@@ -182,8 +182,44 @@ make_timestep_gpu = cuda.jit(cuda_kernel_decorator(make_timestep_gpu,
 ###############################################################################
 ### SPECIALIZE FOR CPU
 ###############################################################################
+euler_forward_pw    = njit(euler_forward_pw_py)
+interp_COLPA_js     = njit(interp_COLPA_js_py)
+interp_COLPA_is     = njit(interp_COLPA_is_py)
+run_all             = njit(run_all_py)
 
-#diag_PVTF_cpu = njit(parallel=True)(diag_PVTF_cpu)
+def make_timestep_cpu(COLP, COLP_OLD,
+                      POTT, POTT_OLD, dPOTTdt,
+                      UWIND, UWIND_OLD, dUFLXdt,
+                      VWIND, VWIND_OLD, dVFLXdt,
+                      A, dt):
+
+    for i in prange(nb,nxs+nb):
+        for j in range(nb,nys+nb):
+            for k in range(wp_int(0),nz):
+                POTT[i,j,k], UWIND[i,j,k], VWIND[i,j,k] = run_all(
+                        COLP     [i  ,j  ,0  ], 
+                        COLP     [i-1,j  ,0  ], COLP     [i+1,j  ,0  ],       
+                        COLP     [i  ,j-1,0  ], COLP     [i  ,j+1,0  ],
+                        COLP     [i-1,j-1,0  ], COLP     [i-1,j+1,0  ],
+                        COLP     [i+1,j-1,0  ], COLP     [i+1,j+1,0  ],   
+                        COLP_OLD [i  ,j  ,0  ], 
+                        COLP_OLD [i-1,j  ,0  ], COLP_OLD [i+1,j  ,0  ],       
+                        COLP_OLD [i  ,j-1,0  ], COLP_OLD [i  ,j+1,0  ],
+                        COLP_OLD [i-1,j-1,0  ], COLP_OLD [i-1,j+1,0  ],
+                        COLP_OLD [i+1,j-1,0  ], COLP_OLD [i+1,j+1,0  ],   
+
+                        POTT_OLD [i  ,j  ,k  ], dPOTTdt  [i  ,j  ,k  ],
+                        UWIND_OLD[i  ,j  ,k  ], dUFLXdt  [i  ,j  ,k  ],
+                        VWIND_OLD[i  ,j  ,k  ], dVFLXdt  [i  ,j  ,k  ],
+
+                        A        [i  ,j  ,0  ], 
+                        A        [i-1,j  ,0  ], A        [i+1,j  ,0  ],       
+                        A        [i  ,j-1,0  ], A        [i  ,j+1,0  ],
+                        A        [i-1,j-1,0  ], A        [i-1,j+1,0  ],
+                        A        [i+1,j-1,0  ], A        [i+1,j+1,0  ],   
+                        dt, j)
+
+make_timestep_cpu = njit(make_timestep_cpu)
 
 
 
