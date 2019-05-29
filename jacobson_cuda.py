@@ -13,15 +13,15 @@ def proceed_timestep_jacobson_gpu(GR, stream, UWIND_OLD, UWIND, VWIND_OLD, VWIND
                         (VWIND, VWIND_OLD, dVFLXdt, COLP, COLP_OLD, A, GR.dt)
     time_step_3D[GR.griddim, GR.blockdim, stream] \
                 (POTT, POTT_OLD, dPOTTdt, COLP, COLP_OLD, GR.dt)
-    time_step_3D[GR.griddim, GR.blockdim, stream] \
-                (QV, QV_OLD, dQVdt, COLP, COLP_OLD, GR.dt)
-    time_step_3D[GR.griddim, GR.blockdim, stream] \
-                (QC, QC_OLD, dQCdt, COLP, COLP_OLD, GR.dt)
+    #time_step_3D[GR.griddim, GR.blockdim, stream] \
+    #            (QV, QV_OLD, dQVdt, COLP, COLP_OLD, GR.dt)
+    #time_step_3D[GR.griddim, GR.blockdim, stream] \
+    #            (QC, QC_OLD, dQCdt, COLP, COLP_OLD, GR.dt)
     stream.synchronize()
 
-    make_equal_or_larger[GR.griddim, GR.blockdim, stream](QV, 0.)
-    make_equal_or_larger[GR.griddim, GR.blockdim, stream](QC, 0.)
-    stream.synchronize()
+    #make_equal_or_larger[GR.griddim, GR.blockdim, stream](QV, 0.)
+    #make_equal_or_larger[GR.griddim, GR.blockdim, stream](QC, 0.)
+    #stream.synchronize()
 
     # TODO 4 NECESSARY
     UWIND = exchange_BC_gpu(UWIND, GR.zonal, GR.merids, \
@@ -30,10 +30,10 @@ def proceed_timestep_jacobson_gpu(GR, stream, UWIND_OLD, UWIND, VWIND_OLD, VWIND
                             GR.griddim_js, GR.blockdim, stream, stagy=True)
     POTT  = exchange_BC_gpu(POTT, GR.zonal, GR.merid,   \
                             GR.griddim, GR.blockdim, stream)
-    QV    = exchange_BC_gpu(QV, GR.zonal, GR.merid,     \
-                            GR.griddim, GR.blockdim, stream)
-    QC    = exchange_BC_gpu(QC, GR.zonal, GR.merid,     \
-                            GR.griddim, GR.blockdim, stream)
+    #QV    = exchange_BC_gpu(QV, GR.zonal, GR.merid,     \
+    #                        GR.griddim, GR.blockdim, stream)
+    #QC    = exchange_BC_gpu(QC, GR.zonal, GR.merid,     \
+    #                        GR.griddim, GR.blockdim, stream)
 
     return(UWIND, VWIND, COLP, POTT, QV, QC)
 

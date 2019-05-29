@@ -28,6 +28,7 @@ def euler_forward_py(VAR, dVARdt, dt):
     """
     return( VAR + dt*dVARdt )
 
+
 def hor_adv_py(VAR, VAR_im1, VAR_ip1, VAR_jm1, VAR_jp1,
             UFLX, UFLX_ip1, VFLX, VFLX_jp1, A):
     """

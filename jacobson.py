@@ -32,8 +32,8 @@ from bin.wind_cython import wind_tendency_jacobson_c
 
 from bin.temperature_cython import temperature_tendency_jacobson_c
 ###### NEW
-from dyn_org_spatial_discretization import (TendencyFactory,
-                                            DiagnosticsFactory) 
+from dyn_org_discretizations import (TendencyFactory,
+                                    DiagnosticsFactory) 
 Tendencies = TendencyFactory()
 Diagnostics = DiagnosticsFactory()
 ###### NEW

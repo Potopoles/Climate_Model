@@ -2,20 +2,28 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          dyn_org_spatial_discretization.py  
+File name:          dyn_org_discretization.py  
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190528
+Last modified:      20190529
 License:            MIT
 
-Organise the computation of all tendencies in dynamical core:
+SPATIAL DISCRETIZATION
+----------------------
+Organise the computation of all RHS of equations to compute 
+time tendencies for prognostica variables of dynamical core:
 - virtual potential temperature POTT
 - horizontal momentum fluxes UFLX and VFLX
 - continuity equation resulting in column pressure COLP tendency and
   vertical wind speed WWIND
 
 Organise the computation of all diagnostic functions:
-- 
+- primary diagnostics containing geopotential PHI, virtual potential
+  temperature factor at mass point PVTF and at vertical borders (PVTFVB)
+    
+   TIME DISCRETIZATION
+----------------------
+Organise the computation of one Euler forward time step.
 
 Differentiate between computation targets GPU and CPU.
 ###############################################################################
@@ -38,12 +46,11 @@ from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
 from dyn_diagnostics import (diag_PVTF_gpu,
                              diag_PHI_gpu,
                              diag_POTTVB_gpu)
+from dyn_prognostics import make_timestep_gpu
 
 
 #from boundaries_cuda import exchange_BC_gpu as exchange_BC_gpu_old
 ###############################################################################
-
-
 
 
 
@@ -224,3 +231,34 @@ class DiagnosticsFactory:
 
             #TURB.diag_rho(GR, COLP, POTT, PVTF, POTTVB, PVTFVB)
             #TURB.diag_dz(GR, PHI, PHIVB)
+
+
+
+
+class PrognosticsFactory:
+    def __init__(self):
+        """
+        """
+        self.fields_prognostic = ['UWIND_OLD', 'UWIND', 'VWIND_OLD',
+                    'VWIND', 'COLP_OLD', 'COLP', 'POTT_OLD', 'POTT',
+                    'dUFLXdt', 'dVFLXdt', 'dPOTTdt']
+
+
+    def euler_forward(self, target, GR_OLD, GR, UWIND_OLD, UWIND, VWIND_OLD,
+                    VWIND, COLP_OLD, COLP, POTT_OLD, POTT,
+                    dUFLXdt, dVFLXdt, dPOTTdt):
+        """
+        """
+        if target == DEVICE:
+                      
+
+            make_timestep_gpu[bpg, tpb](COLP, COLP_OLD,
+                      POTT, POTT_OLD, dPOTTdt,
+                      UWIND, UWIND_OLD, dUFLXdt,
+                      VWIND, VWIND_OLD, dVFLXdt, GR.Ad, GR.dt)
+            exchange_BC_gpu[bpg, tpb](POTT)
+            exchange_BC_gpu[bpg, tpb](VWIND)
+            exchange_BC_gpu[bpg, tpb](UWIND)
+
+
+
