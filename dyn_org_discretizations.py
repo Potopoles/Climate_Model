@@ -43,13 +43,10 @@ from dyn_POTT import POTT_tendency_gpu, POTT_tendency_cpu
 from dyn_UVFLX_prepare import (UVFLX_prep_adv_gpu, UVFLX_prep_adv_cpu)
 from dyn_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
 from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
-from dyn_diagnostics import (diag_PVTF_gpu,
-                             diag_PHI_gpu,
-                             diag_POTTVB_gpu)
+from dyn_diagnostics import (diag_PVTF_gpu, diag_PVTF_cpu,
+                             diag_PHI_gpu, diag_PHI_cpu,
+                             diag_POTTVB_gpu, diag_POTTVB_cpu)
 from dyn_prognostics import make_timestep_gpu
-
-
-#from boundaries_cuda import exchange_BC_gpu as exchange_BC_gpu_old
 ###############################################################################
 
 
@@ -213,14 +210,13 @@ class DiagnosticsFactory:
                                   'PHI', 'PHIVB', 'POTT', 'POTTVB',
                                   'HSURF']
 
-    def primary_diag(self, target, GR_OLD, GR,
+    def primary_diag(self, target, GR,
                         COLP, PVTF, PVTFVB, 
                         PHI, PHIVB, POTT, POTTVB, HSURF):
 
         if target == DEVICE:
 
             diag_PVTF_gpu[bpg, tpb](COLP, PVTF, PVTFVB, GR.sigma_vbd)
-
             diag_PHI_gpu[bpg, tpb_ks] (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
 
             exchange_BC_gpu[bpg, tpb](PVTF)
@@ -232,8 +228,16 @@ class DiagnosticsFactory:
             #TURB.diag_rho(GR, COLP, POTT, PVTF, POTTVB, PVTFVB)
             #TURB.diag_dz(GR, PHI, PHIVB)
 
+        elif target == HOST:
 
+            diag_PVTF_cpu(COLP, PVTF, PVTFVB, GR.sigma_vb)
+            diag_PHI_cpu(PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
 
+            exchange_BC_cpu(PVTF)
+            exchange_BC_cpu(PVTFVB)
+            exchange_BC_cpu(PHI)
+
+            diag_POTTVB_cpu(POTTVB, POTT, PVTF, PVTFVB)
 
 class PrognosticsFactory:
     def __init__(self):

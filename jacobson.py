@@ -326,17 +326,34 @@ def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
     ##############################
     ##############################
     if comp_mode == 1:
-        F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
-                diag_geopotential_jacobson_c(GR, njobs, F.PHI, F.PHIVB, F.HSURF, 
-                                                F.POTT, F.COLP, F.PVTF, F.PVTFVB)
-        F.PHI = np.asarray(F.PHI)
-        F.PHIVB = np.asarray(F.PHIVB)
-        F.PVTF = np.asarray(F.PVTF)
-        F.PVTFVB = np.asarray(F.PVTFVB)
+        if i_run_new_style:
+            # TODO
+            F.COLP          = np.expand_dims(F.COLP, axis=2)
+            F.HSURF         = np.expand_dims(F.HSURF, axis=2)
+            # TODO
 
-        F.POTTVB = diagnose_POTTVB_jacobson_c(GR, njobs, F.POTTVB,
-                                                F.POTT, F.PVTF, F.PVTFVB)
-        F.POTTVB = np.asarray(F.POTTVB)
+            NF.old_to_new(F, host=True)
+            Diagnostics.primary_diag(HOST, GR_NEW,
+                    **NF.get(Diagnostics.fields_primary_diag, target=HOST))
+            NF.new_to_old(F, host=True)
+
+            # TODO
+            F.COLP          = F.COLP.squeeze()
+            F.HSURF         = F.HSURF.squeeze()
+            # TODO
+
+        else:
+            F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
+                    diag_geopotential_jacobson_c(GR, njobs, F.PHI, F.PHIVB, F.HSURF, 
+                                                    F.POTT, F.COLP, F.PVTF, F.PVTFVB)
+            F.PHI = np.asarray(F.PHI)
+            F.PHIVB = np.asarray(F.PHIVB)
+            F.PVTF = np.asarray(F.PVTF)
+            F.PVTFVB = np.asarray(F.PVTFVB)
+
+            F.POTTVB = diagnose_POTTVB_jacobson_c(GR, njobs, F.POTTVB,
+                                                    F.POTT, F.PVTF, F.PVTFVB)
+            F.POTTVB = np.asarray(F.POTTVB)
 
     elif comp_mode == 2:
         if i_run_new_style:
@@ -347,61 +364,14 @@ def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
             # TODO
 
             NF.old_to_new(F, host=False)
-            #print('GPU')
-            #n_iter = 10
-            #t0 = time.time()
-            Diagnostics.primary_diag(DEVICE, GR, GR_NEW,
+            Diagnostics.primary_diag(DEVICE, GR_NEW,
                     **NF.get(Diagnostics.fields_primary_diag, target=DEVICE))
-            #for i in range(n_iter):
-            #    Diagnostics.primary_diag(DEVICE, GR, GR_NEW,
-            #            **NF.get(Diagnostics.fields_primary_diag, target=DEVICE))
-            #print((time.time() - t0)/n_iter)
             NF.new_to_old(F, host=False)
-
-            ##TODO
-            #FIELD1 = np.asarray(F.PHI)
-            #print(np.nanmean((FIELD1)))
-            #print()
 
             # TODO
             F.COLP          = F.COLP.squeeze()
             F.HSURF         = F.HSURF.squeeze()
             # TODO
-
-
-            #t0 = time.time()
-            #F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
-            #     diag_geopotential_jacobson_gpu(GR, GR.stream, F.PHI,
-            #                                    F.PHIVB, F.HSURF, 
-            #                                    F.POTT, F.COLP, F.PVTF, F.PVTFVB)
-            #for i in range(n_iter):
-            #    F.PHI, F.PHIVB, F.PVTF, F.PVTFVB = \
-            #         diag_geopotential_jacobson_gpu(GR, GR.stream, F.PHI,
-            #                                        F.PHIVB, F.HSURF, 
-            #                                        F.POTT, F.COLP, F.PVTF, F.PVTFVB)
-            #print((time.time() - t0)/n_iter)
-
-            ##TODO
-            #FIELD2 = np.asarray(F.PHI)
-            #print(np.nanmean((FIELD2)))
-            #
-            #print()
-            #print(np.sum(np.isnan(FIELD2[:,:,:])) -\
-            #             np.sum(np.isnan(FIELD1[:,:,:])))
-            #print(np.nanmean(FIELD2[:,:,:] - FIELD1[:,:,:]))
-            ##print(np.sum(np.isnan(FIELD2[:,:])) - np.sum(np.isnan(FIELD1[:,:])))
-            ##print(np.nanmean(FIELD2[:,:] - FIELD1[:,:]))
-            #quit()
-
-            
-            #import matplotlib.pyplot as plt
-            ##diff = FIELD2[:,:,k] - FIELD1[:,:,k]
-            #diff = FIELD2[:,:] - FIELD1[:,:,0]
-            #plt.contourf(diff)
-            #plt.colorbar()
-            #plt.show()
-
-            #quit()
 
 
         else:

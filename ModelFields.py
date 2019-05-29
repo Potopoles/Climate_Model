@@ -50,6 +50,7 @@ class ModelFields:
             else:
                 exec('self.device[field_name] = OF.' + field_name)
 
+
     def new_to_old(self, OF, host=True):
         for field_name in self.field_groups[self.ALL_FIELDS]:
             if host:
