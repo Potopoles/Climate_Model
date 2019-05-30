@@ -146,11 +146,11 @@ if i_simulation_mode == 0:
     lat1_deg = 80
     dlat_deg = 2
     dlon_deg = 2
-    output_path = '../output_orig'
-    output_path = '../output'
-    i_sim_n_days = 1
-    i_out_nth_hour = 12
-    i_surface = 0
+    output_path = '../output_ref'
+    output_path = '../output_test'
+    i_sim_n_days = 0.36*1
+    i_out_nth_hour = 4*1
+    i_surface_scheme = 0
     i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0

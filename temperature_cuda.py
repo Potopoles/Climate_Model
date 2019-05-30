@@ -56,7 +56,8 @@ def temperature_tendency_jacobson_gpu(dPOTTdt,
 
             # NUMERICAL DIFUSION 
             if i_num_dif and (POTT_hor_dif_tau > 0.):
-                num_dif = POTT_hor_dif_tau *  exp(-(float(nz-k-1))) *\
+                #num_dif = POTT_hor_dif_tau *  exp(-(float(nz-k-1))) *\
+                num_dif = POTT_hor_dif_tau *\
                             ( + COLP[i-1,j  ] * POTT[i-1,j  ,k  ] \
                               + COLP[i+1,j  ] * POTT[i+1,j  ,k  ] \
                               + COLP[i  ,j-1] * POTT[i  ,j-1,k  ] \
