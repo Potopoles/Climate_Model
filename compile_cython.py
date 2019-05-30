@@ -38,7 +38,7 @@ strings = all
 #strings = ['diagnostics_cython']
 #strings = ['temperature_cython']
 #strings = ['moisture_cython']
-strings = ['continuity_cython']
+#strings = ['continuity_cython']
 #strings = ['jacobson_cython']
 
 folder = ''

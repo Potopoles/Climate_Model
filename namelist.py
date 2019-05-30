@@ -152,7 +152,7 @@ working_precision = 'float64'
 # (default suggestions partially overwrite settings above)
 ####################################################################
 i_run_new_style = 1
-comp_mode = 2
+comp_mode = 1
 i_comp_mode = comp_mode
 # 1: testsuite equality
 # 2: longtime run

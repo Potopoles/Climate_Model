@@ -29,6 +29,8 @@ from datetime import timedelta
 import numpy as np
 
 from grid import Grid
+GR = Grid()
+GR.timer.start('start')
 from fields import initialize_fields, CPU_Fields, GPU_Fields
 from ModelFields import ModelFields
 from nc_IO import constant_fields_to_NC, output_to_NC
@@ -57,7 +59,6 @@ Diagnostics = DiagnosticsFactory()
 # CREATE MODEL GRID
 ####################################################################
 # main grid
-GR = Grid()
 GR_NEW = Grid(new=True)
 # optional subgrids for domain decomposition (not completly implemented)
 #GR, subgrids = create_subgrids(GR, njobs)
@@ -90,6 +91,7 @@ constant_fields_to_NC(GR, CF, RAD, SURF)
 ####################################################################
 ####################################################################
 # TIME LOOP START
+GR.timer.stop('start')
 while GR.ts < GR.nts:
     GR.timer.start('total')
     ####################################################################
