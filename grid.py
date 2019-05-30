@@ -296,11 +296,12 @@ class Grid:
 
 
 
+
         # NEW GRID STYLE
         if self.new:
             self.corf         = np.expand_dims(self.corf,       axis=2)
             self.corf_is      = np.expand_dims(self.corf_is,    axis=2)
-            self.lon_rad      = np.expand_dims(self.lat_rad,    axis=2)
+            self.lon_rad      = np.expand_dims(self.lon_rad,    axis=2)
             self.lat_rad      = np.expand_dims(self.lat_rad,    axis=2)
             self.lat_is_rad   = np.expand_dims(self.lat_is_rad, axis=2)
             self.dlon_rad     = np.expand_dims(self.dlon_rad_2D,axis=2)
@@ -309,6 +310,11 @@ class Grid:
             self.dyis         = np.expand_dims(self.dyis,       axis=2)
             self.dxjs         = np.expand_dims(self.dxjs,       axis=2)
 
+            self.lon_is_rad   = np.expand_dims(self.lon_is_rad, axis=2)
+            self.lat_js_rad   = np.expand_dims(self.lat_js_rad, axis=2)
+
+            self.lon_deg      = np.expand_dims(self.lon_deg,    axis=2)
+            self.lat_deg      = np.expand_dims(self.lat_deg,    axis=2)
             set_up_sigma_levels(self)
 
             self.dsigma       = np.expand_dims(

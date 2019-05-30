@@ -1,16 +1,28 @@
-import numpy as np
-import time
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+###############################################################################
+File name:          IO_helper_functions.py  
+Author:             Christoph Heim
+Date created:       20181001
+Last modified:      20190530
+License:            MIT
+
+Helper functions for IO.
+###############################################################################
+"""
 import copy
-from geopotential import diag_pvt_factor
-from constants import con_kappa, con_g 
-from namelist import comp_mode, nth_ts_time_step_diag
+import numpy as np
+
+from namelist import comp_mode, nth_ts_print_diag
 from org_namelist import wp
-from diagnostics import console_output_diagnostics
+from constants import con_kappa, con_g 
+###############################################################################
 
 
 
-def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
-                    PHI, PHIVB, RHO, MIC):
+def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT,
+                        COLP, PVTF, PVTFVB, PHI, PHIVB, RHO, QV, QC):
 
     # VORTICITY
     VORT = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp)
@@ -29,24 +41,21 @@ def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
                                ) / (2*GR.dy) \
 
 
-    ## PRESSURE AND EFFECTIVE TEMPERATURE
-    #PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
-    #PAIR = 100000*np.power(PVTF, 1/con_kappa)
-    #TAIR = POTT*PVTF
-
+    # vertical wind in m/s
     WWIND_ms = copy.deepcopy(WWIND)
     for ks in range(1,GR.nzs-1):
         WWIND_ms[:,:,ks][GR.iijj] = (( PHI[:,:,ks][GR.iijj] - 
                                         PHI[:,:,ks-1][GR.iijj] ) /
-                                    ( con_g * 0.5 * (GR.dsigma[ks] + 
-                                        GR.dsigma[ks-1] ) ) * 
+                                    ( con_g * 0.5 * (GR.dsigma[0,0,ks] + 
+                                        GR.dsigma[0,0,ks-1] ) ) * 
                                             WWIND[:,:,ks][GR.iijj] )
 
 
+    # water vapor path and liquid water path
     ALTVB = PHIVB / con_g
     dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
-    WVP = np.sum(F.QV[GR.iijj]*dz*RHO[GR.iijj],2)
-    CWP = np.sum(F.QC[GR.iijj]*dz*RHO[GR.iijj],2)
+    WVP = np.sum(QV[GR.iijj]*dz*RHO[GR.iijj],2)
+    CWP = np.sum(QC[GR.iijj]*dz*RHO[GR.iijj],2)
 
 
     return(VORT, WWIND_ms, WVP, CWP)
@@ -58,16 +67,39 @@ def NC_output_diagnostics(GR, F, UWIND, VWIND, WWIND, POTT, COLP, PVTF, PVTFVB,
 ####################################################################
 
 
+def diagnose_print_diag_fields(GR, WIND, COLP, POTT):
+
+    max_wind = np.max(WIND[GR.ii,GR.jj,:])
+    
+    mean_wind = 0
+    mean_temp = 0
+    for k in range(0,GR.nz):
+        mean_wind += ( np.sum( WIND[GR.ii,GR.jj,k]*
+                               COLP[GR.ii,GR.jj,0]*GR.A[GR.ii,GR.jj,0] ) /
+                       np.sum( COLP[GR.ii,GR.jj,0]*GR.A[GR.ii,GR.jj,0] ) )
+        mean_temp += ( np.sum( POTT[GR.ii,GR.jj,k]*
+                               GR.A[GR.ii,GR.jj,0]*COLP[GR.ii,GR.jj,0] ) /
+                       np.sum( GR.A[GR.ii,GR.jj,0]*COLP[GR.ii,GR.jj,0] ) )
+    mean_wind = mean_wind/GR.nz
+    mean_temp = mean_temp/GR.nz
+
+    mean_colp = np.sum(COLP[GR.ii,GR.jj,0] * 
+                       GR.A[GR.ii,GR.jj,0])/np.sum(GR.A[GR.ii,GR.jj,0])
+
+    return(max_wind, mean_wind, mean_temp, mean_colp)
 
 
-def print_ts_info(GR, CF, GF):
+
+def print_ts_info(GR, F):
     
 
-    if GR.ts % nth_ts_time_step_diag == 0:
+    if GR.ts % nth_ts_print_diag == 0:
         if comp_mode == 2:
-            GF.copy_stepDiag_fields_to_host(GR)
+            F.copy_device_to_host(F.PRINT_DIAG_FIELDS)
         GR.timer.start('diag')
-        vmax, mean_wind, mean_temp, mean_colp = console_output_diagnostics(GR, CF)
+        vmax, mean_wind, mean_temp, mean_colp = \
+                    diagnose_print_diag_fields(GR, F.host['WIND'], 
+                                        F.host['COLP'], F.host['POTT'])
         GR.timer.stop('diag')
 
         print(str(GR.ts) + '  ' + str(np.round(GR.sim_time_sec/3600/24,3))  +
@@ -78,18 +110,18 @@ def print_ts_info(GR, CF, GF):
                 '  K  COLP: ' + str(np.round(mean_colp,2)) + ' Pa')
 
         # test for crash
-        if ((np.sum(np.isnan(CF.UWIND[GR.iisjj])) > 0) |
-           (np.max(CF.UWIND[GR.iisjj]) > 500)):
+        if ((np.sum(np.isnan(F.host['UWIND'][GR.iisjj])) > 0) |
+           (np.max(F.host['UWIND'][GR.iisjj]) > 500)):
             raise ValueError('MODEL CRASH')
 
-    if GR.ts % nth_ts_time_step_diag == 0:
+    if GR.ts % nth_ts_print_diag == 0:
         try:
             faster_than_reality = np.round(GR.sim_time_sec/
-                                        GR.timer.timings['total'],2)
+                                    GR.timer.timings['total'],2)
             percentage_done = np.round(GR.sim_time_sec/
-                                        (GR.i_sim_n_days*36*24),2)
+                                    (GR.i_sim_n_days*36*24),2)
             to_go_sec = int((100/percentage_done - 1)*
-                                        GR.timer.timings['total'])
+                                    GR.timer.timings['total'])
             tghr = int(np.floor(to_go_sec/3600))
             tgmin = int(np.floor(to_go_sec - tghr*3600)/60)
             tgsec = int(to_go_sec - tghr*3600 - tgmin*60)

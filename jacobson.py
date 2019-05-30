@@ -19,7 +19,7 @@ from dyn_org_discretizations import (TendencyFactory,
 Tendencies = TendencyFactory()
 Diagnostics = DiagnosticsFactory()
 
-def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
+def tendencies_jacobson(GR, F):
 
     # PROGNOSE CONTINUITY
     ##############################
@@ -28,17 +28,13 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
     if comp_mode == 1:
 
-        NF.old_to_new(F, host=True)
-        Tendencies.continuity(HOST, GR_NEW,
-                    **NF.get(Tendencies.fields_continuity, target=HOST))
-        NF.new_to_old(F, host=True)
+        Tendencies.continuity(HOST, GR,
+                    **F.get(Tendencies.fields_continuity, target=HOST))
 
     elif comp_mode == 2:
 
-        NF.old_to_new(F, host=False)
-        Tendencies.continuity(DEVICE, GR_NEW,
-                **NF.get(Tendencies.fields_continuity, target=DEVICE))
-        NF.new_to_old(F, host=False)
+        Tendencies.continuity(DEVICE, GR,
+                **F.get(Tendencies.fields_continuity, target=DEVICE))
 
     GR.timer.stop('cont')
     ##############################
@@ -53,19 +49,13 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
     if comp_mode == 1:
 
-        NF.old_to_new(F, host=True)
-        Tendencies.momentum(HOST, GR_NEW,
-                **NF.get(Tendencies.fields_momentum, target=HOST))
-                        
-        NF.new_to_old(F, host=True)
+        Tendencies.momentum(HOST, GR,
+                **F.get(Tendencies.fields_momentum, target=HOST))
         
     elif comp_mode == 2:
 
-        NF.old_to_new(F, host=False)
-        Tendencies.momentum(DEVICE, GR_NEW,
-                **NF.get(Tendencies.fields_momentum, target=DEVICE))
-                        
-        NF.new_to_old(F, host=False)
+        Tendencies.momentum(DEVICE, GR,
+                **F.get(Tendencies.fields_momentum, target=DEVICE))
 
     GR.timer.stop('wind')
     ##############################
@@ -79,17 +69,13 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
     # PROGNOSE POTT
     if comp_mode == 1:
 
-        NF.old_to_new(F, host=True)
-        Tendencies.temperature(HOST, GR_NEW,
-                    **NF.get(Tendencies.fields_temperature, target=HOST))
-        NF.new_to_old(F, host=True)
+        Tendencies.temperature(HOST, GR,
+                    **F.get(Tendencies.fields_temperature, target=HOST))
 
     elif comp_mode == 2:
 
-        NF.old_to_new(F, host=False)
-        Tendencies.temperature(DEVICE, GR_NEW,
-                    **NF.get(Tendencies.fields_temperature, target=DEVICE))
-        NF.new_to_old(F, host=False)
+        Tendencies.temperature(DEVICE, GR,
+                    **F.get(Tendencies.fields_temperature, target=DEVICE))
 
     GR.timer.stop('temp')
     ##############################
@@ -134,23 +120,19 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
 
 
-def diagnose_fields_jacobson(GR, GR_NEW, F, NF):
+def diagnose_fields_jacobson(GR, F):
 
     ##############################
     ##############################
     if comp_mode == 1:
 
-        NF.old_to_new(F, host=True)
-        Diagnostics.primary_diag(HOST, GR_NEW,
-                **NF.get(Diagnostics.fields_primary_diag, target=HOST))
-        NF.new_to_old(F, host=True)
+        Diagnostics.primary_diag(HOST, GR,
+                **F.get(Diagnostics.fields_primary_diag, target=HOST))
 
     elif comp_mode == 2:
 
-        NF.old_to_new(F, host=False)
-        Diagnostics.primary_diag(DEVICE, GR_NEW,
-                **NF.get(Diagnostics.fields_primary_diag, target=DEVICE))
-        NF.new_to_old(F, host=False)
+        Diagnostics.primary_diag(DEVICE, GR,
+                **F.get(Diagnostics.fields_primary_diag, target=DEVICE))
 
     ##############################
     ##############################

@@ -18,7 +18,7 @@ from org_namelist import wp, HOST, DEVICE
 from boundaries import exchange_BC
 from IO import load_topo_old, load_restart_fields, load_profile_old
 from diagnostics import diagnose_secondary_fields, diagnose_POTTVB_jacobson
-from geopotential import diag_geopotential_jacobson, diag_pvt_factor
+from geopotential import diag_geopotential_jacobson
 from radiation.org_radiation import radiation
 from surface_model import surface
 from grid import tpbh, tpbv, tpbvs

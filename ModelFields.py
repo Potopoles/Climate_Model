@@ -40,7 +40,9 @@ class ModelFields:
 
 
     # names of field groups
-    ALL_FIELDS = 'all_fields'
+    ALL_FIELDS          = 'all_fields'
+    PRINT_DIAG_FIELDS   = 'print_diag_fields'
+    NC_OUT_DIAG_FIELDS  = 'nc_out_diag_fields'
 
     def old_to_new(self, OF, host=True):
         for field_name in self.field_groups[self.ALL_FIELDS]:
@@ -71,18 +73,26 @@ class ModelFields:
         self.set_field_groups()
 
 
-        field_names = ['POTTVB', 'WWIND', 'HSURF',
+        fields_to_init = ['POTTVB', 'WWIND', 'HSURF',
                         'COLP', 'PSURF', 'PVTF', 'PVTFVB',
                         'POTT', 'TAIR', 'TAIRVB', 'PAIR', 
                         'UWIND', 'VWIND', 'WIND', 'RHO',
                         'PHI', 'PHIVB']
-        self.set(initialize_fields(GR, **self.get(field_names)))
-
-        #self.old_to_new(old_fields)
+        self.set(initialize_fields(GR, **self.get(fields_to_init)))
 
         if self.gpu_enable:
             self.copy_host_to_device(field_group=self.ALL_FIELDS)
         #######################################################################
+
+    def set_field_groups(self):
+
+        self.field_groups = {
+            self.ALL_FIELDS:            self.host.keys(),
+            self.PRINT_DIAG_FIELDS:     ['COLP', 'WIND', 'POTT'],
+            self.NC_OUT_DIAG_FIELDS:    ['UWIND', 'VWIND' ,'WWIND' ,'POTT',
+                                         'COLP', 'PVTF' ,'PVTFVB', 'PHI',
+                                         'PHIVB', 'RHO', 'QV', 'QC']
+        }
 
 
     def get(self, field_names, target='host'):
@@ -115,14 +125,9 @@ class ModelFields:
     def copy_device_to_host(self, field_group):
         self.GR.timer.start('copy')
         for field_name in self.field_groups[field_group]:
-            self.host[field_name] = self.device[field_name].to_host()
+            self.device[field_name].copy_to_host(self.host[field_name])
         self.GR.timer.stop('copy')
 
-    def set_field_groups(self):
-
-        self.field_groups = {
-            self.ALL_FIELDS:        self.host.keys(),
-        }
 
 
 
@@ -329,23 +334,23 @@ class ModelFields:
         #######################################################################
         #######################################################################
         # TODO: Add comments
-        self.QV_OLD      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                            np.nan, dtype=wp) 
-        self.QV          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                            np.nan, dtype=wp) 
-        self.dQVdt       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                            np.nan, dtype=wp) 
-        self.QC_OLD      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                            np.nan, dtype=wp) 
-        self.QC          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                            np.nan, dtype=wp) 
-        self.dQCdt       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                            np.nan, dtype=wp) 
-        self.dQVdt_MIC   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
+        f['QV_OLD']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                             np.nan, dtype=wp)
-        self.dQCdt_MIC   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
+        f['QV']          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                             np.nan, dtype=wp)
-        self.dPOTTdt_MIC = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
+        f['dQVdt']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                            np.nan, dtype=wp)
+        f['QC_OLD']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                            np.nan, dtype=wp)
+        f['QC']          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                            np.nan, dtype=wp)
+        f['dQCdt']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                            np.nan, dtype=wp)
+        f['dQVdt_MIC']   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
+                            np.nan, dtype=wp)
+        f['dQCdt_MIC']   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
+                            np.nan, dtype=wp)
+        f['dPOTTdt_MIC'] = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
                             np.nan, dtype=wp)
 
         self.host = f

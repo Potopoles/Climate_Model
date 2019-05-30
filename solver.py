@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
+###############################################################################
 File name:          solver.py  
 Author:             Christoph Heim
 Date created:       20181001
@@ -20,6 +21,7 @@ last sucessful run:
 Python: 3. 7.3
 Numba:  0.43.1
 Numpy:  1.16.3
+###############################################################################
 """
 #if i == 0:
 #    from pdb import set_trace
@@ -29,12 +31,12 @@ from datetime import timedelta
 import numpy as np
 
 from grid import Grid
-GR = Grid()
-GR.timer.start('start')
+GR_NEW = Grid(new=True)
+GR_NEW.timer.start('start')
 from fields import initialize_fields, CPU_Fields, GPU_Fields
 from ModelFields import ModelFields
 from nc_IO import constant_fields_to_NC, output_to_NC
-from org_model_physics import secondary_diagnostics
+#from org_model_physics import secondary_diagnostics
 from IO import write_restart
 from multiproc import create_subgrids
 from namelist import (i_time_stepping,
@@ -43,38 +45,29 @@ from namelist import (i_time_stepping,
                     i_microphysics, i_surface_scheme)
 from org_namelist import (gpu_enable, HOST, DEVICE)
 from IO_helper_functions import (print_ts_info)
-if i_time_stepping == 'MATSUNO':
-    from matsuno import step_matsuno as time_stepper
-elif i_time_stepping == 'RK4':
-    from RK4 import step_RK4 as time_stepper
+from matsuno import step_matsuno as time_stepper
 
 import _thread
-from namelist import i_run_new_style
 import cupy as cp
 from dyn_org_discretizations import DiagnosticsFactory
 Diagnostics = DiagnosticsFactory()
-####################################################################
+###############################################################################
 
 ####################################################################
 # CREATE MODEL GRID
 ####################################################################
-# main grid
-GR_NEW = Grid(new=True)
-# optional subgrids for domain decomposition (not completly implemented)
-#GR, subgrids = create_subgrids(GR, njobs)
-subgrids = {} # option
 
 ####################################################################
 # CREATE MODEL FIELDS
 ####################################################################
-CF = CPU_Fields(GR, subgrids)
-CF, RAD, SURF, MIC, TURB = initialize_fields(GR, subgrids, CF)
+CF = CPU_Fields(GR_NEW, {})
+CF, RAD, SURF, MIC, TURB = initialize_fields(GR_NEW, {}, CF)
 
 F = ModelFields(GR_NEW, gpu_enable, CF)
 
 
 if comp_mode == 2:
-    GF = GPU_Fields(GR, subgrids, CF)
+    GF = GPU_Fields(GR_NEW, {}, CF)
 else:
     GF = None
 
@@ -84,102 +77,79 @@ else:
 ####################################################################
 # OUTPUT AT TIMESTEP 0 (before start of simulation)
 ####################################################################
-constant_fields_to_NC(GR, CF, RAD, SURF)
+constant_fields_to_NC(GR_NEW, F, RAD, SURF)
 
+
+# TODO
+if comp_mode == 1:
+    CF.COLP          = np.expand_dims(CF.COLP, axis=2)
+    CF.dCOLPdt       = np.expand_dims(CF.dCOLPdt, axis=2)
+    CF.COLP_NEW      = np.expand_dims(CF.COLP_NEW, axis=2)
+    CF.COLP_OLD      = np.expand_dims(CF.COLP_OLD, axis=2)
+    CF.HSURF         = np.expand_dims(CF.HSURF, axis=2)
+    F.old_to_new(CF, host=True)
+elif comp_mode == 2:
+    GF.COLP          = cp.expand_dims(GF.COLP, axis=2)
+    GF.dCOLPdt       = cp.expand_dims(GF.dCOLPdt, axis=2)
+    GF.COLP_NEW      = cp.expand_dims(GF.COLP_NEW, axis=2)
+    GF.COLP_OLD      = cp.expand_dims(GF.COLP_OLD, axis=2)
+    GF.HSURF         = cp.expand_dims(GF.HSURF, axis=2)
+    F.old_to_new(GF, host=False)
 
 ####################################################################
 ####################################################################
 ####################################################################
 # TIME LOOP START
-GR.timer.stop('start')
-while GR.ts < GR.nts:
-    GR.timer.start('total')
+GR_NEW.timer.stop('start')
+while GR_NEW.ts < GR_NEW.nts:
+    GR_NEW.timer.start('total')
     ####################################################################
     # SIMULATION STATUS
     ####################################################################
     real_time_ts_start = time.time()
-    GR.ts += 1
-    GR.sim_time_sec = GR.ts*GR.dt
-    GR.GMT += timedelta(seconds=GR.dt)
-    print_ts_info(GR, CF, GF)
+    GR_NEW.ts += 1
+    GR_NEW.sim_time_sec = GR_NEW.ts*GR_NEW.dt
+    GR_NEW.GMT += timedelta(seconds=GR_NEW.dt)
+    print_ts_info(GR_NEW, F)
 
     ####################################################################
     # SECONDARY DIAGNOSTICS (related to physics)
     ####################################################################
-    GR.timer.start('diag2')
-    # TODO
-    if i_run_new_style == 1:
-        if comp_mode == 1:
-            CF.COLP          = np.expand_dims(CF.COLP, axis=2)
-            CF.dCOLPdt       = np.expand_dims(CF.dCOLPdt, axis=2)
-            CF.COLP_NEW      = np.expand_dims(CF.COLP_NEW, axis=2)
-            CF.COLP_OLD      = np.expand_dims(CF.COLP_OLD, axis=2)
-            CF.HSURF         = np.expand_dims(CF.HSURF, axis=2)
-        elif comp_mode == 2:
-            GF.COLP          = cp.expand_dims(GF.COLP, axis=2)
-            GF.dCOLPdt       = cp.expand_dims(GF.dCOLPdt, axis=2)
-            GF.COLP_NEW      = cp.expand_dims(GF.COLP_NEW, axis=2)
-            GF.COLP_OLD      = cp.expand_dims(GF.COLP_OLD, axis=2)
-            GF.HSURF         = cp.expand_dims(GF.HSURF, axis=2)
+    GR_NEW.timer.start('diag2')
     if comp_mode == 1:
-        if i_run_new_style:
-            F.old_to_new(CF, host=True)
-            Diagnostics.secondary_diag(HOST, GR_NEW,
-                    **F.get(Diagnostics.fields_secondary_diag,
-                            target=HOST))
-            F.new_to_old(CF, host=True)
-        else:
-            secondary_diagnostics(GR, CF)
+        Diagnostics.secondary_diag(HOST, GR_NEW,
+                **F.get(Diagnostics.fields_secondary_diag,
+                        target=HOST))
     elif comp_mode == 2:
-        if i_run_new_style:
-            F.old_to_new(GF, host=False)
-            Diagnostics.secondary_diag(DEVICE, GR_NEW,
-                    **F.get(Diagnostics.fields_secondary_diag,
-                            target=DEVICE))
-            F.new_to_old(GF, host=False)
-        else:
-            secondary_diagnostics(GR, GF)
-    if i_run_new_style == 1:
-        if comp_mode == 1:
-            # TODO
-            CF.COLP          = CF.COLP.squeeze()
-            CF.dCOLPdt       = CF.dCOLPdt.squeeze()
-            CF.COLP_NEW      = CF.COLP_NEW.squeeze()
-            CF.COLP_OLD      = CF.COLP_OLD.squeeze()
-            CF.HSURF         = CF.HSURF.squeeze()
-        elif comp_mode == 2:
-            # TODO
-            GF.COLP          = GF.COLP.squeeze()
-            GF.dCOLPdt       = GF.dCOLPdt.squeeze()
-            GF.COLP_NEW      = GF.COLP_NEW.squeeze()
-            GF.COLP_OLD      = GF.COLP_OLD.squeeze()
-            GF.HSURF         = GF.HSURF.squeeze()
-    GR.timer.stop('diag2')
+        Diagnostics.secondary_diag(DEVICE, GR_NEW,
+                **F.get(Diagnostics.fields_secondary_diag,
+                        target=DEVICE))
+    GR_NEW.timer.stop('diag2')
 
 
     ####################################################################
     # RADIATION
     ####################################################################
-    if i_radiation:
-        #print('flag 1')
-        GR.timer.start('rad')
-        # Asynchroneous Radiation
-        if RAD.i_async_radiation:
-            if RAD.done == 1:
-                if comp_mode == 2:
-                    GF.copy_radiation_fields_to_device(GR, CF)
-                    GF.copy_radiation_fields_to_host(GR)
-                RAD.done = 0
-                _thread.start_new_thread(RAD.calc_radiation, (GR, CF))
-        # Synchroneous Radiation
-        else:
-            if GR.ts % RAD.rad_nth_ts == 0:
-                if comp_mode == 2:
-                    GF.copy_radiation_fields_to_host(GR)
-                RAD.calc_radiation(GR, CF)
-                if comp_mode == 2:
-                    GF.copy_radiation_fields_to_device(GR, CF)
-        GR.timer.stop('rad')
+    #if i_radiation:
+    #    #print('flag 1')
+    #    GR.timer.start('rad')
+    #    # Asynchroneous Radiation
+    #    if RAD.i_async_radiation:
+    #        if RAD.done == 1:
+    #            if comp_mode == 2:
+    #                GF.copy_radiation_fields_to_device(GR, CF)
+    #                GF.copy_radiation_fields_to_host(GR)
+    #            RAD.done = 0
+    #            _thread.start_new_thread(RAD.calc_radiation, (GR, CF))
+    #    # Synchroneous Radiation
+    #    else:
+    #        if GR.ts % RAD.rad_nth_ts == 0:
+    #            if comp_mode == 2:
+    #                GF.copy_radiation_fields_to_host(GR)
+    #            RAD.calc_radiation(GR, CF)
+    #            if comp_mode == 2:
+    #                GF.copy_radiation_fields_to_device(GR, CF)
+    #    GR.timer.stop('rad')
 
     #print('RADIATION timerstarts:')
     #try:
@@ -199,11 +169,11 @@ while GR.ts < GR.nts:
     ####################################################################
     # EARTH SURFACE
     ####################################################################
-    if i_surface_scheme:
-        t_start = time.time()
-        SURF.advance_timestep(GR, CF, GF, RAD)
-        t_end = time.time()
-        GR.soil_comp_time += t_end - t_start
+    #if i_surface_scheme:
+    #    t_start = time.time()
+    #    SURF.advance_timestep(GR, CF, GF, RAD)
+    #    t_end = time.time()
+    #    GR.soil_comp_time += t_end - t_start
 
 
     ####################################################################
@@ -219,74 +189,40 @@ while GR.ts < GR.nts:
     ####################################################################
     # DYNAMICS
     ####################################################################
-    # TODO
-    if i_run_new_style == 1:
-        if comp_mode == 1:
-            CF.COLP          = np.expand_dims(CF.COLP, axis=2)
-            CF.dCOLPdt       = np.expand_dims(CF.dCOLPdt, axis=2)
-            CF.COLP_NEW      = np.expand_dims(CF.COLP_NEW, axis=2)
-            CF.COLP_OLD      = np.expand_dims(CF.COLP_OLD, axis=2)
-            CF.HSURF         = np.expand_dims(CF.HSURF, axis=2)
-        elif comp_mode == 2:
-            GF.COLP          = cp.expand_dims(GF.COLP, axis=2)
-            GF.dCOLPdt       = cp.expand_dims(GF.dCOLPdt, axis=2)
-            GF.COLP_NEW      = cp.expand_dims(GF.COLP_NEW, axis=2)
-            GF.COLP_OLD      = cp.expand_dims(GF.COLP_OLD, axis=2)
-            GF.HSURF         = cp.expand_dims(GF.HSURF, axis=2)
-    GR.timer.start('dyn')
-    if comp_mode in [0,1]:
-        time_stepper(GR, GR_NEW, subgrids, CF, F)
-    elif comp_mode == 2:
-        time_stepper(GR, GR_NEW, subgrids, GF, F)
-    GR.timer.stop('dyn')
-    if i_run_new_style == 1:
-        if comp_mode == 1:
-            # TODO
-            CF.COLP          = CF.COLP.squeeze()
-            CF.dCOLPdt       = CF.dCOLPdt.squeeze()
-            CF.COLP_NEW      = CF.COLP_NEW.squeeze()
-            CF.COLP_OLD      = CF.COLP_OLD.squeeze()
-            CF.HSURF         = CF.HSURF.squeeze()
-        elif comp_mode == 2:
-            # TODO
-            GF.COLP          = GF.COLP.squeeze()
-            GF.dCOLPdt       = GF.dCOLPdt.squeeze()
-            GF.COLP_NEW      = GF.COLP_NEW.squeeze()
-            GF.COLP_OLD      = GF.COLP_OLD.squeeze()
-            GF.HSURF         = GF.HSURF.squeeze()
-
+    GR_NEW.timer.start('dyn')
+    time_stepper(GR_NEW, F)
+    GR_NEW.timer.stop('dyn')
 
 
     ####################################################################
     # WRITE NC OUTPUT
     ####################################################################
-    if GR.ts % GR.i_out_nth_ts == 0:
+    if GR_NEW.ts % GR_NEW.i_out_nth_ts == 0:
         # copy GPU fields to CPU
         if comp_mode == 2:
-            GF.copy_all_fields_to_host(GR)
+            F.copy_device_to_host(F.ALL_FIELDS)
 
         # write file
-        GR.timer.start('IO')
-        GR.nc_output_count += 1
-        output_to_NC(GR, CF, RAD, SURF, MIC)
-        GR.timer.stop('IO')
+        GR_NEW.timer.start('IO')
+        GR_NEW.nc_output_count += 1
+        output_to_NC(GR_NEW, F, RAD, SURF, MIC)
+        GR_NEW.timer.stop('IO')
 
 
     ####################################################################
     # WRITE RESTART FILE
     ####################################################################
-    if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
+    if (GR_NEW.ts % GR_NEW.i_restart_nth_ts == 0) and i_save_to_restart:
+        pass
         # copy GPU fields to CPU
-        if comp_mode == 2:
-            GR.timer.start('copy')
-            GF.copy_all_fields_to_host(GR)
-            GR.timer.stop('copy')
+        #if comp_mode == 2:
+        #    GF.copy_all_fields_to_host(GR)
 
-        GR.timer.start('IO')
-        write_restart(GR, CF, RAD, SURF, MIC, TURB)
-        GR.timer.stop('IO')
+        #GR.timer.start('IO')
+        #write_restart(GR_NEW, CF, RAD, SURF, MIC, TURB)
+        #GR.timer.stop('IO')
 
-    GR.timer.stop('total')
+    GR_NEW.timer.stop('total')
 # TIME LOOP STOP
 ####################################################################
 ####################################################################
@@ -297,5 +233,50 @@ while GR.ts < GR.nts:
 ####################################################################
 # FINALIZE SIMULATION
 ####################################################################
-GR.timer.print_report()
+GR_NEW.timer.print_report()
 
+
+
+
+
+## DEBUG TEMPLATE
+#F.host['POTT'][:] = np.nan
+#F.host['UWIND'][:] = np.nan
+#F.host['VWIND'][:] = np.nan
+#n_iter = 10
+#Prognostics.euler_forward(HOST, GR_NEW,
+#        **NF.get(Prognostics.fields_prognostic, target=HOST))
+#t0 = time.time()
+#for i in range(n_iter):
+#    Prognostics.euler_forward(HOST, GR_NEW,
+#            **NF.get(Prognostics.fields_prognostic, target=HOST))
+#print((time.time() - t0)/n_iter)
+
+#F.COLP          = F.COLP.squeeze()
+#F.dCOLPdt       = F.dCOLPdt.squeeze()
+#F.COLP_NEW      = F.COLP_NEW.squeeze()
+#F.COLP_OLD      = F.COLP_OLD.squeeze()
+#F.HSURF         = F.HSURF.squeeze()
+
+##TODO
+#FIELD1 = np.asarray(F.VWIND)
+#print(np.nanmean((FIELD1)))
+#print()
+
+#F.UWIND, F.VWIND, F.COLP, F.POTT, F.QV, F.QC \
+#             = proceed_timestep_jacobson_c(GR,
+#                    F.UWIND_OLD, F.UWIND, F.VWIND_OLD, F.VWIND,
+#                    F.COLP_OLD, F.COLP, F.POTT_OLD, F.POTT,
+#                    F.QV_OLD, F.QV, F.QC_OLD, F.QC,
+#                    F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt)
+#print((time.time() - t0)/n_iter)
+
+##TODO
+#FIELD2 = np.asarray(F.VWIND)
+#print(np.nanmean((FIELD2)))
+#
+#print()
+#print(np.sum(np.isnan(FIELD2[:,:,:])) -\
+#             np.sum(np.isnan(FIELD1[:,:,:])))
+#print(np.nanmean(FIELD2[:,:,:] - FIELD1[:,:,:]))
+#quit()

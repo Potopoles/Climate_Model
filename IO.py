@@ -8,6 +8,7 @@ from boundaries import exchange_BC
 from namelist import pTop, n_topo_smooth, tau_topo_smooth, comp_mode
 from org_namelist import wp
 from geopotential import diag_pvt_factor
+#from dyn_diagnostics import diag_PVTF_cpu
 from constants import con_kappa
 from scipy import interpolate
 from constants import con_g, con_Rd, con_kappa, con_cp
@@ -99,6 +100,9 @@ def load_profile_old(GR, subgrids, COLP, HSURF, PSURF, PVTF, PVTFVB, POTT, TAIR)
 
     COLP[GR.iijj] = PSURF[GR.iijj] - pTop
     PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
+    #COLP        = np.expand_dims(COLP, axis=2)
+    #diag_PVTF_cpu(COLP, PVTF, PVTFVB, sigma_vb)
+    #COLP        = COLP.squeeze()
 
     PAIR =  np.full( (GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz ), np.nan, dtype=wp)
     for k in range(0,GR.nz):
@@ -237,16 +241,21 @@ def load_topo_old(GR, HSURF):
     lat_inp = ncf['lat'][:]
     hsurf_inp = ncf['data'][0,:,:]
     interp = interp2d(lon_inp, lat_inp, hsurf_inp)
-    HSURF[GR.iijj] = interp(GR.lon_deg[GR.ii,GR.nb+1], GR.lat_deg[GR.nb+1,GR.jj]).T
+    print(GR.lon_deg[GR.ii,GR.nb+1].shape)
+    print(GR.lat_deg[GR.nb+1,GR.jj].shape)
+    print(interp(GR.lon_deg[GR.ii,GR.nb+1,0],
+                 GR.lat_deg[GR.nb+1,GR.jj,0]).T.shape)
+    HSURF[GR.iijj] = interp(GR.lon_deg[GR.ii,GR.nb+1,0],
+                            GR.lat_deg[GR.nb+1,GR.jj,0]).T
     HSURF[HSURF < 0] = 0
     HSURF = exchange_BC_periodic_x(GR, HSURF)
     HSURF = exchange_BC_rigid_y(GR, HSURF)
 
     for i in range(0,n_topo_smooth):
         HSURF[GR.iijj] = HSURF[GR.iijj] + tau_topo_smooth*\
-                                            (HSURF[GR.iijj_im1] + HSURF[GR.iijj_ip1] + \
-                                            HSURF[GR.iijj_jm1] + HSURF[GR.iijj_jp1] - \
-                                            4*HSURF[GR.iijj]) 
+                                    (HSURF[GR.iijj_im1] + HSURF[GR.iijj_ip1] + \
+                                    HSURF[GR.iijj_jm1] + HSURF[GR.iijj_jp1] - \
+                                    4*HSURF[GR.iijj]) 
         HSURF = exchange_BC_periodic_x(GR, HSURF)
         HSURF = exchange_BC_rigid_y(GR, HSURF)
 

@@ -92,7 +92,7 @@ i_sim_n_days = 0.5
 # IO SETTINGS
 ####################################################################
 # TIME STEP OUTPUT
-nth_ts_time_step_diag = 10
+nth_ts_print_diag = 20
 # NC OUTPUT
 i_out_nth_hour = 0.25
 output_path = '../output_run'
@@ -152,7 +152,7 @@ working_precision = 'float64'
 # (default suggestions partially overwrite settings above)
 ####################################################################
 i_run_new_style = 1
-comp_mode = 1
+comp_mode = 2
 i_comp_mode = comp_mode
 # 1: testsuite equality
 # 2: longtime run

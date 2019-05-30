@@ -28,7 +28,6 @@ Organise the computation of one Euler forward time step.
 Differentiate between computation targets GPU and CPU.
 ###############################################################################
 """
-import math
 import numpy as np
 from numba import cuda
 
