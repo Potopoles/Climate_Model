@@ -5,7 +5,7 @@
 File name:          jacobson.py  
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190528
+Last modified:      20190530
 License:            MIT
 
 ###############################################################################
@@ -64,7 +64,7 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
     ##############################
     ##############################
-    t_start = time.time()
+    GR.timer.start('cont')
     if i_run_new_style == 1:
 
         if comp_mode == 1:
@@ -123,8 +123,7 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
             F.WWIND = exchange_BC_gpu(F.WWIND, GR.zonalvb, GR.meridvb,
                                         GR.griddim_ks, GR.blockdim_ks, GR.stream)
 
-    t_end = time.time()
-    GR.cont_comp_time += t_end - t_start
+    GR.timer.stop('cont')
     ##############################
     ##############################
 
@@ -132,7 +131,7 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
     ##############################
     ##############################
-    t_start = time.time()
+    GR.timer.start('wind')
     # PROGNOSE WIND
     if comp_mode == 1:
         if i_run_new_style == 1:
@@ -175,8 +174,7 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
                                         F.COLP, F.COLP_NEW, F.PHI, F.POTT,
                                         F.PVTF, F.PVTFVB)
 
-    t_end = time.time()
-    GR.wind_comp_time += t_end - t_start
+    GR.timer.stop('wind')
     ##############################
     ##############################
 
@@ -184,7 +182,7 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
 
     ##############################
     ##############################
-    t_start = time.time()
+    GR.timer.start('temp')
     # PROGNOSE POTT
     if comp_mode == 1:
         if i_run_new_style == 1:
@@ -217,9 +215,7 @@ def tendencies_jacobson(GR, GR_NEW, F, subgrids, NF):
             F.COLP          = F.COLP.squeeze()
             F.COLP_NEW      = F.COLP_NEW.squeeze()
 
-
-    t_end = time.time()
-    GR.temp_comp_time += t_end - t_start
+    GR.timer.stop('temp')
     ##############################
     ##############################
 

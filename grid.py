@@ -21,6 +21,7 @@ from org_namelist import wp_int, wp
 from constants import con_rE, con_omega
 from boundaries import exchange_BC, exchange_BC_periodic_x
 from IO import (load_restart_grid, set_up_sigma_levels)
+from utilities import Timer
 
 ####################################################################
 
@@ -71,17 +72,18 @@ class Grid:
             self.new = new
 
             # TIMERS
-            self.total_comp_time = 0
-            self.IO_time = 0
-            self.dyn_comp_time = 0
-            self.wind_comp_time = 0
-            self.temp_comp_time = 0
-            self.trac_comp_time = 0
-            self.cont_comp_time = 0
-            self.diag_comp_time = 0
-            self.step_comp_time = 0
-            self.special = 0
-            self.copy_time = 0
+            self.timer = Timer()
+            #self.total_comp_time = 0
+            #self.IO_time = 0
+            #self.dyn_comp_time = 0
+            #self.wind_comp_time = 0
+            #self.temp_comp_time = 0
+            #self.trac_comp_time = 0
+            #self.cont_comp_time = 0
+            #self.diag_comp_time = 0
+            #self.step_comp_time = 0
+            #self.special = 0
+            #self.copy_time = 0
 
             self.rad_comp_time = 0
             self.mic_comp_time = 0
@@ -335,8 +337,7 @@ class Grid:
             self.ii,  self.jj  = np.ix_(self.i    ,self.j)
             self.iis, self.jjs = np.ix_(self.i_s  ,self.js)
 
-            self.timings = {}
-            self.timings['copy'] = 0
+
 
 
 def lat_lon_recangle_area(lat,dlon,dlat, i_curved_earth):
@@ -346,3 +347,5 @@ def lat_lon_recangle_area(lat,dlon,dlat, i_curved_earth):
     else:
         A = dlon * dlat * con_rE**2
     return(A)
+
+

@@ -12,7 +12,6 @@ Setup and store model fields. Have each field in memory (for CPU)
 and if GPU enabled also on GPU.
 ###############################################################################
 """
-import time
 import numpy as np
 from numba import cuda
 
@@ -107,19 +106,17 @@ class ModelFields:
 
 
     def copy_host_to_device(self, field_group):
-        t_start = time.time()
+        self.GR.timer.start('copy')
         for field_name in self.field_groups[field_group]:
             self.device[field_name] = cuda.to_device(self.host[field_name]) 
-        t_end = time.time()
-        self.GR.timings['copy'] += t_end - t_start
+        self.GR.timer.stop('copy')
 
 
     def copy_device_to_host(self, field_group):
-        t_start = time.time()
+        self.GR.timer.start('copy')
         for field_name in self.field_groups[field_group]:
             self.host[field_name] = self.device[field_name].to_host()
-        t_end = time.time()
-        self.GR.timings['copy'] += t_end - t_start
+        self.GR.timer.stop('copy')
 
     def set_field_groups(self):
 
@@ -358,7 +355,7 @@ class ModelFields:
 
 
     def copy_stepDiag_fields_to_host(self, GR):
-        t_start = time.time()
+        GR.timer.start('copy')
         #self.COLP              .to_host(GR.stream)
         #self.WIND              .to_host(GR.stream) 
         #self.POTT              .to_host(GR.stream) 
@@ -368,13 +365,11 @@ class ModelFields:
         self.CF.WIND          =    self.WIND.copy_to_host() 
         self.CF.POTT          =    self.POTT.copy_to_host() 
 
-
-        t_end = time.time()
-        GR.copy_time += t_end - t_start
+        GR.timer.stop('copy')
 
 
     def copy_radiation_fields_to_device(self, GR, CF):
-        t_start = time.time()
+        GR.timer.start('copy')
 
         self.dPOTTdt_RAD      = cuda.to_device(CF.dPOTTdt_RAD,  GR.stream) 
         self.SWFLXNET         = cuda.to_device(CF.SWFLXNET,     GR.stream) 
@@ -382,11 +377,10 @@ class ModelFields:
 
         GR.stream.synchronize()
 
-        t_end = time.time()
-        GR.copy_time += t_end - t_start
+        GR.timer.stop('copy')
 
     def copy_radiation_fields_to_host(self, GR):
-        t_start = time.time()
+        GR.timer.start('copy')
         self.RHO               .to_host(GR.stream)
         self.TAIR              .to_host(GR.stream)
         self.PHIVB             .to_host(GR.stream) 
@@ -397,12 +391,11 @@ class ModelFields:
 
         GR.stream.synchronize()
 
-        t_end = time.time()
-        GR.copy_time += t_end - t_start
+        GR.timer.stop('copy')
 
 
     def copy_all_fields_to_host(self, GR):
-        t_start = time.time()
+        GR.timer.start('copy')
 
         # TODO: NEW STYLE (???) MAYBE USE GPU CLASS INSTEAD
         self.CF.COLP          =    self.COLP.copy_to_host()
@@ -467,8 +460,7 @@ class ModelFields:
 
         GR.stream.synchronize()
 
-        t_end = time.time()
-        GR.copy_time += t_end - t_start
+        GR.timer.stop('copy')
 
 
 

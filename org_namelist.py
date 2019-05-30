@@ -14,7 +14,8 @@ import numba
 import numpy as np
 from namelist import (working_precision,
                     UVFLX_dif_coef, POTT_dif_coef, COLP_dif_coef,
-                    comp_mode)
+                    comp_mode,
+                    pair_top)
 ####################################################################
 
 ####################################################################
@@ -51,3 +52,7 @@ UVFLX_dif_coef = wp(UVFLX_dif_coef)
 POTT_dif_coef = wp(POTT_dif_coef)
 if COLP_dif_coef > 0:
     raise NotImplementedError('no pressure difusion in gpu implemented')
+
+
+# physical values
+pair_top = wp(pair_top)

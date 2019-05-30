@@ -146,17 +146,20 @@ i_restart_nth_day = 5.00
 njobs = 4
 
 working_precision = 'float32'
-#working_precision = 'float64'
+working_precision = 'float64'
 ####################################################################
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
 ####################################################################
 i_run_new_style = 1
 comp_mode = 2
+i_comp_mode = comp_mode
 # 1: testsuite equality
 # 2: longtime run
 # 10: benchmark experiment
-i_simulation_mode = 2
+i_simulation_mode = 1
+
+i_sync_context = 1
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 1:
@@ -183,8 +186,8 @@ elif i_simulation_mode == 2:
     dlat_deg = 1.0
     dlon_deg = 1.0
     output_path = '../output'
-    i_sim_n_days = 0.1#*365.00
-    i_out_nth_hour = 24
+    i_sim_n_days = 0.3#*365.00
+    i_out_nth_hour = 2
     i_surface_scheme = 0
     i_radiation = 0
     i_microphysics = 0

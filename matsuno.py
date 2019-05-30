@@ -5,7 +5,7 @@
 File name:          matsuno.py  
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190529
+Last modified:      20190530
 License:            MIT
 
 Perform a matsuno time step.
@@ -42,7 +42,7 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
 
     ##############################
     ##############################
-    t_start = time.time()
+    GR.timer.start('step')
     if comp_mode == 1:
         F.UWIND_OLD[:] = F.UWIND[:]
         F.VWIND_OLD[:] = F.VWIND[:]
@@ -71,9 +71,7 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
                                     F.QC_OLD, F.QC)
             set_equal2D[GR.griddim_xy, GR.blockdim_xy, GR.stream](
                                     F.COLP_OLD, F.COLP)
-    t_end = time.time()
-    GR.step_comp_time += t_end - t_start
-    GR.special += t_end - t_start
+    GR.timer.stop('step')
     ##############################
     ##############################
 
@@ -100,7 +98,7 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
 
     ##############################
     ##############################
-    t_start = time.time()
+    GR.timer.start('step')
     if comp_mode == 1:
 
         if i_run_new_style:
@@ -118,6 +116,14 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
             #            **NF.get(Prognostics.fields_prognostic, target=HOST))
             #print((time.time() - t0)/n_iter)
             NF.new_to_old(F, host=False)
+
+            ## TODO
+            #F.COLP          = F.COLP.squeeze()
+            #F.dCOLPdt       = F.dCOLPdt.squeeze()
+            #F.COLP_NEW      = F.COLP_NEW.squeeze()
+            #F.COLP_OLD      = F.COLP_OLD.squeeze()
+            #F.HSURF         = F.HSURF.squeeze()
+
 
             ##TODO
             #FIELD1 = np.asarray(F.VWIND)
@@ -246,18 +252,16 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
                                 F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt,
                                 F.dQCdt, GR.Ad)
 
-    t_end = time.time()
-    GR.step_comp_time += t_end - t_start
+    GR.timer.stop('step')
     ##############################
     ##############################
 
 
     ##############################
     ##############################
-    t_start = time.time()
+    GR.timer.start('diag')
     diagnose_fields_jacobson(GR, GR_NEW, F, NF)
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
+    GR.timer.stop('diag')
     ##############################
     ##############################
 
@@ -286,7 +290,7 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
 
     ##############################
     ##############################
-    t_start = time.time()
+    GR.timer.start('step')
     if comp_mode == 1:
         if i_run_new_style:
 
@@ -325,18 +329,16 @@ def step_matsuno(GR, GR_NEW, subgrids, F, NF):
                         F.QV_OLD, F.QV, F.QC_OLD, F.QC,
                         F.dUFLXdt, F.dVFLXdt, F.dPOTTdt, F.dQVdt, F.dQCdt, GR.Ad)
 
-    t_end = time.time()
-    GR.step_comp_time += t_end - t_start
+    GR.timer.stop('step')
     ##############################
     ##############################
 
 
     ##############################
     ##############################
-    t_start = time.time()
+    GR.timer.start('diag')
     diagnose_fields_jacobson(GR, GR_NEW, F, NF)
-    t_end = time.time()
-    GR.diag_comp_time += t_end - t_start
+    GR.timer.stop('diag')
     ##############################
     ##############################
 

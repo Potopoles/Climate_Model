@@ -5,7 +5,7 @@
 File name:          dyn_org_discretization.py  
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190529
+Last modified:      20190530
 License:            MIT
 
 SPATIAL DISCRETIZATION
@@ -45,7 +45,8 @@ from dyn_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
 from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
 from dyn_diagnostics import (diag_PVTF_gpu, diag_PVTF_cpu,
                              diag_PHI_gpu, diag_PHI_cpu,
-                             diag_POTTVB_gpu, diag_POTTVB_cpu)
+                             diag_POTTVB_gpu, diag_POTTVB_cpu,
+                             diag_secondary_gpu, diag_secondary_cpu)
 from dyn_prognostics import make_timestep_gpu, make_timestep_cpu
 ###############################################################################
 
@@ -209,6 +210,10 @@ class DiagnosticsFactory:
         self.fields_primary_diag = ['COLP', 'PVTF', 'PVTFVB',
                                   'PHI', 'PHIVB', 'POTT', 'POTTVB',
                                   'HSURF']
+        self.fields_secondary_diag = ['POTTVB', 'TAIRVB', 'PVTFVB',
+                       'COLP', 'PAIR', 'PHI', 'POTT',
+                       'TAIR', 'RHO', 'PVTF',
+                       'UWIND', 'VWIND', 'WIND']
 
     def primary_diag(self, target, GR,
                         COLP, PVTF, PVTFVB, 
@@ -219,9 +224,9 @@ class DiagnosticsFactory:
             diag_PVTF_gpu[bpg, tpb](COLP, PVTF, PVTFVB, GR.sigma_vbd)
             diag_PHI_gpu[bpg, tpb_ks] (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
 
-            exchange_BC_gpu[bpg, tpb](PVTF)
-            exchange_BC_gpu[bpg, tpb_ks](PVTFVB)
-            exchange_BC_gpu[bpg, tpb](PHI)
+            #exchange_BC_gpu[bpg, tpb](PVTF)
+            #exchange_BC_gpu[bpg, tpb_ks](PVTFVB)
+            #exchange_BC_gpu[bpg, tpb](PHI)
 
             diag_POTTVB_gpu[bpg, tpb_ks](POTTVB, POTT, PVTF, PVTFVB)
 
@@ -233,11 +238,34 @@ class DiagnosticsFactory:
             diag_PVTF_cpu(COLP, PVTF, PVTFVB, GR.sigma_vb)
             diag_PHI_cpu(PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
 
-            exchange_BC_cpu(PVTF)
-            exchange_BC_cpu(PVTFVB)
-            exchange_BC_cpu(PHI)
+            #exchange_BC_cpu(PVTF)
+            #exchange_BC_cpu(PVTFVB)
+            #exchange_BC_cpu(PHI)
 
             diag_POTTVB_cpu(POTTVB, POTT, PVTF, PVTFVB)
+
+
+    def secondary_diag(self, target, GR,
+                       POTTVB, TAIRVB, PVTFVB, 
+                       COLP, PAIR, PHI, POTT, 
+                       TAIR, RHO, PVTF,
+                       UWIND, VWIND, WIND):
+
+        if target == DEVICE:
+
+            diag_secondary_gpu[bpg, tpb_ks](POTTVB, TAIRVB, PVTFVB, 
+                                        COLP, PAIR, PHI, POTT, 
+                                        TAIR, RHO, PVTF,
+                                        UWIND, VWIND, WIND)
+
+        elif target == HOST:
+
+            diag_secondary_cpu(POTTVB, TAIRVB, PVTFVB, 
+                                        COLP, PAIR, PHI, POTT, 
+                                        TAIR, RHO, PVTF,
+                                        UWIND, VWIND, WIND)
+
+
 
 class PrognosticsFactory:
     def __init__(self):
