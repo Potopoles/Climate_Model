@@ -185,7 +185,7 @@ def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
 
 def set_up_profile(GR, COLP, HSURF, PSURF, PVTF,
                     PVTFVB, POTT, TAIR, PAIR):
-    filename = 'verticalProfileTable.dat'
+    filename = 'data/mean_vert_prof.dat'
     profile = np.loadtxt(filename)
 
     for i in GR.ii:
@@ -277,7 +277,7 @@ def set_up_sigma_levels(GR):
     HSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb    ,1   ), 
                                 np.nan, dtype=wp)
     HSURF = load_topo(GR, HSURF)
-    filename = 'verticalProfileTable.dat'
+    filename = 'data/mean_vert_prof.dat'
     profile = np.loadtxt(filename)
     zsurf_test = np.mean(HSURF[GR.iijj])
     top_ind = np.argwhere(profile[:,2] >= pair_top).squeeze()[-1]

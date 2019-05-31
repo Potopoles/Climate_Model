@@ -24,10 +24,9 @@ from namelist import (i_UVFLX_main_switch,
                     i_UVFLX_hor_adv, i_UVFLX_vert_adv,
                     i_UVFLX_coriolis,
                     i_UVFLX_num_dif, i_UVFLX_pre_grad)
-from io_read_namelist import (UVFLX_dif_coef,
-                              wp, wp_int, wp_old)
+from io_read_namelist import (UVFLX_dif_coef, wp, wp_int)
 from io_constants import con_rE
-from grid import nx,nxs,ny,nys,nz,nzs,nb
+from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 from misc_gpu_functions import cuda_kernel_decorator
 
 from dyn_functions import (num_dif_py, pre_grad_py, UVFLX_hor_adv_py)

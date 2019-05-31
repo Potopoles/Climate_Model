@@ -12,7 +12,7 @@ Perform a matsuno time integration.
 """
 from namelist import comp_mode
 from io_read_namelist import CPU, GPU
-from grid import tpb, bpg
+from main_grid import tpb, bpg
 from misc_gpu_functions import set_equal
 from dyn_tendencies import compute_tendencies
 from dyn_org_discretizations import (PrognosticsFactory, DiagnosticsFactory) 

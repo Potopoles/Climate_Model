@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          dyn_org_discretization.py  
 Author:             Christoph Heim
 Date created:       20190509
 Last modified:      20190531
@@ -37,7 +36,7 @@ from numba import cuda
 
 from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
 from io_read_namelist import CPU, GPU
-from grid import (nx,nxs,ny,nys,nz,nzs,nb,
+from main_grid import (nx,nxs,ny,nys,nz,nzs,nb,
                  tpb, tpb_ks, bpg, tpb_sc, bpg_sc)
 from misc_boundaries import exchange_BC_cpu, exchange_BC_gpu
 from dyn_continuity import (continuity_gpu, continuity_cpu)

@@ -19,7 +19,7 @@ from math import pow
 from namelist import (pair_top)
 from io_read_namelist import (wp, wp_str, wp_int)
 from io_constants import con_g, con_Rd, con_kappa, con_cp
-from grid import nx,nxs,ny,nys,nz,nzs,nb
+from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 

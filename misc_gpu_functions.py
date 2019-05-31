@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          misc_gpu_functions.py  
 Author:             Christoph Heim
 Date created:       20190509
 Last modified:      20190531
@@ -15,7 +14,7 @@ from numba import cuda
 from inspect import signature
 
 from io_read_namelist import wp_str
-from grid import nx,nxs,ny,nys,nz,nzs,nb
+from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 ###############################################################################
 
 

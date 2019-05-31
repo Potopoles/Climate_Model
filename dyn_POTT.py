@@ -23,8 +23,8 @@ from namelist import (POTT_dif_coef,
                     i_POTT_main_switch,
                     i_POTT_radiation, i_POTT_microphys,
                     i_POTT_hor_adv, i_POTT_vert_adv, i_POTT_num_dif)
-from io_read_namelist import (wp, wp_int, wp_old)
-from grid import nx,nxs,ny,nys,nz,nzs,nb
+from io_read_namelist import (wp, wp_int)
+from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 from misc_gpu_functions import cuda_kernel_decorator
 
 from dyn_functions import (hor_adv_py, vert_adv_py, 

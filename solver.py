@@ -34,8 +34,8 @@ from namelist import (i_time_stepping,
                     i_radiation, njobs, comp_mode,
                     i_microphysics, i_surface_scheme)
 from io_read_namelist import (gpu_enable, CPU, GPU)
-from grid import Grid
-from ModelFields import ModelFields
+from main_grid import Grid
+from main_fields import ModelFields
 from io_nc_output import constant_fields_to_NC, output_to_NC
 from io_restart import write_restart
 from io_functions import (print_ts_info)
@@ -89,11 +89,11 @@ while GR.ts < GR.nts:
     ####################################################################
     # SECONDARY DIAGNOSTICS (related to physics)
     ####################################################################
-    GR.timer.start('diag2')
+    GR.timer.start('diag')
     Diagnostics.secondary_diag(GR,
             **F.get(Diagnostics.fields_secondary_diag,
                     target=Diagnostics.target))
-    GR.timer.stop('diag2')
+    GR.timer.stop('diag')
 
 
     ####################################################################
@@ -196,7 +196,6 @@ while GR.ts < GR.nts:
 ####################################################################
 ####################################################################
 ####################################################################
-
 
 
 ####################################################################

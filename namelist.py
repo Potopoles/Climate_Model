@@ -152,7 +152,6 @@ comp_mode = 2
 i_comp_mode = comp_mode
 # 1: testsuite equality
 # 2: longtime run
-# 10: benchmark experiment
 i_simulation_mode = 1
 
 i_sync_context = 1
@@ -189,21 +188,6 @@ elif i_simulation_mode == 2:
     i_microphysics = 0
     i_turbulence = 0
 
-
-## BENCHMARK EXPERIMENT
-elif i_simulation_mode == 10:
-    nz = 16
-    lat0_deg = -80
-    lat1_deg = 80
-    dlat_deg = 2.0
-    dlon_deg = 2.0
-    output_path = '../output'
-    i_sim_n_days = 1.05
-    i_out_nth_hour = 1.0
-    i_surface_scheme = 1
-    i_radiation = 1
-    i_microphysics = 0
-    i_turbulence = 0
 
 
 

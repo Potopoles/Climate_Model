@@ -95,10 +95,10 @@ class surface:
             if i_microphysics > 0:
                 raise NotImplementedError()
 
-            calc_albedo_gpu[GR.griddim_xy_in, GR.blockdim_xy, GR.stream]\
+            calc_albedo_gpu[GR.main_griddim_xy_in, GR.blockdim_xy, GR.stream]\
                                 (GF.SURFALBEDSW, GF.SURFALBEDLW, GF.OCEANMASK, GF.SOILTEMP)
 
-            calc_evaporation_capacity_gpu[GR.griddim_xy_in, GR.blockdim_xy, GR.stream]\
+            calc_evaporation_capacity_gpu[GR.riddim_xy_in, GR.blockdim_xy, GR.stream]\
                                 (GF.SOILEVAPITY, GF.SOILMOIST, GF.OCEANMASK, GF.SOILTEMP)
 
 

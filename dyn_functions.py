@@ -17,7 +17,7 @@ Fundamentals of Atmospheric Modeling, Second Edition Chapter 7
 """
 from io_read_namelist import wp, wp_int
 from io_constants import con_cp
-from grid import nx,nxs,ny,nys,nz,nzs,nb
+from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 ###############################################################################
 
 

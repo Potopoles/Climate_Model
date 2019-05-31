@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          misc_boundaries.py  
 Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190531
@@ -16,7 +15,7 @@ from numba import njit, cuda
 
 from io_read_namelist import wp
 from misc_gpu_functions import cuda_kernel_decorator
-from grid import nx,nxs,ny,nys,nz,nzs,nb
+from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 ###############################################################################
 
 def exchange_BC_cpu(FIELD):

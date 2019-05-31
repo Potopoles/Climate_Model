@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          io_nc_output.py  
 Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190531
@@ -17,7 +16,7 @@ from netCDF4 import Dataset
 from namelist import (output_path, output_fields,
                      i_radiation, i_microphysics, i_surface_scheme)
 from io_read_namelist import pair_top
-from grid import nx,nxs,ny,nys,nz,nzs,nb
+from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 from io_functions import NC_output_diagnostics
 ###############################################################################
 

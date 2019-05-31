@@ -22,8 +22,8 @@ from math import sin, cos
 from numba import cuda, njit, prange
 
 from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
-from io_read_namelist import (wp, wp_int, wp_old)
-from grid import nx,nxs,ny,nys,nz,nzs,nb
+from io_read_namelist import (wp, wp_int)
+from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 from misc_gpu_functions import cuda_kernel_decorator
 from dyn_functions import (interp_WWIND_UVWIND_py,
                     calc_momentum_fluxes_isjs_py, calc_momentum_fluxes_ijs_py,

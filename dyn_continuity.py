@@ -2,6 +2,7 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
+Author:             Christoph Heim
 Date created:       20190526
 Last modified:      20190531
 License:            MIT
@@ -20,8 +21,8 @@ import numpy as np
 from numba import cuda, njit, prange, vectorize
 
 from namelist import (i_COLP_main_switch)
-from io_read_namelist import (wp_str, wp, wp_numba, wp_int, wp_old)
-from grid import (nx,nxs,ny,nys,nz,nzs,nb,
+from io_read_namelist import (wp_str, wp, wp_numba, wp_int)
+from main_grid import (nx,nxs,ny,nys,nz,nzs,nb,
                   shared_nz)
 from misc_gpu_functions import cuda_kernel_decorator
 from dyn_functions import euler_forward_py
