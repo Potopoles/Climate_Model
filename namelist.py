@@ -38,10 +38,8 @@ n_topo_smooth = 20
 tau_topo_smooth = 0.1
 
 # VERTICAL PROFILE
-pTop = 10000.
-pSurf = 101350.
 pair_top = 10000.
-#pair_surf = 101350. 
+pair_surf = 101350. 
 
 # ATMOSPHERIC PERTURBATIONS
 gaussian_dlon = np.pi/10
@@ -151,7 +149,6 @@ working_precision = 'float64'
 # SIMULATION MODES (how to run the model - default suggestions)
 # (default suggestions partially overwrite settings above)
 ####################################################################
-i_run_new_style = 1
 comp_mode = 2
 i_comp_mode = comp_mode
 # 1: testsuite equality

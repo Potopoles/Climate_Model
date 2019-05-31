@@ -15,7 +15,7 @@ import numpy as np
 from namelist import (working_precision,
                     UVFLX_dif_coef, POTT_dif_coef, COLP_dif_coef,
                     comp_mode,
-                    pair_top)
+                    pair_top, pair_surf)
 ####################################################################
 
 ####################################################################
@@ -56,3 +56,4 @@ if COLP_dif_coef > 0:
 
 # physical values
 pair_top = wp(pair_top)
+pair_surf = wp(pair_surf)

@@ -198,7 +198,7 @@ def launch_numba_cpu_prep_adv(WWIND_UWIND, WWIND_VWIND,
 
         for i in prange(nb,nxs+nb):
             for j in range(nb,ny+nb):
-                for k in range(wp_int(0),nz):
+                for k in range(wp_int(0),nzs):
                     WWIND_UWIND[i  ,j  ,k  ] = \
                         interp_WWIND_UVWIND(
                 UWIND     [i  ,j  ,k  ], UWIND     [i  ,j  ,k-1],
@@ -216,7 +216,7 @@ def launch_numba_cpu_prep_adv(WWIND_UWIND, WWIND_VWIND,
 
         for i in prange(nb,nx+nb):
             for j in range(nb,nys+nb):
-                for k in range(wp_int(0),nz):
+                for k in range(wp_int(0),nzs):
                     WWIND_VWIND[i  ,j  ,k  ] = \
                         interp_WWIND_UVWIND(
                 VWIND     [i  ,j  ,k  ], VWIND     [i  ,j  ,k-1],

@@ -12,10 +12,11 @@ Write fields to nc file.
 ###############################################################################
 """
 import numpy as np
-#import time
 from netCDF4 import Dataset
-from namelist import output_path, output_fields, pTop
-from namelist import (i_radiation, i_microphysics, i_surface_scheme)
+
+from namelist import (output_path, output_fields,
+                     i_radiation, i_microphysics, i_surface_scheme)
+from org_namelist import pair_top
 from grid import nx,nxs,ny,nys,nz,nzs,nb
 from IO_helper_functions import NC_output_diagnostics
 ###############################################################################
@@ -114,7 +115,7 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
 
     if output_fields['PSURF']:
         PSURF_out = ncf.createVariable('PSURF', 'f4', ('time', 'lat', 'lon',) )
-        PSURF_out[-1,:,:] = F.host['COLP'][GR.ii,GR.jj,:].T + pTop
+        PSURF_out[-1,:,:] = F.host['COLP'][GR.ii,GR.jj,:].T + pair_top
 
     if output_fields['WWIND']:
         WWIND_out = ncf.createVariable('WWIND', 'f4',

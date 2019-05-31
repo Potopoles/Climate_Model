@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
-####################################################################
+###############################################################################
 File name:          grid.py  
 Author:             Christoph Heim
 Date created:       20181001
@@ -11,19 +11,27 @@ License:            MIT
 Setup computational and geographical grid for simulation.
 Alson includes coriolis parameter and grid cell area and similar
 things.
-####################################################################
+###############################################################################
 """
 import math
-from numba import cuda
 import numpy as np
-from namelist import *
+from numba import cuda
+
+from namelist import (nz, nb,
+                      lon0_deg, lon1_deg, dlon_deg,
+                      lat0_deg, lat1_deg, dlat_deg,
+                      CFL,
+                      i_load_from_restart, i_restart_nth_day,
+                      i_curved_earth,
+                      i_out_nth_hour, i_sim_n_days,
+                      GMT_initialization)
 from org_namelist import wp_int, wp
 from constants import con_rE, con_omega
 from boundaries import exchange_BC, exchange_BC_periodic_x
-from IO import (load_restart_grid, set_up_sigma_levels)
+from restart import load_restart_grid
+from initial_conditions import set_up_sigma_levels
 from utilities import Timer
-
-####################################################################
+###############################################################################
 
 # FIXED GPU SETTINGS (have to here in code to be able to import them in another module)
 tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
@@ -73,17 +81,6 @@ class Grid:
 
             # TIMERS
             self.timer = Timer()
-            #self.total_comp_time = 0
-            #self.IO_time = 0
-            #self.dyn_comp_time = 0
-            #self.wind_comp_time = 0
-            #self.temp_comp_time = 0
-            #self.trac_comp_time = 0
-            #self.cont_comp_time = 0
-            #self.diag_comp_time = 0
-            #self.step_comp_time = 0
-            #self.special = 0
-            #self.copy_time = 0
 
             self.rad_comp_time = 0
             self.mic_comp_time = 0
@@ -114,7 +111,8 @@ class Grid:
             # NUMBER OF GRID POINTS IN EACH DIMENSION
             possible_nz = [2,4,8,16,32,64]
             if nz not in possible_nz:
-                raise NotImplementedError('Vertical reduction for GPU needs nz of 2**x')
+                raise NotImplementedError('Vertical reduction for GPU ' +
+                                            'needs nz of 2**x')
             self.nz = nz
             self.nzs = nzs
             self.nx = nx
@@ -170,23 +168,22 @@ class Grid:
             self.iisjjs_jp1     = np.ix_(self.iis  ,self.jjs+1)
 
             # 2D MATRIX OF LONGITUDES AND LATITUDES IN DEGREES
-            self.lon_deg   = np.full( (self.nx +2*self.nb,self.ny+2*self.nb), np.nan,
-                                        dtype=wp)
-            self.lat_deg   = np.full( (self.nx +2*self.nb,self.ny+2*self.nb), np.nan,
-                                        dtype=wp)
-            self.lon_is_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb), np.nan,
-                                        dtype=wp)
-            self.lat_is_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb), np.nan,
-                                        dtype=wp)
-            self.lon_js_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan,
-                                        dtype=wp)
-            self.lat_js_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb), np.nan,
-                                        dtype=wp)
-
-            self.dlon_rad_2D   = np.full( (self.nx +2*self.nb,self.nys+2*self.nb), self.dlon_rad,
-                                        dtype=wp)
-            self.dlat_rad_2D   = np.full( (self.nxs+2*self.nb,self.ny +2*self.nb), self.dlat_rad,
-                                        dtype=wp)
+            self.lon_deg   = np.full( (self.nx +2*self.nb,self.ny+2*self.nb),
+                                        np.nan, dtype=wp)
+            self.lat_deg   = np.full( (self.nx +2*self.nb,self.ny+2*self.nb),
+                                        np.nan, dtype=wp)
+            self.lon_is_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb),
+                                        np.nan, dtype=wp)
+            self.lat_is_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb),
+                                        np.nan, dtype=wp)
+            self.lon_js_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb),
+                                        np.nan, dtype=wp)
+            self.lat_js_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb),
+                                        np.nan, dtype=wp)
+            self.dlon_rad_2D = np.full( (self.nx +2*self.nb,self.nys+2*self.nb),
+                                        self.dlon_rad, dtype=wp)
+            self.dlat_rad_2D = np.full( (self.nxs+2*self.nb,self.ny +2*self.nb),
+                                        self.dlat_rad, dtype=wp)
 
             for j in range(self.nb, self.ny+self.nb):
                 self.lon_deg[self.ii,j] = self.lon0_deg + \
@@ -223,8 +220,10 @@ class Grid:
             self.dyis = np.full( (self.nxs+2*self.nb,self.ny +2*self.nb),
                                 np.nan, dtype=wp)
 
-            self.dx[self.iijj] = np.cos( self.lat_rad[self.iijj] )*self.dlon_rad*con_rE 
-            self.dxjs[self.iijjs] = np.cos( self.lat_js_rad[self.iijjs] )*self.dlon_rad*con_rE 
+            self.dx[self.iijj] = ( np.cos( self.lat_rad[self.iijj] ) *
+                                        self.dlon_rad*con_rE )
+            self.dxjs[self.iijjs] = ( np.cos( self.lat_js_rad[self.iijjs] ) *
+                                        self.dlon_rad*con_rE )
             self.dyis[self.iisjj] = self.dlat_rad*con_rE 
             self.dx = exchange_BC(self, self.dx)
             self.dxjs = exchange_BC(self, self.dxjs)
@@ -241,23 +240,27 @@ class Grid:
             for i in self.ii:
                 for j in self.jj:
                     self.A[i,j] = lat_lon_recangle_area(self.lat_rad[i,j],
-                                        self.dlon_rad, self.dlat_rad, i_curved_earth)
+                            self.dlon_rad, self.dlat_rad, i_curved_earth)
             self.A = exchange_BC(self, self.A)
 
             if i_curved_earth:
                 print('fraction of earth covered: ' + \
-                        str(np.round(np.sum(self.A[self.iijj])/(4*np.pi*con_rE**2),2)))
+                        str(np.round(np.sum(
+                            self.A[self.iijj])/(4*np.pi*con_rE**2),2)))
             else:
                 print('fraction of cylinder covered: ' + \
-                        str(np.round(np.sum(self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
+                        str(np.round(np.sum(
+                            self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
 
             # CORIOLIS FORCE
             self.corf    = np.full( (self.nx +2*self.nb, self.ny +2*self.nb), 
                                     np.nan, dtype=wp)
             self.corf_is = np.full( (self.nxs+2*self.nb, self.ny +2*self.nb),
                                     np.nan, dtype=wp)
-            self.corf[self.iijj] = 2*con_omega*np.sin(self.lat_rad[self.iijj])
-            self.corf_is[self.iisjj] = 2*con_omega*np.sin(self.lat_is_rad[self.iisjj])
+            self.corf[self.iijj] = 2*con_omega*np.sin(
+                                                self.lat_rad[self.iijj])
+            self.corf_is[self.iisjj] = 2*con_omega*np.sin(
+                                                self.lat_is_rad[self.iisjj])
 
             # SIGMA LEVELS
             self.level  = np.arange(0,self.nz )
@@ -297,51 +300,54 @@ class Grid:
 
 
 
-        # NEW GRID STYLE
-        if self.new:
-            self.corf         = np.expand_dims(self.corf,       axis=2)
-            self.corf_is      = np.expand_dims(self.corf_is,    axis=2)
-            self.lon_rad      = np.expand_dims(self.lon_rad,    axis=2)
-            self.lat_rad      = np.expand_dims(self.lat_rad,    axis=2)
-            self.lat_is_rad   = np.expand_dims(self.lat_is_rad, axis=2)
-            self.dlon_rad     = np.expand_dims(self.dlon_rad_2D,axis=2)
-            self.dlat_rad     = np.expand_dims(self.dlat_rad_2D,axis=2)
-            self.A            = np.expand_dims(self.A,          axis=2)
-            self.dyis         = np.expand_dims(self.dyis,       axis=2)
-            self.dxjs         = np.expand_dims(self.dxjs,       axis=2)
+        # ADJUST TO NEW SETUP OF MODEL
+        self.i   = np.arange((self.nb),(self.nx +self.nb)) 
+        self.i_s = np.arange((self.nb),(self.nxs+self.nb)) 
+        self.j   = np.arange((self.nb),(self.ny +self.nb)) 
+        self.js  = np.arange((self.nb),(self.nys+self.nb)) 
+        self.ii,  self.jj  = np.ix_(self.i    ,self.j)
+        self.iis, self.jjs = np.ix_(self.i_s  ,self.js)
 
-            self.lon_is_rad   = np.expand_dims(self.lon_is_rad, axis=2)
-            self.lat_js_rad   = np.expand_dims(self.lat_js_rad, axis=2)
 
-            self.lon_deg      = np.expand_dims(self.lon_deg,    axis=2)
-            self.lat_deg      = np.expand_dims(self.lat_deg,    axis=2)
-            set_up_sigma_levels(self)
+        self.corf         = np.expand_dims(self.corf,       axis=2)
+        self.corf_is      = np.expand_dims(self.corf_is,    axis=2)
+        self.lon_rad      = np.expand_dims(self.lon_rad,    axis=2)
+        self.lat_rad      = np.expand_dims(self.lat_rad,    axis=2)
+        self.lat_is_rad   = np.expand_dims(self.lat_is_rad, axis=2)
+        self.dlon_rad     = np.expand_dims(self.dlon_rad_2D,axis=2)
+        self.dlat_rad     = np.expand_dims(self.dlat_rad_2D,axis=2)
+        self.A            = np.expand_dims(self.A,          axis=2)
+        self.dyis         = np.expand_dims(self.dyis,       axis=2)
+        self.dxjs         = np.expand_dims(self.dxjs,       axis=2)
 
-            self.dsigma       = np.expand_dims(
-                                np.expand_dims(self.dsigma   , 0),0)
-            self.sigma_vb     = np.expand_dims(
-                                np.expand_dims(self.sigma_vb , 0),0)
+        self.lon_is_rad   = np.expand_dims(self.lon_is_rad, axis=2)
+        self.lon_js_rad   = np.expand_dims(self.lon_js_rad, axis=2)
+        self.lat_js_rad   = np.expand_dims(self.lat_js_rad, axis=2)
 
-            self.corfd        = cuda.to_device(self.corf       )
-            self.corf_isd     = cuda.to_device(self.corf_is    )
-            self.lat_radd     = cuda.to_device(self.lat_rad    )
-            self.lat_is_radd  = cuda.to_device(self.lat_is_rad )
-            self.dlon_radd    = cuda.to_device(self.dlon_rad   )
-            self.dlat_radd    = cuda.to_device(self.dlat_rad   )
-            self.Ad           = cuda.to_device(self.A          )
-            self.dyisd        = cuda.to_device(self.dyis       )
-            self.dxjsd        = cuda.to_device(self.dxjs       )
-            self.dsigmad      = cuda.to_device(self.dsigma     )
-            self.sigma_vbd    = cuda.to_device(self.sigma_vb   )
+        self.lon_deg      = np.expand_dims(self.lon_deg,    axis=2)
+        self.lat_deg      = np.expand_dims(self.lat_deg,    axis=2)
+
+        set_up_sigma_levels(self)
+
+        self.dsigma       = np.expand_dims(
+                            np.expand_dims(self.dsigma   , 0),0)
+        self.sigma_vb     = np.expand_dims(
+                            np.expand_dims(self.sigma_vb , 0),0)
+
+        self.corfd        = cuda.to_device(self.corf       )
+        self.corf_isd     = cuda.to_device(self.corf_is    )
+        self.lat_radd     = cuda.to_device(self.lat_rad    )
+        self.lat_is_radd  = cuda.to_device(self.lat_is_rad )
+        self.dlon_radd    = cuda.to_device(self.dlon_rad   )
+        self.dlat_radd    = cuda.to_device(self.dlat_rad   )
+        self.Ad           = cuda.to_device(self.A          )
+        self.dyisd        = cuda.to_device(self.dyis       )
+        self.dxjsd        = cuda.to_device(self.dxjs       )
+        self.dsigmad      = cuda.to_device(self.dsigma     )
+        self.sigma_vbd    = cuda.to_device(self.sigma_vb   )
 
 
         
-            self.i   = np.arange((self.nb),(self.nx +self.nb)) 
-            self.i_s = np.arange((self.nb),(self.nxs+self.nb)) 
-            self.j   = np.arange((self.nb),(self.ny +self.nb)) 
-            self.js  = np.arange((self.nb),(self.nys+self.nb)) 
-            self.ii,  self.jj  = np.ix_(self.i    ,self.j)
-            self.iis, self.jjs = np.ix_(self.i_s  ,self.js)
 
 
 

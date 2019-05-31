@@ -197,8 +197,6 @@ class TendencyFactory:
 
 
 
-
-
 class DiagnosticsFactory:
     """
     """
@@ -213,6 +211,7 @@ class DiagnosticsFactory:
                        'COLP', 'PAIR', 'PHI', 'POTT',
                        'TAIR', 'RHO', 'PVTF',
                        'UWIND', 'VWIND', 'WIND']
+
 
     def primary_diag(self, target, GR,
                         COLP, PVTF, PVTFVB, 

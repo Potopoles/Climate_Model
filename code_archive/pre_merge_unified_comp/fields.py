@@ -624,8 +624,13 @@ def gaussian2D(GR, FIELD, pert, lon0_rad, lat0_rad, lonSig_rad, latSig_rad):
         perturb = pert*np.exp( \
                 - np.power(GR.lon_rad[selinds] - lon0_rad, 2)/(2*lonSig_rad**2) \
                 - np.power(GR.lat_rad[selinds] - lat0_rad, 2)/(2*latSig_rad**2) )
+    
 
-    FIELD[selinds] = FIELD[selinds] + perturb
+    # TODO
+    try:
+        FIELD[selinds] = FIELD[selinds] + perturb
+    except ValueError:
+        FIELD[selinds] = FIELD[selinds] + perturb.squeeze()
 
     return(FIELD)
 

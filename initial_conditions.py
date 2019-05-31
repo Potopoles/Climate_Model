@@ -5,7 +5,7 @@
 File name:          initial_conditions.py  
 Author:             Christoph Heim (CH)
 Date created:       20190525
-Last modified:      20190526
+Last modified:      20190531
 License:            MIT
 
 Functions to initialize the model fields and set up an average
@@ -24,7 +24,7 @@ from namelist import (i_load_from_restart, i_use_topo,
                     UWIND_gaussian_pert, UWIND_random_pert,
                     VWIND_gaussian_pert, VWIND_random_pert,
                     POTT_gaussian_pert, POTT_random_pert)
-from org_namelist import wp
+from org_namelist import wp, pair_top
 from constants import con_kappa, con_g, con_cp, con_Rd
 from boundaries import exchange_BC
 
@@ -70,6 +70,7 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
             UWIND[:,:,k] = gaussian2D(GR, UWIND[:,:,k], UWIND_gaussian_pert, 
                          np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
             UWIND[:,:,k] = random2D(GR, UWIND[:,:,k], UWIND_random_pert)
+
             VWIND[:,:,k][GR.iijjs] = vwind_0
             VWIND[:,:,k] = gaussian2D(GR, VWIND[:,:,k], VWIND_gaussian_pert,
                          np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
@@ -86,7 +87,7 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
         POTT    = exchange_BC(GR, POTT)
 
         ## PRIMARY DIAGNOSTIC FIELDS
-        diagnose_fields_initializaiton(GR, PHI, PHIVB, PVTF, PVTFVB,
+        diagnose_fields_init(GR, PHI, PHIVB, PVTF, PVTFVB,
                                             HSURF, POTT, COLP, POTTVB)
 
         ## SECONDARY DIAGNOSTIC FIELDS
@@ -220,8 +221,8 @@ def load_topo(GR, HSURF):
     lat_inp = ncf['lat'][:]
     hsurf_inp = ncf['data'][0,:,:]
     interp = interp2d(lon_inp, lat_inp, hsurf_inp)
-    HSURF[GR.ii,GR.jj,0] = interp(GR.lon_deg[GR.i,GR.nb+1],
-                                  GR.lat_deg[GR.nb+1,GR.j]).T
+    HSURF[GR.ii,GR.jj,0] = interp(GR.lon_deg[GR.ii,GR.nb+1,0].squeeze(),
+                                  GR.lat_deg[GR.nb+1,GR.jj,0].squeeze()).T
     HSURF[HSURF < 0] = 0
     HSURF = exchange_BC(GR, HSURF)
 
@@ -244,45 +245,92 @@ def random2D(GR, FIELD, pert):
                                       FIELD.shape[1])
     return(FIELD)
 
+
 def gaussian2D(GR, FIELD, pert, lon0_rad, lat0_rad, lonSig_rad, latSig_rad):
     dimx,dimy = FIELD.shape
 
     if (dimy == GR.nys+2*GR.nb): # staggered in y 
         selinds = (GR.ii, GR.jjs)
-        selinds_lat = (GR.ii, GR.jjs, 0)
+        lat = GR.lat_js_rad[GR.ii, GR.jjs, 0]
+        lon = GR.lon_js_rad[GR.ii, GR.jjs, 0]
     elif (dimx == GR.nxs+2*GR.nb): # staggered in x 
         selinds = (GR.iis, GR.jj)
-        selinds_lat = (GR.iis, GR.jj, 0)
+        lat = GR.lat_is_rad[GR.iis, GR.jj, 0]
+        lon = GR.lon_is_rad[GR.iis, GR.jj, 0]
     else: # unstaggered in y and x 
         selinds = (GR.ii, GR.jj)
-        selinds_lat = (GR.ii, GR.jj, 0)
+        lat = GR.lat_rad[GR.ii, GR.jj, 0]
+        lon = GR.lon_rad[GR.ii, GR.jj, 0]
 
     perturb = pert*np.exp(
-            - np.power(GR.lon_rad[selinds_lat] - lon0_rad, 2)/
+            - np.power(lon - lon0_rad, 2)/
                         (2*lonSig_rad**2)
-            - np.power(GR.lat_rad[selinds_lat] - lat0_rad, 2)/
+            - np.power(lat - lat0_rad, 2)/
                         (2*latSig_rad**2) )
 
     FIELD[selinds] = FIELD[selinds] + perturb
+
 
     return(FIELD)
 
 
 
+def set_up_sigma_levels(GR):
+    HSURF       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb    ,1   ), 
+                                np.nan, dtype=wp)
+    HSURF = load_topo(GR, HSURF)
+    filename = 'verticalProfileTable.dat'
+    profile = np.loadtxt(filename)
+    zsurf_test = np.mean(HSURF[GR.iijj])
+    top_ind = np.argwhere(profile[:,2] >= pair_top).squeeze()[-1]
+    ztop_test = profile[top_ind,0] + (profile[top_ind,2] - pair_top)/ \
+                            (profile[top_ind,4]*profile[top_ind,1])
 
-def diagnose_fields_initializaiton(GR, PHI, PHIVB, PVTF, PVTFVB,
+    ks = np.arange(0,GR.nzs)
+    z_vb_test   = np.zeros(GR.nzs, dtype=wp)
+    p_vb_test   = np.zeros(GR.nzs, dtype=wp)
+    rho_vb_test = np.zeros(GR.nzs, dtype=wp)
+    g_vb_test   = np.zeros(GR.nzs, dtype=wp)
+
+    z_vb_test[0] = ztop_test
+    z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)**(2)
+    #z_vb_test[ks] = zsurf_test + (ztop_test - zsurf_test)*(1 - ks/GR.nz)
+    #print(z_vb_test)
+    #print(np.diff(z_vb_test))
+    #quit()
+
+    rho_vb_test = np.interp(z_vb_test, profile[:,0], profile[:,4]) 
+    g_vb_test = np.interp(z_vb_test, profile[:,0], profile[:,1]) 
+    p_vb_test[0] = pair_top
+    ks = 1
+    for ks in range(1,GR.nzs):
+        p_vb_test[ks] = p_vb_test[ks-1] + \
+                        rho_vb_test[ks]*g_vb_test[ks] * \
+                        (z_vb_test[ks-1] - z_vb_test[ks])
+    
+    GR.sigma_vb[:] = (p_vb_test - pair_top)/(p_vb_test[-1] - pair_top)
+    GR.dsigma[:] = np.diff(GR.sigma_vb)
+
+
+
+
+###############################################################################
+### OLD AND UGLY FUNCTIONS TO INITIALIZE ATMOSPHERIC PROFILE
+###############################################################################
+
+def diagnose_fields_init(GR, PHI, PHIVB, PVTF, PVTFVB,
                                         HSURF, POTT, COLP, POTTVB):
-    PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_jacobson(
+    PHI, PHIVB, PVTF, PVTFVB = diag_geopotential_init(
                                 GR, PHI, PHIVB, HSURF, 
                                 POTT, COLP, PVTF, PVTFVB)
 
-    POTTVB = diagnose_POTTVB_jacobson(GR, POTTVB, POTT, PVTF, PVTFVB)
+    POTTVB = diagnose_POTTVB_init(GR, POTTVB, POTT, PVTF, PVTFVB)
     return(PHI, PHIVB, PVTF, PVTFVB, POTTVB)
 
 
 
 
-def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
+def diag_pvt_factor_init(GR, COLP, PVTF, PVTFVB):
     PAIRVB = np.full( (GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs), np.nan, dtype=wp)
 
     # TODO: WHY IS PAIRVB NOT FILLED AT UPPERMOST AND LOWER MOST HALFLEVEL??? 
@@ -303,10 +351,10 @@ def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
 
 
 
-def diag_geopotential_jacobson(GR, PHI, PHIVB, HSURF, POTT, COLP,
+def diag_geopotential_init(GR, PHI, PHIVB, HSURF, POTT, COLP,
                                PVTF, PVTFVB):
 
-    PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
+    PVTF, PVTFVB = diag_pvt_factor_init(GR, COLP, PVTF, PVTFVB)
 
     #phi_vb = HSURF[GR.iijj]*con_g
     PHIVB[GR.ii,GR.jj,GR.nzs-1] = HSURF[GR.ii,GR.jj,0]*con_g
@@ -361,7 +409,7 @@ def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
     return(PAIR, TAIR, TAIRVB, RHO, WIND)
 
 
-def diagnose_POTTVB_jacobson(GR, POTTVB, POTT, PVTF, PVTFVB):
+def diagnose_POTTVB_init(GR, POTTVB, POTT, PVTF, PVTFVB):
 
     for ks in range(1,GR.nzs-1):
         POTTVB[:,:,ks][GR.iijj] =   ( \
