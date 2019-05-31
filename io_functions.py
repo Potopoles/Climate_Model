@@ -2,10 +2,10 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          IO_helper_functions.py  
+File name:          io_functions.py  
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190530
+Last modified:      20190531
 License:            MIT
 
 Helper functions for IO.
@@ -15,8 +15,8 @@ import copy
 import numpy as np
 
 from namelist import comp_mode, nth_ts_print_diag
-from org_namelist import wp
-from constants import con_kappa, con_g 
+from io_read_namelist import wp
+from io_constants import con_kappa, con_g 
 ###############################################################################
 
 

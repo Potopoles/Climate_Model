@@ -2,10 +2,10 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          nc_IO.py  
+File name:          io_nc_output.py  
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190530
+Last modified:      20190531
 License:            MIT
 
 Write fields to nc file.
@@ -16,9 +16,9 @@ from netCDF4 import Dataset
 
 from namelist import (output_path, output_fields,
                      i_radiation, i_microphysics, i_surface_scheme)
-from org_namelist import pair_top
+from io_read_namelist import pair_top
 from grid import nx,nxs,ny,nys,nz,nzs,nb
-from IO_helper_functions import NC_output_diagnostics
+from io_functions import NC_output_diagnostics
 ###############################################################################
 
 

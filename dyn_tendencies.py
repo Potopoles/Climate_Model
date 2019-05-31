@@ -2,40 +2,32 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          jacobson.py  
+File name:          dyn_tendencies.py  
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190530
+Last modified:      20190531
 License:            MIT
 
+Compute tendencies during one time step.
 ###############################################################################
 """
 from namelist import comp_mode
-from org_namelist import HOST, DEVICE
-from dyn_org_discretizations import (TendencyFactory,
-                                    DiagnosticsFactory) 
+from io_read_namelist import CPU, GPU
+from dyn_org_discretizations import TendencyFactory
 ###############################################################################
+if comp_mode == 1:
+    Tendencies = TendencyFactory(target=CPU)
+elif comp_mode == 2:
+    Tendencies = TendencyFactory(target=GPU)
 
-Tendencies = TendencyFactory()
-Diagnostics = DiagnosticsFactory()
-
-def tendencies_jacobson(GR, F):
+def compute_tendencies(GR, F):
 
     # PROGNOSE CONTINUITY
     ##############################
     ##############################
     GR.timer.start('cont')
-
-    if comp_mode == 1:
-
-        Tendencies.continuity(HOST, GR,
-                    **F.get(Tendencies.fields_continuity, target=HOST))
-
-    elif comp_mode == 2:
-
-        Tendencies.continuity(DEVICE, GR,
-                **F.get(Tendencies.fields_continuity, target=DEVICE))
-
+    Tendencies.continuity(GR, **F.get(Tendencies.fields_continuity,
+                        target=Tendencies.target))
     GR.timer.stop('cont')
     ##############################
     ##############################
@@ -45,37 +37,19 @@ def tendencies_jacobson(GR, F):
     ##############################
     ##############################
     GR.timer.start('wind')
-
-    if comp_mode == 1:
-
-        Tendencies.momentum(HOST, GR,
-                **F.get(Tendencies.fields_momentum, target=HOST))
-        
-    elif comp_mode == 2:
-
-        Tendencies.momentum(DEVICE, GR,
-                **F.get(Tendencies.fields_momentum, target=DEVICE))
-
+    Tendencies.momentum(GR, **F.get(Tendencies.fields_momentum,
+                        target=Tendencies.target))
     GR.timer.stop('wind')
     ##############################
     ##############################
 
 
-
+    # PROGNOSE POTT
     ##############################
     ##############################
     GR.timer.start('temp')
-    # PROGNOSE POTT
-    if comp_mode == 1:
-
-        Tendencies.temperature(HOST, GR,
-                    **F.get(Tendencies.fields_temperature, target=HOST))
-
-    elif comp_mode == 2:
-
-        Tendencies.temperature(DEVICE, GR,
-                    **F.get(Tendencies.fields_temperature, target=DEVICE))
-
+    Tendencies.temperature(GR, **F.get(Tendencies.fields_temperature,
+                            target=Tendencies.target))
     GR.timer.stop('temp')
     ##############################
     ##############################
@@ -115,27 +89,4 @@ def tendencies_jacobson(GR, F):
     #GR.trac_comp_time += t_end - t_start
     ###############################
     ###############################
-
-
-
-
-def diagnose_fields_jacobson(GR, F):
-
-    ##############################
-    ##############################
-    if comp_mode == 1:
-
-        Diagnostics.primary_diag(HOST, GR,
-                **F.get(Diagnostics.fields_primary_diag, target=HOST))
-
-    elif comp_mode == 2:
-
-        Diagnostics.primary_diag(DEVICE, GR,
-                **F.get(Diagnostics.fields_primary_diag, target=DEVICE))
-
-    ##############################
-    ##############################
-
-
-
 

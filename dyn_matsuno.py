@@ -2,49 +2,51 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          matsuno.py  
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190530
+Last modified:      20190531
 License:            MIT
 
-Perform a matsuno time step.
+Perform a matsuno time integration.
 ###############################################################################
 """
 from namelist import comp_mode
-from org_namelist import HOST, DEVICE
+from io_read_namelist import CPU, GPU
 from grid import tpb, bpg
-from GPU import set_equal
-from jacobson import tendencies_jacobson, diagnose_fields_jacobson
-from dyn_org_discretizations import (PrognosticsFactory) 
+from misc_gpu_functions import set_equal
+from dyn_tendencies import compute_tendencies
+from dyn_org_discretizations import (PrognosticsFactory, DiagnosticsFactory) 
 ###############################################################################
-Prognostics = PrognosticsFactory()
+if comp_mode == 1:
+    Prognostics = PrognosticsFactory(target=CPU)
+    Diagnostics = DiagnosticsFactory(target=CPU)
+elif comp_mode == 2:
+    Prognostics = PrognosticsFactory(target=GPU)
+    Diagnostics = DiagnosticsFactory(target=GPU)
 
-def step_matsuno(GR, NF):
+def step_matsuno(GR, F):
 
+    # UPDATE TIME LEVELS
     ##############################
     ##############################
     GR.timer.start('step')
-
     if comp_mode == 1:
-        NF.host['COLP_OLD'][:]  = NF.host['COLP'][:]
-        NF.host['UWIND_OLD'][:] = NF.host['UWIND'][:]
-        NF.host['VWIND_OLD'][:] = NF.host['VWIND'][:]
-        NF.host['POTT_OLD'][:]  = NF.host['POTT'][:]
-        #NF.host['QV_OLD'][:]    = NF.host['QV'][:]
-        #NF.host['QC_OLD'][:]    = NF.host['QC'][:]
+        F.host['COLP_OLD'][:]  = F.host['COLP'][:]
+        F.host['UWIND_OLD'][:] = F.host['UWIND'][:]
+        F.host['VWIND_OLD'][:] = F.host['VWIND'][:]
+        F.host['POTT_OLD'][:]  = F.host['POTT'][:]
+        #F.host['QV_OLD'][:]    = F.host['QV'][:]
+        #F.host['QC_OLD'][:]    = F.host['QC'][:]
     elif comp_mode == 2:
-        set_equal[bpg, tpb](NF.device['COLP_OLD'],     NF.device['COLP'])
-        set_equal[bpg, tpb](NF.device['UWIND_OLD'],    NF.device['UWIND'])
-        set_equal[bpg, tpb](NF.device['VWIND_OLD'],    NF.device['VWIND'])
-        set_equal[bpg, tpb](NF.device['POTT_OLD'],     NF.device['POTT'])
-        #set_equal[bpg, tpb](NF.device['QV_OLD'],       NF.device['QV'])
-        #set_equal[bpg, tpb](NF.device['QC_OLD'],       NF.device['QC'])
-
+        set_equal[bpg, tpb](F.device['COLP_OLD'],     F.device['COLP'])
+        set_equal[bpg, tpb](F.device['UWIND_OLD'],    F.device['UWIND'])
+        set_equal[bpg, tpb](F.device['VWIND_OLD'],    F.device['VWIND'])
+        set_equal[bpg, tpb](F.device['POTT_OLD'],     F.device['POTT'])
+        #set_equal[bpg, tpb](F.device['QV_OLD'],       F.device['QV'])
+        #set_equal[bpg, tpb](F.device['QC_OLD'],       F.device['QC'])
     GR.timer.stop('step')
     ##############################
     ##############################
-
 
     ############################################################
     ############################################################
@@ -52,43 +54,36 @@ def step_matsuno(GR, NF):
     ############################################################
     ############################################################
 
+    # COMPUTE TENDENCIES
     ##############################
     ##############################
-    tendencies_jacobson(GR, NF)
+    compute_tendencies(GR, F)
     if comp_mode == 1:
-        NF.host['COLP'][:]  = NF.host['COLP_NEW'][:]
+        F.host['COLP'][:]  = F.host['COLP_NEW'][:]
     elif comp_mode == 2:
-        set_equal[bpg, tpb](NF.device['COLP'],     NF.device['COLP_NEW'])
+        set_equal[bpg, tpb](F.device['COLP'],     F.device['COLP_NEW'])
     ##############################
     ##############################
 
+    # PROGNOSE NEXT TIME LEVEL
     ##############################
     ##############################
     GR.timer.start('step')
-    if comp_mode == 1:
-
-        Prognostics.euler_forward(HOST, GR,
-                **NF.get(Prognostics.fields_prognostic, target=HOST))
-
-    elif comp_mode == 2:
-
-        Prognostics.euler_forward(DEVICE, GR,
-                **NF.get(Prognostics.fields_prognostic, target=DEVICE))
-
+    Prognostics.euler_forward(GR, **F.get(Prognostics.fields_prognostic,
+                            target=Prognostics.target))
     GR.timer.stop('step')
     ##############################
     ##############################
 
-
+    # DIAGNOSE VARIABLES
     ##############################
     ##############################
     GR.timer.start('diag')
-    diagnose_fields_jacobson(GR, NF)
+    Diagnostics.primary_diag(GR, **F.get(Diagnostics.fields_primary_diag,
+                            target=Diagnostics.target))
     GR.timer.stop('diag')
     ##############################
     ##############################
-
-
 
     ############################################################
     ############################################################
@@ -96,39 +91,33 @@ def step_matsuno(GR, NF):
     ############################################################
     ############################################################
 
+    # COMPUTE TENDENCIES
     ##############################
     ##############################
-    tendencies_jacobson(GR, NF)
+    compute_tendencies(GR, F)
     if comp_mode == 1:
-        NF.host['COLP'][:]  = NF.host['COLP_NEW'][:]
+        F.host['COLP'][:]  = F.host['COLP_NEW'][:]
     elif comp_mode == 2:
-        set_equal[bpg, tpb](NF.device['COLP'],     NF.device['COLP_NEW'])
+        set_equal[bpg, tpb](F.device['COLP'],     F.device['COLP_NEW'])
     ##############################
     ##############################
 
-
+    # PROGNOSE NEXT TIME LEVEL
     ##############################
     ##############################
     GR.timer.start('step')
-    if comp_mode == 1:
-
-        Prognostics.euler_forward(HOST, GR,
-                **NF.get(Prognostics.fields_prognostic, target=HOST))
-
-    elif comp_mode == 2:
-
-        Prognostics.euler_forward(DEVICE, GR,
-                **NF.get(Prognostics.fields_prognostic, target=DEVICE))
-
+    Prognostics.euler_forward(GR, **F.get(Prognostics.fields_prognostic,
+                            target=Prognostics.target))
     GR.timer.stop('step')
     ##############################
     ##############################
 
-
+    # DIAGNOSE VARIABLES
     ##############################
     ##############################
     GR.timer.start('diag')
-    diagnose_fields_jacobson(GR, NF)
+    Diagnostics.primary_diag(GR, **F.get(Diagnostics.fields_primary_diag,
+                            target=Diagnostics.target))
     GR.timer.stop('diag')
     ##############################
     ##############################

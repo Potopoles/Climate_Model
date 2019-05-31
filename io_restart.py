@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          restart.py  
+File name:          io_restart.py  
 Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190531
@@ -16,11 +16,9 @@ import os
 import pickle
 
 from namelist import n_topo_smooth, tau_topo_smooth, comp_mode
-from org_namelist import wp, pair_top
+from io_read_namelist import wp, pair_top
 #from radiation.namelist_radiation import njobs_rad
-from constants import con_g, con_Rd, con_kappa, con_cp
-from boundaries import exchange_BC_rigid_y, exchange_BC_periodic_x
-from boundaries import exchange_BC
+from io_constants import con_g, con_Rd, con_kappa, con_cp
 ###############################################################################
 
 

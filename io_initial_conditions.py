@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          initial_conditions.py  
+File name:          io_initial_conditions.py  
 Author:             Christoph Heim (CH)
 Date created:       20190525
 Last modified:      20190531
@@ -24,16 +24,14 @@ from namelist import (i_load_from_restart, i_use_topo,
                     UWIND_gaussian_pert, UWIND_random_pert,
                     VWIND_gaussian_pert, VWIND_random_pert,
                     POTT_gaussian_pert, POTT_random_pert)
-from org_namelist import wp, pair_top
-from constants import con_kappa, con_g, con_cp, con_Rd
-from boundaries import exchange_BC
+from io_read_namelist import wp, pair_top
+from io_constants import con_kappa, con_g, con_cp, con_Rd
 
 def initialize_fields(GR, POTTVB, WWIND, HSURF,
                         COLP, PSURF, PVTF, PVTFVB,
                         POTT, TAIR, TAIRVB, PAIR,
                         UWIND, VWIND, WIND, RHO,
-                        PHI, PHIVB,
-                    ):
+                        PHI, PHIVB):
     if i_load_from_restart:
         raise NotImplementedError
         #CF, RAD, SURF, MIC, TURB = load_restart_fields(GR)
@@ -81,10 +79,10 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
             POTT[:,:,k] = random2D(GR, POTT[:,:,k], POTT_random_pert)
 
         # BOUNDARY EXCHANGE OF INITIAL CONDITIONS
-        COLP    = exchange_BC(GR, COLP)
-        UWIND   = exchange_BC(GR, UWIND)
-        VWIND   = exchange_BC(GR, VWIND)
-        POTT    = exchange_BC(GR, POTT)
+        COLP    = GR.exchange_BC(COLP)
+        UWIND   = GR.exchange_BC(UWIND)
+        VWIND   = GR.exchange_BC(VWIND)
+        POTT    = GR.exchange_BC(POTT)
 
         ## PRIMARY DIAGNOSTIC FIELDS
         diagnose_fields_init(GR, PHI, PHIVB, PVTF, PVTFVB,
@@ -224,7 +222,7 @@ def load_topo(GR, HSURF):
     HSURF[GR.ii,GR.jj,0] = interp(GR.lon_deg[GR.ii,GR.nb+1,0].squeeze(),
                                   GR.lat_deg[GR.nb+1,GR.jj,0].squeeze()).T
     HSURF[HSURF < 0] = 0
-    HSURF = exchange_BC(GR, HSURF)
+    HSURF = GR.exchange_BC(HSURF)
 
     # smooth topography
     tau_topo_smooth = 0.1
@@ -233,7 +231,7 @@ def load_topo(GR, HSURF):
                           (  HSURF[GR.ii-1,GR.jj] + HSURF[GR.ii+1,GR.jj] +
                              HSURF[GR.ii,GR.jj-1] + HSURF[GR.ii,GR.jj+1] -
                            4*HSURF[GR.ii,GR.jj  ]))
-        HSURF = exchange_BC(GR, HSURF)
+        HSURF = GR.exchange_BC(HSURF)
 
     return(HSURF)
 
@@ -381,9 +379,9 @@ def diag_geopotential_init(GR, PHI, PHIVB, HSURF, POTT, COLP,
     PHIVB[:,:,0][GR.iijj] = PHI[:,:,0][GR.iijj] - dphi
 
     # TODO 5 NECESSARY
-    PVTF = exchange_BC(GR, PVTF)
-    PVTFVB = exchange_BC(GR, PVTFVB)
-    PHI = exchange_BC(GR, PHI)
+    PVTF    = GR.exchange_BC(PVTF)
+    PVTFVB  = GR.exchange_BC(PVTFVB)
+    PHI     = GR.exchange_BC(PHI)
 
     return(PHI, PHIVB, PVTF, PVTFVB)
 

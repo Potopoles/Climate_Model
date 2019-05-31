@@ -2,10 +2,9 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          tendency_functions.py  
-Author:             Christoph Heim (CH)
+Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190526
+Last modified:      20190531
 License:            MIT
 
 Collection of generally applicable finite difference tendency
@@ -16,9 +15,9 @@ Taken from Jacobson 2005:
 Fundamentals of Atmospheric Modeling, Second Edition Chapter 7
 ###############################################################################
 """
-from org_namelist import wp, wp_int
+from io_read_namelist import wp, wp_int
+from io_constants import con_cp
 from grid import nx,nxs,ny,nys,nz,nzs,nb
-from constants import con_cp
 ###############################################################################
 
 

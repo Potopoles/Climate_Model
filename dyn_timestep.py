@@ -2,10 +2,9 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          dyn_prognostics.py  
 Author:             Christoph Heim
 Date created:       20190529
-Last modified:      20190529
+Last modified:      20190531
 License:            MIT
 
 Functions for prognostic step for both CPU and GPU.
@@ -18,10 +17,10 @@ from numba import cuda, njit, prange
 from math import pow
 
 from namelist import (pair_top)
-from org_namelist import (wp, wp_str, wp_int)
-from constants import con_g, con_Rd, con_kappa, con_cp
+from io_read_namelist import (wp, wp_str, wp_int)
+from io_constants import con_g, con_Rd, con_kappa, con_cp
 from grid import nx,nxs,ny,nys,nz,nzs,nb
-from GPU import cuda_kernel_decorator
+from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 
 

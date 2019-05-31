@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ####################################################################
-File name:          namelist.py  
 Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190521

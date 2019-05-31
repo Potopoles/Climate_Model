@@ -2,10 +2,9 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          tendency_UVFLX.py  
-Author:             Christoph Heim (CH)
+Author:             Christoph Heim
 Date created:       20190518
-Last modified:      20190526
+Last modified:      20190531
 License:            MIT
 
 Prepare computation of horizontal momentum flux tendencies
@@ -23,10 +22,9 @@ from math import sin, cos
 from numba import cuda, njit, prange
 
 from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
-from org_namelist import (wp, wp_int, wp_old)
+from io_read_namelist import (wp, wp_int, wp_old)
 from grid import nx,nxs,ny,nys,nz,nzs,nb
-from GPU import cuda_kernel_decorator
-
+from misc_gpu_functions import cuda_kernel_decorator
 from dyn_functions import (interp_WWIND_UVWIND_py,
                     calc_momentum_fluxes_isjs_py, calc_momentum_fluxes_ijs_py,
                     calc_momentum_fluxes_isj_py, calc_momentum_fluxes_ij_py)

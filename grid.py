@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          grid.py  
 Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190523
@@ -25,12 +24,11 @@ from namelist import (nz, nb,
                       i_curved_earth,
                       i_out_nth_hour, i_sim_n_days,
                       GMT_initialization)
-from org_namelist import wp_int, wp
-from constants import con_rE, con_omega
-from boundaries import exchange_BC, exchange_BC_periodic_x
-from restart import load_restart_grid
-from initial_conditions import set_up_sigma_levels
-from utilities import Timer
+from io_read_namelist import wp_int, wp
+from io_constants import con_rE, con_omega
+from io_restart import load_restart_grid
+from io_initial_conditions import set_up_sigma_levels
+from misc_utilities import Timer
 ###############################################################################
 
 # FIXED GPU SETTINGS (have to here in code to be able to import them in another module)
@@ -225,9 +223,9 @@ class Grid:
             self.dxjs[self.iijjs] = ( np.cos( self.lat_js_rad[self.iijjs] ) *
                                         self.dlon_rad*con_rE )
             self.dyis[self.iisjj] = self.dlat_rad*con_rE 
-            self.dx = exchange_BC(self, self.dx)
-            self.dxjs = exchange_BC(self, self.dxjs)
-            self.dyis = exchange_BC(self, self.dyis)
+            self.dx   = self.exchange_BC(self.dx)
+            self.dxjs = self.exchange_BC(self.dxjs)
+            self.dyis = self.exchange_BC(self.dyis)
             self.dy = self.dlat_rad*con_rE
 
 
@@ -241,7 +239,7 @@ class Grid:
                 for j in self.jj:
                     self.A[i,j] = lat_lon_recangle_area(self.lat_rad[i,j],
                             self.dlon_rad, self.dlat_rad, i_curved_earth)
-            self.A = exchange_BC(self, self.A)
+            self.A = self.exchange_BC(self.A)
 
             if i_curved_earth:
                 print('fraction of earth covered: ' + \
@@ -348,6 +346,47 @@ class Grid:
 
 
         
+    def exchange_BC(self, FIELD):
+        """
+        Python function (slow) to exchange boundaries.
+        Should not be used within time step loop but just for initializiation.
+        Advantage: Does not depend on import grid constants (e.g. nx)
+                   Can therefore be used within grid.py and initial_conditiony.py
+        """
+
+        dim2 = False
+        if len(FIELD.shape) == 2:
+            dim2 = True
+            fnx,fny = FIELD.shape
+        elif len(FIELD.shape) == 3:
+            fnx,fny,fnz = FIELD.shape
+
+        # zonal boundaries
+        if fnx == self.nxs+2*self.nb: # staggered in x
+            FIELD[0,::] = FIELD[self.nxs-1,::] 
+            FIELD[self.nxs,::] = FIELD[1,::] 
+        else:     # unstaggered in x
+            FIELD[0,::] = FIELD[self.nx,::] 
+            FIELD[self.nx+1,::] = FIELD[1,::] 
+
+        if dim2:
+            # meridional boundaries
+            if fny == self.nys+2*self.nb: # staggered in y
+                for j in [0,1,self.nys,self.nys+1]:
+                    FIELD[:,j] = wp(0.)
+            else:     # unstaggered in y
+                FIELD[:,0] = FIELD[:,1] 
+                FIELD[:,self.ny+1] = FIELD[:,self.ny] 
+        else:
+            # meridional boundaries
+            if fny == self.nys+2*self.nb: # staggered in y
+                for j in [0,1,self.nys,self.nys+1]:
+                    FIELD[:,j,:] = wp(0.)
+            else:     # unstaggered in y
+                FIELD[:,0,:] = FIELD[:,1,:] 
+                FIELD[:,self.ny+1,:] = FIELD[:,self.ny,:] 
+
+        return(FIELD)
 
 
 
@@ -359,5 +398,4 @@ def lat_lon_recangle_area(lat,dlon,dlat, i_curved_earth):
     else:
         A = dlon * dlat * con_rE**2
     return(A)
-
 

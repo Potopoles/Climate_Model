@@ -2,10 +2,9 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          dyn_diagnostics.py  
 Author:             Christoph Heim
 Date created:       20190528
-Last modified:      20190530
+Last modified:      20190531
 License:            MIT
 
 Jacobson 2005
@@ -19,10 +18,10 @@ import cupy as cp
 from numba import cuda, njit, prange
 from math import pow
 
-from org_namelist import (wp, wp_int, wp_old, pair_top)
-from constants import con_g, con_Rd, con_kappa, con_cp
+from io_read_namelist import (wp, wp_int, wp_old, pair_top)
+from io_constants import con_g, con_Rd, con_kappa, con_cp
 from grid import nx,nxs,ny,nys,nz,nzs,nb
-from GPU import cuda_kernel_decorator
+from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 
 

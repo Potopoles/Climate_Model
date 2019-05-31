@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          ModelFields.py  
 Author:             Christoph Heim
 Date created:       20190525
 Last modified:      20190531
@@ -15,9 +14,9 @@ and if GPU enabled also on GPU.
 import numpy as np
 from numba import cuda
 
-from namelist import (i_surface_scheme)
-from org_namelist import wp
-from initial_conditions import initialize_fields
+from namelist import i_surface_scheme
+from io_read_namelist import wp, CPU, GPU
+from io_initial_conditions import initialize_fields
 ###############################################################################
 
 class ModelFields:
@@ -62,22 +61,22 @@ class ModelFields:
         }
 
 
-    def get(self, field_names, target='host'):
+    def get(self, field_names, target=CPU):
         field_dict = {}
-        if target == 'host':
+        if target == CPU:
             for field_name in field_names:
                 field_dict[field_name] = self.host[field_name]
-        elif target == 'device':
+        elif target == GPU:
             for field_name in field_names:
                 field_dict[field_name] = self.device[field_name]
         return(field_dict)
 
 
-    def set(self, field_dict, target='host'):
-        if target == 'host':
+    def set(self, field_dict, target=CPU):
+        if target == CPU:
             for field_name,field in field_dict.items():
                 self.host[field_name] = field
-        elif target == 'device':
+        elif target == GPU:
             for field_name,field in field_dict.items():
                 self.device[field_name] = field
 

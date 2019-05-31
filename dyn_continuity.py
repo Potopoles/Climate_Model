@@ -2,9 +2,8 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-Author:             Christoph Heim (CH)
 Date created:       20190526
-Last modified:      20190526
+Last modified:      20190531
 License:            MIT
 
 Computation column pressure (COLP) tendency and vertical wind (WWIND),
@@ -19,12 +18,13 @@ Chapter 7.4, page 208ff
 """
 import numpy as np
 from numba import cuda, njit, prange, vectorize
+
 from namelist import (i_COLP_main_switch)
-from org_namelist import (wp_str, wp, wp_numba, wp_int, wp_old)
-from grid import nx,nxs,ny,nys,nz,nzs,nb
-from grid import shared_nz
-from GPU import cuda_kernel_decorator
-from dyn_functions import (euler_forward_py)
+from io_read_namelist import (wp_str, wp, wp_numba, wp_int, wp_old)
+from grid import (nx,nxs,ny,nys,nz,nzs,nb,
+                  shared_nz)
+from misc_gpu_functions import cuda_kernel_decorator
+from dyn_functions import euler_forward_py
 ###############################################################################
 
 

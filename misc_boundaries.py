@@ -2,45 +2,45 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          GPU.py  
-Author:             Christoph Heim (CH)
-Date created:       20190509
-Last modified:      20190528
+File name:          misc_boundaries.py  
+Author:             Christoph Heim
+Date created:       20181001
+Last modified:      20190531
 License:            MIT
 
-Functionality not yet defined.
-Should contain:
-- GPU helper functions
+Functions to implement lateral boundary conditions for both GPU and CPU.
 ###############################################################################
 """
-from numba import cuda
-from inspect import signature
+import numpy as np
+from numba import njit, cuda
 
-from org_namelist import wp_str
+from io_read_namelist import wp
+from misc_gpu_functions import cuda_kernel_decorator
 from grid import nx,nxs,ny,nys,nz,nzs,nb
 ###############################################################################
 
+def exchange_BC_cpu(FIELD):
 
-def cuda_kernel_decorator(function, non_3D={}):
-    arguments = list(signature(function).parameters)
-    n_input_args = len(arguments)
-    decorator = 'void('
-    for i in range(n_input_args):
-        if arguments[i] not in non_3D.keys():
-            decorator += wp_str + '[:,:,:],'
-        else:
-            decorator += non_3D[arguments[i]] + ','
-    decorator = decorator[:-1]
-    decorator += ')'
-    return(decorator)
+    fnx,fny,fnz = FIELD.shape
+
+    # zonal boundaries
+    if fnx == nxs+2*nb: # staggered in x
+        FIELD[0,:,:] = FIELD[nxs-1,:,:] 
+        FIELD[nxs,:,:] = FIELD[1,:,:] 
+    else:     # unstaggered in x
+        FIELD[0,:,:] = FIELD[nx,:,:] 
+        FIELD[nx+1,:,:] = FIELD[1,:,:] 
+
+    # meridional boundaries
+    if fny == nys+2*nb: # staggered in y
+        for j in [0,1,nys,nys+1]:
+            FIELD[:,j,:] = wp(0.)
+    else:     # unstaggered in y
+        FIELD[:,0,:] = FIELD[:,1,:] 
+        FIELD[:,ny+1,:] = FIELD[:,ny,:] 
+exchange_BC_cpu = njit(parallel=True)(exchange_BC_cpu)
 
 
-def set_equal(set_FIELD, get_FIELD):
-    fnx,fny,fnz = set_FIELD.shape
-    i, j, k = cuda.grid(3)
-    if i < fnx and j < fny and k < fnz:
-        set_FIELD[i,j,k] = get_FIELD[i,j,k] 
-set_equal = cuda.jit(cuda_kernel_decorator(set_equal))(set_equal)
 
 
 def exchange_BC_gpu(FIELD):
@@ -75,7 +75,4 @@ def exchange_BC_gpu(FIELD):
                 FIELD[i,j,k] = FIELD[i,ny,k] 
 exchange_BC_gpu = cuda.jit(cuda_kernel_decorator(
                             exchange_BC_gpu))(exchange_BC_gpu)
-
-
-
 

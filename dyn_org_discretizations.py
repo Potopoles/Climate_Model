@@ -5,7 +5,7 @@
 File name:          dyn_org_discretization.py  
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190530
+Last modified:      20190531
 License:            MIT
 
 SPATIAL DISCRETIZATION
@@ -25,6 +25,10 @@ Organise the computation of all diagnostic functions:
 ----------------------
 Organise the computation of one Euler forward time step.
 
+           DIAGNOSTICS
+----------------------
+Organise the computation of diagnostics.
+
 Differentiate between computation targets GPU and CPU.
 ###############################################################################
 """
@@ -32,11 +36,10 @@ import numpy as np
 from numba import cuda
 
 from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
-from org_namelist import HOST, DEVICE
-from grid import nx,nxs,ny,nys,nz,nzs,nb
-from grid import tpb, tpb_ks, bpg, tpb_sc, bpg_sc
-from GPU import exchange_BC_gpu
-from CPU import exchange_BC_cpu
+from io_read_namelist import CPU, GPU
+from grid import (nx,nxs,ny,nys,nz,nzs,nb,
+                 tpb, tpb_ks, bpg, tpb_sc, bpg_sc)
+from misc_boundaries import exchange_BC_cpu, exchange_BC_gpu
 from dyn_continuity import (continuity_gpu, continuity_cpu)
 from dyn_POTT import POTT_tendency_gpu, POTT_tendency_cpu
 from dyn_UVFLX_prepare import (UVFLX_prep_adv_gpu, UVFLX_prep_adv_cpu)
@@ -46,7 +49,7 @@ from dyn_diagnostics import (diag_PVTF_gpu, diag_PVTF_cpu,
                              diag_PHI_gpu, diag_PHI_cpu,
                              diag_POTTVB_gpu, diag_POTTVB_cpu,
                              diag_secondary_gpu, diag_secondary_cpu)
-from dyn_prognostics import make_timestep_gpu, make_timestep_cpu
+from dyn_timestep import make_timestep_gpu, make_timestep_cpu
 ###############################################################################
 
 
@@ -55,7 +58,7 @@ class TendencyFactory:
     """
     """
     
-    def __init__(self):
+    def __init__(self, target):
         """
         """
         self.fields_continuity = ['UFLX', 'VFLX', 'FLXDIV',
@@ -72,14 +75,16 @@ class TendencyFactory:
                         'PVTF', 'PVTFVB',
                         'WWIND_UWIND', 'WWIND_VWIND']
 
+        self.target = target
 
-    def continuity(self, target, GR, UFLX, VFLX, FLXDIV,
+
+    def continuity(self, GR, UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
                     COLP, dCOLPdt, COLP_NEW, COLP_OLD):
         """
         """
 
-        if target == DEVICE:
+        if self.target == GPU:
             continuity_gpu[bpg_sc, tpb_sc](UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
                     COLP, dCOLPdt, COLP_NEW, COLP_OLD,
@@ -90,7 +95,7 @@ class TendencyFactory:
             exchange_BC_gpu[bpg, tpb](WWIND)
             exchange_BC_gpu[bpg, tpb](COLP_NEW)
 
-        elif target == HOST:
+        elif self.target == CPU:
             continuity_cpu(UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
                     COLP, dCOLPdt, COLP_NEW, COLP_OLD,
@@ -102,34 +107,34 @@ class TendencyFactory:
             exchange_BC_cpu(COLP_NEW)
 
 
-    def temperature(self, target, GR,
-                            dPOTTdt, POTT, UFLX, VFLX,
-                            COLP, POTTVB, WWIND, COLP_NEW):
+    def temperature(self, GR,
+                        dPOTTdt, POTT, UFLX, VFLX,
+                        COLP, POTTVB, WWIND, COLP_NEW):
         """
         """
-        if target == DEVICE:
+        if self.target == GPU:
             POTT_tendency_gpu[bpg, tpb](GR.Ad, GR.dsigmad,
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
                     POTTVB, WWIND, COLP_NEW)
-        elif target == HOST:
+        elif self.target == CPU:
             POTT_tendency_cpu(GR.A, GR.dsigma,
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
                     POTTVB, WWIND, COLP_NEW)
 
 
-    def momentum(self, target, GR,
-                        dUFLXdt, dVFLXdt,
-                        UWIND, VWIND, WWIND,
-                        UFLX, VFLX,
-                        CFLX, QFLX, DFLX, EFLX,
-                        SFLX, TFLX, BFLX, RFLX,
-                        PHI, COLP, COLP_NEW, POTT,
-                        PVTF, PVTFVB,
-                        WWIND_UWIND, WWIND_VWIND):
+    def momentum(self, GR,
+                    dUFLXdt, dVFLXdt,
+                    UWIND, VWIND, WWIND,
+                    UFLX, VFLX,
+                    CFLX, QFLX, DFLX, EFLX,
+                    SFLX, TFLX, BFLX, RFLX,
+                    PHI, COLP, COLP_NEW, POTT,
+                    PVTF, PVTFVB,
+                    WWIND_UWIND, WWIND_VWIND):
         """
         """
 
-        if target == DEVICE:
+        if self.target == GPU:
             # PREPARE ADVECTIVE FLUXES
             if i_UVFLX_hor_adv or i_UVFLX_vert_adv:
                 UVFLX_prep_adv_gpu[bpg, tpb_ks](
@@ -163,7 +168,7 @@ class TendencyFactory:
                         GR.dsigmad,     GR.sigma_vbd)
 
 
-        elif target == HOST:
+        elif self.target == CPU:
             # PREPARE ADVECTIVE FLUXES
             if i_UVFLX_hor_adv or i_UVFLX_vert_adv:
                 UVFLX_prep_adv_cpu(
@@ -201,7 +206,7 @@ class DiagnosticsFactory:
     """
     """
     
-    def __init__(self):
+    def __init__(self, target):
         """
         """
         self.fields_primary_diag = ['COLP', 'PVTF', 'PVTFVB',
@@ -212,12 +217,13 @@ class DiagnosticsFactory:
                        'TAIR', 'RHO', 'PVTF',
                        'UWIND', 'VWIND', 'WIND']
 
+        self.target = target
 
-    def primary_diag(self, target, GR,
+    def primary_diag(self, GR,
                         COLP, PVTF, PVTFVB, 
                         PHI, PHIVB, POTT, POTTVB, HSURF):
 
-        if target == DEVICE:
+        if self.target == GPU:
 
             diag_PVTF_gpu[bpg, tpb](COLP, PVTF, PVTFVB, GR.sigma_vbd)
             diag_PHI_gpu[bpg, tpb_ks] (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
@@ -231,7 +237,7 @@ class DiagnosticsFactory:
             #TURB.diag_rho(GR, COLP, POTT, PVTF, POTTVB, PVTFVB)
             #TURB.diag_dz(GR, PHI, PHIVB)
 
-        elif target == HOST:
+        elif self.target == CPU:
 
             diag_PVTF_cpu(COLP, PVTF, PVTFVB, GR.sigma_vb)
             diag_PHI_cpu(PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
@@ -243,20 +249,20 @@ class DiagnosticsFactory:
             diag_POTTVB_cpu(POTTVB, POTT, PVTF, PVTFVB)
 
 
-    def secondary_diag(self, target, GR,
+    def secondary_diag(self, GR,
                        POTTVB, TAIRVB, PVTFVB, 
                        COLP, PAIR, PHI, POTT, 
                        TAIR, RHO, PVTF,
                        UWIND, VWIND, WIND):
 
-        if target == DEVICE:
+        if self.target == GPU:
 
             diag_secondary_gpu[bpg, tpb_ks](POTTVB, TAIRVB, PVTFVB, 
                                         COLP, PAIR, PHI, POTT, 
                                         TAIR, RHO, PVTF,
                                         UWIND, VWIND, WIND)
 
-        elif target == HOST:
+        elif self.target == CPU:
 
             diag_secondary_cpu(POTTVB, TAIRVB, PVTFVB, 
                                         COLP, PAIR, PHI, POTT, 
@@ -266,20 +272,22 @@ class DiagnosticsFactory:
 
 
 class PrognosticsFactory:
-    def __init__(self):
+    def __init__(self, target):
         """
         """
         self.fields_prognostic = ['UWIND_OLD', 'UWIND', 'VWIND_OLD',
                     'VWIND', 'COLP_OLD', 'COLP', 'POTT_OLD', 'POTT',
                     'dUFLXdt', 'dVFLXdt', 'dPOTTdt']
 
+        self.target = target
 
-    def euler_forward(self, target, GR, UWIND_OLD, UWIND, VWIND_OLD,
+
+    def euler_forward(self, GR, UWIND_OLD, UWIND, VWIND_OLD,
                     VWIND, COLP_OLD, COLP, POTT_OLD, POTT,
                     dUFLXdt, dVFLXdt, dPOTTdt):
         """
         """
-        if target == DEVICE:
+        if self.target == GPU:
 
             make_timestep_gpu[bpg, tpb](COLP, COLP_OLD,
                       POTT, POTT_OLD, dPOTTdt,
@@ -289,7 +297,7 @@ class PrognosticsFactory:
             exchange_BC_gpu[bpg, tpb](VWIND)
             exchange_BC_gpu[bpg, tpb](UWIND)
 
-        elif target == HOST:
+        elif self.target == CPU:
 
             make_timestep_cpu(COLP, COLP_OLD,
                       POTT, POTT_OLD, dPOTTdt,

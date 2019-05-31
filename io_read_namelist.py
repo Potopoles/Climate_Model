@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
-File name:          org_namelist.py  
+###############################################################################
+File name:          io_read_namelist.py  
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190509
+Last modified:      20190531
 License:            MIT
 
 Load namelist and process variables if necessary such that
 they can be imported form here in other files.
+###############################################################################
 """
 import numba
 import numpy as np
@@ -16,7 +18,7 @@ from namelist import (working_precision,
                     UVFLX_dif_coef, POTT_dif_coef, COLP_dif_coef,
                     comp_mode,
                     pair_top, pair_surf)
-####################################################################
+###############################################################################
 
 ####################################################################
 # COMPUTATION
@@ -44,8 +46,8 @@ else:
 
 
 # names of host and device
-HOST = 'host'
-DEVICE = 'device'
+CPU = 'CPU'
+GPU = 'GPU'
 
 
 UVFLX_dif_coef = wp(UVFLX_dif_coef)

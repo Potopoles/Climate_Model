@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          solver.py  
 Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190531
@@ -34,17 +33,20 @@ from namelist import (i_time_stepping,
                     i_load_from_restart, i_save_to_restart,
                     i_radiation, njobs, comp_mode,
                     i_microphysics, i_surface_scheme)
-from org_namelist import (gpu_enable, HOST, DEVICE)
+from io_read_namelist import (gpu_enable, CPU, GPU)
 from grid import Grid
 from ModelFields import ModelFields
-from nc_IO import constant_fields_to_NC, output_to_NC
-from restart import write_restart
-from IO_helper_functions import (print_ts_info)
-from matsuno import step_matsuno as time_stepper
+from io_nc_output import constant_fields_to_NC, output_to_NC
+from io_restart import write_restart
+from io_functions import (print_ts_info)
+from dyn_matsuno import step_matsuno as time_stepper
 
 from dyn_org_discretizations import DiagnosticsFactory
-Diagnostics = DiagnosticsFactory()
 ###############################################################################
+if comp_mode == 1:
+    Diagnostics = DiagnosticsFactory(target=CPU)
+elif comp_mode == 2:
+    Diagnostics = DiagnosticsFactory(target=GPU)
 
 ####################################################################
 # CREATE MODEL GRID
@@ -88,14 +90,9 @@ while GR.ts < GR.nts:
     # SECONDARY DIAGNOSTICS (related to physics)
     ####################################################################
     GR.timer.start('diag2')
-    if comp_mode == 1:
-        Diagnostics.secondary_diag(HOST, GR,
-                **F.get(Diagnostics.fields_secondary_diag,
-                        target=HOST))
-    elif comp_mode == 2:
-        Diagnostics.secondary_diag(DEVICE, GR,
-                **F.get(Diagnostics.fields_secondary_diag,
-                        target=DEVICE))
+    Diagnostics.secondary_diag(GR,
+            **F.get(Diagnostics.fields_secondary_diag,
+                    target=Diagnostics.target))
     GR.timer.stop('diag2')
 
 
@@ -216,12 +213,12 @@ GR.timer.print_report()
 #F.host['UWIND'][:] = np.nan
 #F.host['VWIND'][:] = np.nan
 #n_iter = 10
-#Prognostics.euler_forward(HOST, GR,
-#        **NF.get(Prognostics.fields_prognostic, target=HOST))
+#Prognostics.euler_forward(CPU, GR,
+#        **NF.get(Prognostics.fields_prognostic, target=CPU))
 #t0 = time.time()
 #for i in range(n_iter):
-#    Prognostics.euler_forward(HOST, GR,
-#            **NF.get(Prognostics.fields_prognostic, target=HOST))
+#    Prognostics.euler_forward(CPU, GR,
+#            **NF.get(Prognostics.fields_prognostic, target=CPU))
 #print((time.time() - t0)/n_iter)
 
 #F.COLP          = F.COLP.squeeze()
