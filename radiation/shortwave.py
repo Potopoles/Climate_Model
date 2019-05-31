@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 from datetime import timedelta
-from constants import solar_constant_0
+from io_constants import solar_constant_0
 from radiation.namelist_radiation import \
                             sigma_abs_gas_SW_in, sigma_sca_gas_SW_in
 

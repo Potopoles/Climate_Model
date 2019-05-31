@@ -1,7 +1,6 @@
 import numpy as np
-import time
 from namelist import i_comp_mode, i_radiation, i_microphysics
-from org_namelist import wp
+from io_read_namelist import wp
 #from surface_model_cuda import soil_temperature_euler_forward_gpu,\
 #                              calc_albedo_gpu, calc_evaporation_capacity_gpu
 from numba import cuda
@@ -9,7 +8,7 @@ from numba import cuda
 # NAMELIST
 ####################################################################
 
-nz_soil = 1
+#nz_soil = 1
 
 # constant values
 depth_soil = 4

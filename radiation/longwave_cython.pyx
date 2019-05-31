@@ -1,8 +1,8 @@
 import numpy as np
 import cython
-from org_namelist import wp
+from io_read_namelist import wp
 from radiation.namelist_radiation import njobs_rad, planck_n_lw_bins, emissivity_surface
-from constants import con_c, con_h, con_kb
+from io_constants import con_c, con_h, con_kb
 from libc.math cimport exp, pi
 
 if wp == 'float64':

@@ -79,6 +79,7 @@ i_UVFLX_pre_grad        = 1
 i_use_topo = 1
 n_topo_smooth = 20
 i_surface_scheme = 0
+nz_soil = 1
 
 # PHYSICS
 i_radiation = 0
@@ -160,7 +161,7 @@ i_sync_context = 1
 ###############################################################################
 # 1: testsuite equality
 # 2: longtime run
-i_simulation_mode = 1
+i_simulation_mode = 2
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 1:
@@ -189,7 +190,7 @@ elif i_simulation_mode == 2:
     output_path = '../output'
     i_sim_n_days = 20.#*365.00
     i_out_nth_hour = 12
-    i_surface_scheme = 0
+    i_surface_scheme = 1
     i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0

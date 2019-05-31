@@ -1,7 +1,7 @@
 import numpy as np
 import time
 import scipy
-from constants import con_h, con_c, con_kb
+from io_constants import con_h, con_c, con_kb
 from radiation.namelist_radiation import  \
                             sigma_abs_gas_LW_in, sigma_sca_gas_LW_in, \
                             emissivity_surface, planck_n_lw_bins

@@ -99,26 +99,25 @@ while GR.ts < GR.nts:
     ####################################################################
     # RADIATION
     ####################################################################
-    #if i_radiation:
-    #    #print('flag 1')
-    #    GR.timer.start('rad')
-    #    # Asynchroneous Radiation
-    #    if RAD.i_async_radiation:
-    #        if RAD.done == 1:
-    #            if i_comp_mode == 2:
-    #                GF.copy_radiation_fields_to_device(GR, CF)
-    #                GF.copy_radiation_fields_to_host(GR)
-    #            RAD.done = 0
-    #            _thread.start_new_thread(RAD.calc_radiation, (GR, CF))
-    #    # Synchroneous Radiation
-    #    else:
-    #        if GR.ts % RAD.rad_nth_ts == 0:
-    #            if i_comp_mode == 2:
-    #                GF.copy_radiation_fields_to_host(GR)
-    #            RAD.calc_radiation(GR, CF)
-    #            if i_comp_mode == 2:
-    #                GF.copy_radiation_fields_to_device(GR, CF)
-    #    GR.timer.stop('rad')
+    if i_radiation:
+        GR.timer.start('rad')
+        # Asynchroneous Radiation
+        if RAD.i_async_radiation:
+            if RAD.done == 1:
+                if i_comp_mode == 2:
+                    GF.copy_radiation_fields_to_device(GR, CF)
+                    GF.copy_radiation_fields_to_host(GR)
+                RAD.done = 0
+                _thread.start_new_thread(RAD.calc_radiation, (GR, CF))
+        # Synchroneous Radiation
+        else:
+            if GR.ts % RAD.rad_nth_ts == 0:
+                if i_comp_mode == 2:
+                    GF.copy_radiation_fields_to_host(GR)
+                RAD.calc_radiation(GR, CF)
+                if i_comp_mode == 2:
+                    GF.copy_radiation_fields_to_device(GR, CF)
+        GR.timer.stop('rad')
 
     #print('RADIATION timerstarts:')
     #try:

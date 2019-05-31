@@ -1,4 +1,4 @@
-from namelist import comp_mode
+from namelist import i_comp_mode
 # PSEUDO RADIATION SCHEME (not realistic but fast)
 pseudo_rad_inpRate = 0.00020
 pseudo_rad_outRate = 5.0E-7
@@ -7,7 +7,7 @@ pseudo_rad_outRate = 5.0E-7
 #rad_nth_hour = 2.5
 rad_nth_hour = 1.9
 
-if comp_mode == 2:
+if i_comp_mode == 2:
     i_async_radiation = 1
 else:
     i_async_radiation = 0

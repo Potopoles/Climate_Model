@@ -17,6 +17,7 @@ from numba import cuda
 from namelist import i_surface_scheme
 from io_read_namelist import wp, CPU, GPU
 from io_initial_conditions import initialize_fields
+from radiation.org_radiation import Radiation
 ###############################################################################
 
 class ModelFields:
@@ -45,6 +46,18 @@ class ModelFields:
                         'UWIND', 'VWIND', 'WIND', 'RHO',
                         'PHI', 'PHIVB']
         self.set(initialize_fields(GR, **self.get(fields_to_init)))
+
+
+        ## RADIATION
+        #if i_radiation:
+        #    if SURF is None:
+        #        raise ValueError('Soil model must be used for i_radiation > 0')
+        #    RAD = radiation(GR, i_radiation)
+        #    rad_njobs_orig = RAD.njobs_rad
+        #    RAD.njobs_rad = 4
+        #    RAD.calc_radiation(GR, CF)
+        #    RAD.njobs_rad = rad_njobs_orig
+        
 
         if self.gpu_enable:
             self.copy_host_to_device(field_group=self.ALL_FIELDS)
@@ -263,17 +276,28 @@ class ModelFields:
         #######################################################################
         # TODO: Add comments
         if i_surface_scheme: 
-            self.OCEANMASK   = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
-            self.SOILDEPTH   = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
-            self.SOILCP      = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
-            self.SOILRHO     = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
-            self.SOILTEMP    = np.full( ( GR.nx, GR.ny, nz_soil), np.nan, dtype=wp)
-            self.SOILMOIST   = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
-            self.SOILEVAPITY = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
-            self.SURFALBEDSW = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
-            self.SURFALBEDLW = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
-            self.RAINRATE    = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
-            self.ACCRAIN     = np.full( ( GR.nx, GR.ny, 1      ), np.nan, dtype=wp)
+            f['OCEANMASK']   = np.full( ( GR.nx, GR.ny, 1      ),
+                                        np.nan, dtype=wp)
+            f['SOILDEPTH']   = np.full( ( GR.nx, GR.ny, 1      ),
+                                        np.nan, dtype=wp)
+            f['SOILCP']      = np.full( ( GR.nx, GR.ny, 1      ), 
+                                        np.nan, dtype=wp)
+            f['SOILRHO']     = np.full( ( GR.nx, GR.ny, 1      ), 
+                                        np.nan, dtype=wp)
+            f['SOILTEMP']    = np.full( ( GR.nx, GR.ny, nz_soil), 
+                                        np.nan, dtype=wp)
+            f['SOILMOIST']   = np.full( ( GR.nx, GR.ny, 1      ), 
+                                        np.nan, dtype=wp)
+            f['SOILEVAPITY'] = np.full( ( GR.nx, GR.ny, 1      ), 
+                                        np.nan, dtype=wp)
+            f['SURFALBEDSW'] = np.full( ( GR.nx, GR.ny, 1      ), 
+                                        np.nan, dtype=wp)
+            f['SURFALBEDLW'] = np.full( ( GR.nx, GR.ny, 1      ), 
+                                        np.nan, dtype=wp)
+            f['RAINRATE']    = np.full( ( GR.nx, GR.ny, 1      ), 
+                                        np.nan, dtype=wp)
+            f['ACCRAIN']     = np.full( ( GR.nx, GR.ny, 1      ), 
+                                        np.nan, dtype=wp)
 
 
 
@@ -282,11 +306,15 @@ class ModelFields:
         ### 3 RADIATION FIELDS
         #######################################################################
         #######################################################################
-        # TODO: Add comments
-        self.dPOTTdt_RAD = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
-                                    np.nan, dtype=wp)
-        self.LWFLXNET    = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp)
-        self.SWFLXNET    = np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan, dtype=wp)
+        # potential temperature change due to radiation [K s-1]
+        f['dPOTTdt_RAD']     = np.full( ( GR.nx, GR.ny, GR.nz  ), 
+                                        np.nan, dtype=wp)
+        # net longwave flux (direction?) [W m-2]
+        f['LWFLXNET']        = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        # net shortwave flux (direction?) [W m-2]
+        f['SWFLXNET']        = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
 
         #######################################################################
         #######################################################################

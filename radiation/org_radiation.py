@@ -4,7 +4,7 @@ import time
 from radiation.namelist_radiation import \
         pseudo_rad_inpRate, pseudo_rad_outRate, \
         rad_nth_hour, i_async_radiation, planck_n_lw_bins
-from constants import con_cp, con_g
+from io_constants import con_cp, con_g
 from radiation.shortwave import rad_solar_zenith_angle, \
        calc_current_solar_constant
 from radiation.longwave import org_longwave
@@ -19,7 +19,7 @@ from radiation.namelist_radiation import njobs_rad
 
 
 
-class radiation:
+class Radiation:
 
     def __init__(self, GR, i_radiation):
         print('Prepare Radiation')
