@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          io_restart.py  
 Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190531
@@ -15,7 +14,7 @@ import numpy as np
 import os
 import pickle
 
-from namelist import n_topo_smooth, tau_topo_smooth, comp_mode
+from namelist import i_comp_mode
 from io_read_namelist import wp, pair_top
 #from radiation.namelist_radiation import njobs_rad
 from io_constants import con_g, con_Rd, con_kappa, con_cp
@@ -83,7 +82,7 @@ def write_restart(GR, CF, RAD, SOIL, MIC, TURB):
         pickle.dump(out, f)
 
     # restore unpicklable GR objects for GPU 
-    if comp_mode == 2:
+    if i_comp_mode == 2:
         GR.stream      =   stream     
         GR.zonal       =   zonal   
         GR.zonals      =   zonals  
