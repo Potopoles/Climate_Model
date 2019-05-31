@@ -128,7 +128,7 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
     if output_fields['VORT']:
         VORT_out = ncf.createVariable('VORT', 'f4',
                                     ('time', 'level', 'lat', 'lon',) )
-        VORT_out[-1,:,:,:] = VORT[:,:,:][GR.iijj].T
+        VORT_out[-1,:,:,:] = VORT[:,:,:][GR.ii,GR.jj].T
 
 
     if output_fields['WVP']:

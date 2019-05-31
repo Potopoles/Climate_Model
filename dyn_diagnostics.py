@@ -41,7 +41,6 @@ from misc_gpu_functions import cuda_kernel_decorator
 def diag_PVTF_gpu(COLP, PVTF, PVTFVB, sigma_vb):
 
     i, j, k = cuda.grid(3)
-    #if i >= nb and i < nx+nb and j >= nb and j < ny+nb and k < nz:
     if i < nx+2*nb and j < ny+2*nb and k < nz:
 
         pairvb_km12 = pair_top + sigma_vb[0,0,k  ] * COLP[i,j,0]
@@ -62,7 +61,6 @@ diag_PVTF_gpu = cuda.jit(cuda_kernel_decorator(
 def diag_PHI_gpu(PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF):
 
     i, j, k = cuda.grid(3)
-    #if i >= nb and i < nx+nb and j >= nb and j < ny+nb and k < nzs:
     if i < nx+2*nb and j < ny+2*nb and k < nzs:
         kiter = nzs-1
         if k == kiter:
@@ -88,7 +86,6 @@ diag_PHI_gpu = cuda.jit(cuda_kernel_decorator(diag_PHI_gpu))(diag_PHI_gpu)
 def diag_POTTVB_gpu(POTTVB, POTT, PVTF, PVTFVB):
 
     i, j, k = cuda.grid(3)
-    #if i >= nb and i < nx+nb and j >= nb and j < ny+nb and k < nzs:
     if i < nx+2*nb and j < ny+2*nb and k < nzs:
         if k > 0 and k < nzs-1:
             POTTVB[i,j,k] =   (
@@ -133,8 +130,6 @@ diag_secondary_gpu = cuda.jit(cuda_kernel_decorator(
 ###############################################################################
 def diag_PVTF_cpu(COLP, PVTF, PVTFVB, sigma_vb):
 
-    #for i in prange(nb,nx+nb):
-    #    for j in range(nb,ny+nb):
     for i in prange(0,nx+2*nb):
         for j in range(0,ny+2*nb):
             for k in range(wp_int(0),nz):
@@ -155,8 +150,6 @@ diag_PVTF_cpu = njit(parallel=True)(diag_PVTF_cpu)
 
 
 def diag_PHI_cpu(PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF):
-    #for i in prange(nb,nx+nb):
-    #    for j in range(nb,ny+nb):
     for i in prange(0,nx+2*nb):
         for j in range(0,ny+2*nb):
             k = nzs-1
@@ -176,8 +169,6 @@ diag_PHI_cpu = njit(parallel=True)(diag_PHI_cpu)
 
 
 def diag_POTTVB_cpu(POTTVB, POTT, PVTF, PVTFVB):
-    #for i in prange(nb,nx+nb):
-    #    for j in range(nb,ny+nb):
     for i in prange(0,nx+2*nb):
         for j in range(0,ny+2*nb):
             for k in range(wp_int(1),nzs-1):

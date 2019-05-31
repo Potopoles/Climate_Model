@@ -77,7 +77,7 @@ class TendencyFactory:
         self.target = target
 
 
-    def continuity(self, GR, UFLX, VFLX, FLXDIV,
+    def continuity(self, GR, GRF, UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
                     COLP, dCOLPdt, COLP_NEW, COLP_OLD):
         """
@@ -87,8 +87,9 @@ class TendencyFactory:
             continuity_gpu[bpg_sc, tpb_sc](UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
                     COLP, dCOLPdt, COLP_NEW, COLP_OLD,
-                    GR.dyisd, GR.dxjsd, GR.dsigmad, GR.sigma_vbd,
-                    GR.Ad, GR.dt)
+                    GRF['dyis'], GRF['dxjs'],
+                    GRF['dsigma'], GRF['sigma_vb'],
+                    GRF['A'], GR.dt)
             exchange_BC_gpu[bpg, tpb](UFLX)
             exchange_BC_gpu[bpg, tpb](VFLX)
             exchange_BC_gpu[bpg, tpb](WWIND)
@@ -98,30 +99,33 @@ class TendencyFactory:
             continuity_cpu(UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
                     COLP, dCOLPdt, COLP_NEW, COLP_OLD,
-                    GR.dyis, GR.dxjs, GR.dsigma, GR.sigma_vb,
-                    GR.A, GR.dt)
+                    GRF['dyis'], GRF['dxjs'],
+                    GRF['dsigma'], GRF['sigma_vb'],
+                    GRF['A'], GR.dt)
             exchange_BC_cpu(UFLX)
             exchange_BC_cpu(VFLX)
             exchange_BC_cpu(WWIND)
             exchange_BC_cpu(COLP_NEW)
 
 
-    def temperature(self, GR,
-                        dPOTTdt, POTT, UFLX, VFLX,
-                        COLP, POTTVB, WWIND, COLP_NEW):
+    def temperature(self, GRF,
+                    dPOTTdt, POTT, UFLX, VFLX,
+                    COLP, POTTVB, WWIND, COLP_NEW):
         """
         """
         if self.target == GPU:
-            POTT_tendency_gpu[bpg, tpb](GR.Ad, GR.dsigmad,
+            POTT_tendency_gpu[bpg, tpb](GRF['A'], GRF['dsigma'],
+                    GRF['POTT_dif_coef'],
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
                     POTTVB, WWIND, COLP_NEW)
         elif self.target == CPU:
-            POTT_tendency_cpu(GR.A, GR.dsigma,
+            POTT_tendency_cpu(GRF['A'], GRF['dsigma'],
+                    GRF['POTT_dif_coef'],
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
                     POTTVB, WWIND, COLP_NEW)
 
 
-    def momentum(self, GR,
+    def momentum(self, GRF,
                     dUFLXdt, dVFLXdt,
                     UWIND, VWIND, WWIND,
                     UFLX, VFLX,
@@ -142,7 +146,7 @@ class TendencyFactory:
                             UFLX, VFLX,
                             CFLX, QFLX, DFLX, EFLX,
                             SFLX, TFLX, BFLX, RFLX,
-                            COLP_NEW, GR.Ad, GR.dsigmad)
+                            COLP_NEW, GRF['A'], GRF['dsigma'])
 
             # UFLX
             UFLX_tendency_gpu[bpg, tpb](
@@ -150,10 +154,11 @@ class TendencyFactory:
                         BFLX, CFLX, DFLX, EFLX,
                         PHI, COLP, POTT,
                         PVTF, PVTFVB, WWIND_UWIND,
-                        GR.corf_isd, GR.lat_is_radd,
-                        GR.dlon_radd, GR.dlat_radd,
-                        GR.dyisd,
-                        GR.dsigmad, GR.sigma_vbd)
+                        GRF['corf_is'], GRF['lat_is_rad'],
+                        GRF['dlon_rad'], GRF['dlat_rad'],
+                        GRF['dyis'],
+                        GRF['dsigma'], GRF['sigma_vb'],
+                        GRF['UVFLX_dif_coef'])
 
             # VFLX
             VFLX_tendency_gpu[bpg, tpb](
@@ -161,10 +166,11 @@ class TendencyFactory:
                         RFLX, SFLX, TFLX, QFLX,
                         PHI, COLP, POTT,
                         PVTF, PVTFVB, WWIND_VWIND,
-                        GR.corfd,       GR.lat_radd,
-                        GR.dlon_radd,   GR.dlat_radd,
-                        GR.dxjsd, 
-                        GR.dsigmad,     GR.sigma_vbd)
+                        GRF['corf'],        GRF['lat_rad'],
+                        GRF['dlon_rad'],    GRF['dlat_rad'],
+                        GRF['dxjs'], 
+                        GRF['dsigma'],      GRF['sigma_vb'],
+                        GRF['UVFLX_dif_coef'])
 
 
         elif self.target == CPU:
@@ -176,17 +182,18 @@ class TendencyFactory:
                             UFLX, VFLX,
                             CFLX, QFLX, DFLX, EFLX,
                             SFLX, TFLX, BFLX, RFLX,
-                            COLP_NEW, GR.A, GR.dsigma)
+                            COLP_NEW, GRF['A'], GRF['dsigma'])
             # UFLX
             UFLX_tendency_cpu(
                         dUFLXdt, UFLX, UWIND, VWIND,
                         BFLX, CFLX, DFLX, EFLX,
                         PHI, COLP, POTT,
                         PVTF, PVTFVB, WWIND_UWIND,
-                        GR.corf_is,     GR.lat_is_rad,
-                        GR.dlon_rad,    GR.dlat_rad,
-                        GR.dyis,
-                        GR.dsigma,      GR.sigma_vb)
+                        GRF['corf_is'], GRF['lat_is_rad'],
+                        GRF['dlon_rad'], GRF['dlat_rad'],
+                        GRF['dyis'],
+                        GRF['dsigma'], GRF['sigma_vb'],
+                        GRF['UVFLX_dif_coef'])
 
             # VFLX
             VFLX_tendency_cpu(
@@ -194,10 +201,11 @@ class TendencyFactory:
                         RFLX, SFLX, TFLX, QFLX,
                         PHI, COLP, POTT,
                         PVTF, PVTFVB, WWIND_VWIND,
-                        GR.corf,        GR.lat_rad,
-                        GR.dlon_rad,    GR.dlat_rad,
-                        GR.dxjs, 
-                        GR.dsigma,      GR.sigma_vb)
+                        GRF['corf'],        GRF['lat_rad'],
+                        GRF['dlon_rad'],    GRF['dlat_rad'],
+                        GRF['dxjs'], 
+                        GRF['dsigma'],      GRF['sigma_vb'],
+                        GRF['UVFLX_dif_coef'])
 
 
 
@@ -218,13 +226,13 @@ class DiagnosticsFactory:
 
         self.target = target
 
-    def primary_diag(self, GR,
+    def primary_diag(self, GRF,
                         COLP, PVTF, PVTFVB, 
                         PHI, PHIVB, POTT, POTTVB, HSURF):
 
         if self.target == GPU:
 
-            diag_PVTF_gpu[bpg, tpb](COLP, PVTF, PVTFVB, GR.sigma_vbd)
+            diag_PVTF_gpu[bpg, tpb](COLP, PVTF, PVTFVB, GRF['sigma_vb'])
             diag_PHI_gpu[bpg, tpb_ks] (PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
 
             #exchange_BC_gpu[bpg, tpb](PVTF)
@@ -238,17 +246,13 @@ class DiagnosticsFactory:
 
         elif self.target == CPU:
 
-            diag_PVTF_cpu(COLP, PVTF, PVTFVB, GR.sigma_vb)
+            diag_PVTF_cpu(COLP, PVTF, PVTFVB, GRF['sigma_vb'])
             diag_PHI_cpu(PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF) 
-
-            #exchange_BC_cpu(PVTF)
-            #exchange_BC_cpu(PVTFVB)
-            #exchange_BC_cpu(PHI)
 
             diag_POTTVB_cpu(POTTVB, POTT, PVTF, PVTFVB)
 
 
-    def secondary_diag(self, GR,
+    def secondary_diag(self,
                        POTTVB, TAIRVB, PVTFVB, 
                        COLP, PAIR, PHI, POTT, 
                        TAIR, RHO, PVTF,
@@ -281,7 +285,7 @@ class PrognosticsFactory:
         self.target = target
 
 
-    def euler_forward(self, GR, UWIND_OLD, UWIND, VWIND_OLD,
+    def euler_forward(self, GR, GRF, UWIND_OLD, UWIND, VWIND_OLD,
                     VWIND, COLP_OLD, COLP, POTT_OLD, POTT,
                     dUFLXdt, dVFLXdt, dPOTTdt):
         """
@@ -291,7 +295,7 @@ class PrognosticsFactory:
             make_timestep_gpu[bpg, tpb](COLP, COLP_OLD,
                       POTT, POTT_OLD, dPOTTdt,
                       UWIND, UWIND_OLD, dUFLXdt,
-                      VWIND, VWIND_OLD, dVFLXdt, GR.Ad, GR.dt)
+                      VWIND, VWIND_OLD, dVFLXdt, GRF['A'], GR.dt)
             exchange_BC_gpu[bpg, tpb](POTT)
             exchange_BC_gpu[bpg, tpb](VWIND)
             exchange_BC_gpu[bpg, tpb](UWIND)
@@ -301,7 +305,7 @@ class PrognosticsFactory:
             make_timestep_cpu(COLP, COLP_OLD,
                       POTT, POTT_OLD, dPOTTdt,
                       UWIND, UWIND_OLD, dUFLXdt,
-                      VWIND, VWIND_OLD, dVFLXdt, GR.A, GR.dt)
+                      VWIND, VWIND_OLD, dVFLXdt, GRF['A'], GR.dt)
             exchange_BC_cpu(POTT)
             exchange_BC_cpu(VWIND)
             exchange_BC_cpu(UWIND)

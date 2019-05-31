@@ -2,8 +2,7 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          io_initial_conditions.py  
-Author:             Christoph Heim (CH)
+Author:             Christoph Heim
 Date created:       20190525
 Last modified:      20190531
 License:            MIT
@@ -69,7 +68,7 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
                          np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
             UWIND[:,:,k] = random2D(GR, UWIND[:,:,k], UWIND_random_pert)
 
-            VWIND[:,:,k][GR.iijjs] = vwind_0
+            VWIND[:,:,k][GR.ii,GR.jjs] = vwind_0
             VWIND[:,:,k] = gaussian2D(GR, VWIND[:,:,k], VWIND_gaussian_pert,
                          np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
             VWIND[:,:,k] = random2D(GR, VWIND[:,:,k], VWIND_random_pert)
@@ -174,10 +173,10 @@ def diag_pvt_factor(GR, COLP, PVTF, PVTFVB):
 
     for k in range(0,GR.nz):
         kp1 = k + 1
-        PVTF[:,:,k][GR.iijj] = 1/(1+con_kappa) * \
-                    ( PVTFVB[:,:,kp1][GR.iijj] * PAIRVB[:,:,kp1][GR.iijj] - \
-                      PVTFVB[:,:,k  ][GR.iijj] * PAIRVB[:,:,k  ][GR.iijj] ) / \
-                    ( PAIRVB[:,:,kp1][GR.iijj] - PAIRVB[:,:,k  ][GR.iijj] )
+        PVTF[:,:,k][GR.ii,GR.jj] = 1/(1+con_kappa) * \
+                    ( PVTFVB[:,:,kp1][GR.ii,GR.jj] * PAIRVB[:,:,kp1][GR.ii,GR.jj] - \
+                      PVTFVB[:,:,k  ][GR.ii,GR.jj] * PAIRVB[:,:,k  ][GR.ii,GR.jj] ) / \
+                    ( PAIRVB[:,:,kp1][GR.ii,GR.jj] - PAIRVB[:,:,k  ][GR.ii,GR.jj] )
 
     return(PVTF, PVTFVB)
 
@@ -196,7 +195,7 @@ def set_up_profile(GR, COLP, HSURF, PSURF, PVTF,
     PVTF, PVTFVB = diag_pvt_factor(GR, COLP, PVTF, PVTFVB)
 
     for k in range(0,GR.nz):
-        PAIR[:,:,k][GR.iijj] = 100000.*np.power(PVTF[:,:,k][GR.iijj], 1/con_kappa)
+        PAIR[:,:,k][GR.ii,GR.jj] = 100000.*np.power(PVTF[:,:,k][GR.ii,GR.jj], 1/con_kappa)
 
     interp = interp1d(profile[:,2], profile[:,3])
     for i in GR.ii:
@@ -204,8 +203,8 @@ def set_up_profile(GR, COLP, HSURF, PSURF, PVTF,
             TAIR[i,j,:] = interp(PAIR[i,j,:])
 
     for k in range(0,GR.nz):
-        POTT[:,:,k][GR.iijj] = TAIR[:,:,k][GR.iijj] * \
-                np.power(100000./PAIR[:,:,k][GR.iijj], con_kappa)
+        POTT[:,:,k][GR.ii,GR.jj] = TAIR[:,:,k][GR.ii,GR.jj] * \
+                np.power(100000./PAIR[:,:,k][GR.ii,GR.jj], con_kappa)
 
     return(COLP, PSURF, POTT, TAIR, PAIR)
 
@@ -266,7 +265,7 @@ def gaussian2D(GR, FIELD, pert, lon0_rad, lat0_rad, lonSig_rad, latSig_rad):
             - np.power(lat - lat0_rad, 2)/
                         (2*latSig_rad**2) )
 
-    FIELD[selinds] = FIELD[selinds] + perturb
+    FIELD[selinds] = FIELD[selinds] + perturb.squeeze()
 
 
     return(FIELD)
@@ -279,7 +278,7 @@ def set_up_sigma_levels(GR):
     HSURF = load_topo(GR, HSURF)
     filename = 'data/mean_vert_prof.dat'
     profile = np.loadtxt(filename)
-    zsurf_test = np.mean(HSURF[GR.iijj])
+    zsurf_test = np.mean(HSURF[GR.ii,GR.jj])
     top_ind = np.argwhere(profile[:,2] >= pair_top).squeeze()[-1]
     ztop_test = profile[top_ind,0] + (profile[top_ind,2] - pair_top)/ \
                             (profile[top_ind,4]*profile[top_ind,1])
@@ -340,10 +339,10 @@ def diag_pvt_factor_init(GR, COLP, PVTF, PVTFVB):
 
     for k in range(0,GR.nz):
         kp1 = k + 1
-        PVTF[:,:,k][GR.iijj] = 1/(1+con_kappa) * \
-                    ( PVTFVB[:,:,kp1][GR.iijj] * PAIRVB[:,:,kp1][GR.iijj] - \
-                      PVTFVB[:,:,k  ][GR.iijj] * PAIRVB[:,:,k  ][GR.iijj] ) / \
-                    ( PAIRVB[:,:,kp1][GR.iijj] - PAIRVB[:,:,k  ][GR.iijj] )
+        PVTF[:,:,k][GR.ii,GR.jj] = 1/(1+con_kappa) * \
+                    ( PVTFVB[:,:,kp1][GR.ii,GR.jj] * PAIRVB[:,:,kp1][GR.ii,GR.jj] - \
+                      PVTFVB[:,:,k  ][GR.ii,GR.jj] * PAIRVB[:,:,k  ][GR.ii,GR.jj] ) / \
+                    ( PAIRVB[:,:,kp1][GR.ii,GR.jj] - PAIRVB[:,:,k  ][GR.ii,GR.jj] )
 
     return(PVTF, PVTFVB)
 
@@ -363,20 +362,20 @@ def diag_geopotential_init(GR, PHI, PHIVB, HSURF, POTT, COLP,
     for k in range(GR.nz-2,-1,-1):
         kp1 = k + 1
 
-        dphi = con_cp * POTT[:,:,kp1][GR.iijj] * \
-                        (PVTFVB[:,:,kp1][GR.iijj] - PVTF[:,:,kp1][GR.iijj])
+        dphi = con_cp * POTT[:,:,kp1][GR.ii,GR.jj] * \
+                        (PVTFVB[:,:,kp1][GR.ii,GR.jj] - PVTF[:,:,kp1][GR.ii,GR.jj])
         #phi_vb = PHI[:,:,kp1][GR.iijj] - dphi
-        PHIVB[:,:,kp1][GR.iijj] = PHI[:,:,kp1][GR.iijj] - dphi
+        PHIVB[:,:,kp1][GR.ii,GR.jj] = PHI[:,:,kp1][GR.ii,GR.jj] - dphi
 
         # phi_k
-        dphi = con_cp * POTT[:,:,k][GR.iijj] * \
-                            (PVTF[:,:,k][GR.iijj] - PVTFVB[:,:,kp1][GR.iijj])
+        dphi = con_cp * POTT[:,:,k][GR.ii,GR.jj] * \
+                            (PVTF[:,:,k][GR.ii,GR.jj] - PVTFVB[:,:,kp1][GR.ii,GR.jj])
         #PHI[:,:,k][GR.iijj] = phi_vb - dphi
-        PHI[:,:,k][GR.iijj] = PHIVB[:,:,kp1][GR.iijj] - dphi
+        PHI[:,:,k][GR.ii,GR.jj] = PHIVB[:,:,kp1][GR.ii,GR.jj] - dphi
 
-    dphi = con_cp * POTT[:,:,0][GR.iijj] * \
-                    (PVTFVB[:,:,0][GR.iijj] - PVTF[:,:,0][GR.iijj])
-    PHIVB[:,:,0][GR.iijj] = PHI[:,:,0][GR.iijj] - dphi
+    dphi = con_cp * POTT[:,:,0][GR.ii,GR.jj] * \
+                    (PVTFVB[:,:,0][GR.ii,GR.jj] - PVTF[:,:,0][GR.ii,GR.jj])
+    PHIVB[:,:,0][GR.ii,GR.jj] = PHI[:,:,0][GR.ii,GR.jj] - dphi
 
     # TODO 5 NECESSARY
     PVTF    = GR.exchange_BC(PVTF)
@@ -393,15 +392,15 @@ def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
                                     TAIR, TAIRVB, RHO,
                                 PVTF, PVTFVB, UWIND, VWIND, WIND):
 
-    TAIR[GR.iijj] = POTT[GR.iijj] * PVTF[GR.iijj]
-    TAIRVB[GR.iijj] = POTTVB[GR.iijj] * PVTFVB[GR.iijj]
-    PAIR[GR.iijj] = 100000*np.power(PVTF[GR.iijj], 1/con_kappa)
-    RHO[GR.iijj] = PAIR[GR.iijj] / (con_Rd * TAIR[GR.iijj])
+    TAIR[GR.ii,GR.jj] = POTT[GR.ii,GR.jj] * PVTF[GR.ii,GR.jj]
+    TAIRVB[GR.ii,GR.jj] = POTTVB[GR.ii,GR.jj] * PVTFVB[GR.ii,GR.jj]
+    PAIR[GR.ii,GR.jj] = 100000*np.power(PVTF[GR.ii,GR.jj], 1/con_kappa)
+    RHO[GR.ii,GR.jj] = PAIR[GR.ii,GR.jj] / (con_Rd * TAIR[GR.ii,GR.jj])
 
     for k in range(0,GR.nz):
-        WIND[:,:,k][GR.iijj] = np.sqrt( ((UWIND[:,:,k][GR.iijj] + \
-                                        UWIND[:,:,k][GR.iijj_ip1])/2)**2 + \
-                        ((VWIND[:,:,k][GR.iijj] + VWIND[:,:,k][GR.iijj_jp1])/2)**2 )
+        WIND[:,:,k][GR.ii,GR.jj] = np.sqrt( ((UWIND[:,:,k][GR.ii,GR.jj] + \
+                                        UWIND[:,:,k][GR.ii+1,GR.jj])/2)**2 + \
+                        ((VWIND[:,:,k][GR.ii,GR.jj] + VWIND[:,:,k][GR.ii,GR.jj+1])/2)**2 )
 
 
     return(PAIR, TAIR, TAIRVB, RHO, WIND)
@@ -410,17 +409,17 @@ def diagnose_secondary_fields(GR, COLP, PAIR, PHI, POTT, POTTVB,
 def diagnose_POTTVB_init(GR, POTTVB, POTT, PVTF, PVTFVB):
 
     for ks in range(1,GR.nzs-1):
-        POTTVB[:,:,ks][GR.iijj] =   ( \
-                    +   (PVTFVB[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj]) * \
-                        POTT[:,:,ks-1][GR.iijj]
-                    +   (PVTF[:,:,ks][GR.iijj] - PVTFVB[:,:,ks][GR.iijj]) * \
-                        POTT[:,:,ks][GR.iijj]
-                                    ) / (PVTF[:,:,ks][GR.iijj] - PVTF[:,:,ks-1][GR.iijj])
+        POTTVB[:,:,ks][GR.ii,GR.jj] =   ( \
+                    +   (PVTFVB[:,:,ks][GR.ii,GR.jj] - PVTF[:,:,ks-1][GR.ii,GR.jj]) * \
+                        POTT[:,:,ks-1][GR.ii,GR.jj]
+                    +   (PVTF[:,:,ks][GR.ii,GR.jj] - PVTFVB[:,:,ks][GR.ii,GR.jj]) * \
+                        POTT[:,:,ks][GR.ii,GR.jj]
+                                    ) / (PVTF[:,:,ks][GR.ii,GR.jj] - PVTF[:,:,ks-1][GR.ii,GR.jj])
 
     # extrapolate model bottom and model top POTTVB
-    POTTVB[:,:,0][GR.iijj] = POTT[:,:,0][GR.iijj] - \
-            ( POTTVB[:,:,1][GR.iijj] - POTT[:,:,0][GR.iijj] )
-    POTTVB[:,:,-1][GR.iijj] = POTT[:,:,-1][GR.iijj] - \
-            ( POTTVB[:,:,-2][GR.iijj] - POTT[:,:,-1][GR.iijj] )
+    POTTVB[:,:,0][GR.ii,GR.jj] = POTT[:,:,0][GR.ii,GR.jj] - \
+            ( POTTVB[:,:,1][GR.ii,GR.jj] - POTT[:,:,0][GR.ii,GR.jj] )
+    POTTVB[:,:,-1][GR.ii,GR.jj] = POTT[:,:,-1][GR.ii,GR.jj] - \
+            ( POTTVB[:,:,-2][GR.ii,GR.jj] - POTT[:,:,-1][GR.ii,GR.jj] )
 
     return(POTTVB)

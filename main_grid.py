@@ -7,9 +7,11 @@ Date created:       20181001
 Last modified:      20190523
 License:            MIT
 
-Setup computational and geographical grid for simulation.
-Alson includes coriolis parameter and grid cell area and similar
-things.
+Set up computational and geographical grid for simulation.
+Grid class:
+    - Contains all grid parameters and is passed to almost all functions
+    (except compiled njit/cuda.jit functions)
+    - Also contains coriolis parameter
 ###############################################################################
 """
 import math
@@ -24,22 +26,22 @@ from namelist import (nz, nb,
                       i_curved_earth,
                       i_out_nth_hour, i_sim_n_days,
                       GMT_initialization)
-from io_read_namelist import wp_int, wp
+from io_read_namelist import (wp_int, wp, gpu_enable, CPU, GPU,
+                            POTT_dif_coef, UVFLX_dif_coef)
 from io_constants import con_rE, con_omega
 from io_restart import load_restart_grid
 from io_initial_conditions import set_up_sigma_levels
 from misc_utilities import Timer
 ###############################################################################
 
-# FIXED GPU SETTINGS (have to here in code to be able to import them in another module)
-tpbh  = 1    # tasks per block horizontal (CANNOT BE CHANGED!)
-tpbv  = nz   # tasks per block vertical (CANNOT BE CHANGED!)
-tpbvs = nz+1 # tasks per block vertical (CANNOT BE CHANGED!)
-
-
+###############################################################################
+# GLOBAL SETTINGS
+###############################################################################
+# vertical extent of cuda shared arrays
+# (must be called before setting nz = wp_int(nz))
 shared_nz = nz 
-#shared_nzs = nz+1
 
+# domain extent to be imported in modules
 nz = wp_int(nz)
 nzs = wp_int(nz+1)
 nx = wp_int((lon1_deg - lon0_deg)/dlon_deg)
@@ -48,25 +50,46 @@ ny = wp_int((lat1_deg - lat0_deg)/dlat_deg)
 nys = wp_int(ny+1)
 nb = wp_int(nb)
 
+###############################################################################
+# GPU COMPUTATION SETTINGS
+###############################################################################
+if gpu_enable:
+    if nz > 32:
+        raise NotImplementedError('More than 32 vertical levels '+
+                'currently not yet implemented for GPU')
+    possible_nz = [2,4,8,16,32,64]
+    if nz not in possible_nz:
+        raise NotImplementedError('Vertical reduction for GPU ' +
+                                    'needs nz of 2**x')
 
-# GPU computation
-if nz > 32:
-    raise NotImplementedError
+# GPU threads per block and blocks per grid
+# normal case
 tpb     = (2,       2,      nz )
+# case of vertically staggered variable
 tpb_ks  = (tpb[0],  tpb[1], nzs)
+# normal case
 bpg = (math.ceil((nxs+2*nb)/tpb[0]), math.ceil((nys+2*nb)/tpb[1]), 1)
+# case of single column (when shared arrays are used in vertical
+# direction
 tpb_sc = (1,       1,      nz )
-#tpb_sc_ks = (1,       1,      nzs)
 bpg_sc = (math.ceil((nxs+2*nb)/tpb_sc[0]),
           math.ceil((nys+2*nb)/tpb_sc[1]), 1)
 
+
+###############################################################################
+# GRID CLASS
+###############################################################################
 class Grid:
 
-    def __init__(self, i_subgrid=0, specs=None, new=False):
+    def __init__(self):
 
+        #######################################################################
+        # LOAD GRID FROM RESTART FILE
+        #######################################################################
         if i_load_from_restart:
-            loadGR = load_restart_grid(dlat_deg, dlat_deg, nz)
-            self.__dict__ = loadGR.__dict__
+            loaded_GR = load_restart_grid(dlat_deg, dlat_deg, nz)
+            self.__dict__ = loaded_GR.__dict__
+            # update time settings
             self.i_sim_n_days = i_sim_n_days
             self.nts = i_sim_n_days*3600*24/self.dt
             self.i_out_nth_hour = i_out_nth_hour
@@ -74,43 +97,28 @@ class Grid:
             self.i_restart_nth_day = i_restart_nth_day
             self.i_restart_nth_ts = self.i_restart_nth_day*24/ \
                                 self.i_out_nth_hour*self.i_out_nth_ts
+
+        #######################################################################
+        # CREATE NEW GRID
+        #######################################################################
         else:
-            self.new = new
-
-            # TIMERS
-            self.timer = Timer()
-
-            self.rad_comp_time = 0
-            self.mic_comp_time = 0
-            self.soil_comp_time = 0
-
             # GRID DEFINITION IN DEGREES 
-            if not i_subgrid:
-                self.lon0_deg = lon0_deg
-                self.lon1_deg = lon1_deg
-                self.lat0_deg = lat0_deg
-                self.lat1_deg = lat1_deg
-            else:
-                self.lon0_deg = specs['lon0_deg']
-                self.lon1_deg = specs['lon1_deg']
-                self.lat0_deg = specs['lat0_deg']
-                self.lat1_deg = specs['lat1_deg']
+            self.lon0_deg = lon0_deg
+            self.lon1_deg = lon1_deg
+            self.lat0_deg = lat0_deg
+            self.lat1_deg = lat1_deg
             self.dlon_deg = dlon_deg
             self.dlat_deg = dlat_deg
 
             # GRID DEFINITION IN RADIANS
-            self.lon0_rad = self.lon0_deg/180*np.pi
-            self.lon1_rad = self.lon1_deg/180*np.pi
-            self.lat0_rad = self.lat0_deg/180*np.pi
-            self.lat1_rad = self.lat1_deg/180*np.pi
-            self.dlon_rad = self.dlon_deg/180*np.pi
-            self.dlat_rad = self.dlat_deg/180*np.pi
+            self.lon0_rad    = self.lon0_deg/180*np.pi
+            self.lon1_rad    = self.lon1_deg/180*np.pi
+            self.lat0_rad    = self.lat0_deg/180*np.pi
+            self.lat1_rad    = self.lat1_deg/180*np.pi
+            self.dlon_rad_1D = self.dlon_deg/180*np.pi
+            self.dlat_rad_1D = self.dlat_deg/180*np.pi
 
             # NUMBER OF GRID POINTS IN EACH DIMENSION
-            possible_nz = [2,4,8,16,32,64]
-            if nz not in possible_nz:
-                raise NotImplementedError('Vertical reduction for GPU ' +
-                                            'needs nz of 2**x')
             self.nz = nz
             self.nzs = nzs
             self.nx = nx
@@ -120,86 +128,56 @@ class Grid:
             self.nb = nb
 
             # INDEX ARRAYS
-            self.kk  = np.arange(0,self.nz)
-            self.kks = np.arange(0,self.nzs)
-            self.ii = np.arange((self.nb),(self.nx+self.nb)) 
-            self.jj = np.arange((self.nb),(self.ny+self.nb)) 
-            self.iis = np.arange((self.nb),(self.nxs+self.nb)) 
-            self.jjs = np.arange((self.nb),(self.nys+self.nb)) 
-
-            self.iijj           = np.ix_(self.ii   ,self.jj  )
-            self.iijj_im1       = np.ix_(self.ii-1 ,self.jj  )
-            self.iijj_im1_jp1   = np.ix_(self.ii-1 ,self.jj+1)
-            self.iijj_ip1       = np.ix_(self.ii+1 ,self.jj  )
-            self.iijj_ip1_jm1   = np.ix_(self.ii+1 ,self.jj-1)
-            self.iijj_ip1_jp1   = np.ix_(self.ii+1 ,self.jj+1)
-            self.iijj_jm1       = np.ix_(self.ii   ,self.jj-1)
-            self.iijj_jp1       = np.ix_(self.ii   ,self.jj+1)
-
-            self.iisjj          = np.ix_(self.iis  ,self.jj  )
-            self.iisjj_jm1      = np.ix_(self.iis  ,self.jj-1)
-            self.iisjj_jp1      = np.ix_(self.iis  ,self.jj+1)
-            self.iisjj_im1      = np.ix_(self.iis-1,self.jj  )
-            self.iisjj_im1_jm1  = np.ix_(self.iis-1,self.jj-1)
-            self.iisjj_im1_jp1  = np.ix_(self.iis-1,self.jj+1)
-            self.iisjj_ip1      = np.ix_(self.iis+1,self.jj  )
-            self.iisjj_ip1_jm1  = np.ix_(self.iis+1,self.jj-1)
-            self.iisjj_ip1_jp1  = np.ix_(self.iis+1,self.jj+1)
-
-            self.iijjs          = np.ix_(self.ii  ,self.jjs  )
-            self.iijjs_im1      = np.ix_(self.ii-1,self.jjs  )
-            self.iijjs_ip1      = np.ix_(self.ii+1,self.jjs  )
-            self.iijjs_jm1      = np.ix_(self.ii  ,self.jjs-1)
-            self.iijjs_im1_jm1  = np.ix_(self.ii-1,self.jjs-1)
-            self.iijjs_im1_jp1  = np.ix_(self.ii-1,self.jjs+1)
-            self.iijjs_ip1_jm1  = np.ix_(self.ii+1,self.jjs-1)
-            self.iijjs_ip1_jp1  = np.ix_(self.ii+1,self.jjs+1)
-            self.iijjs_jp1      = np.ix_(self.ii  ,self.jjs+1)
-
-            self.iisjjs         = np.ix_(self.iis  ,self.jjs  )
-            self.iisjjs_im1     = np.ix_(self.iis-1,self.jjs  )
-            self.iisjjs_im1_jm1 = np.ix_(self.iis-1,self.jjs-1)
-            self.iisjjs_im1_jp1 = np.ix_(self.iis-1,self.jjs+1)
-            self.iisjjs_ip1     = np.ix_(self.iis+1,self.jjs  )
-            self.iisjjs_ip1_jm1 = np.ix_(self.iis+1,self.jjs-1)
-            self.iisjjs_jm1     = np.ix_(self.iis  ,self.jjs-1)
-            self.iisjjs_jp1     = np.ix_(self.iis  ,self.jjs+1)
+            self.i   = np.arange((self.nb),(self.nx +self.nb)) 
+            self.i_s = np.arange((self.nb),(self.nxs+self.nb)) 
+            self.j   = np.arange((self.nb),(self.ny +self.nb)) 
+            self.js  = np.arange((self.nb),(self.nys+self.nb)) 
+            self.k   = np.arange(self.nz) 
+            self.ii,  self.jj  = np.ix_(self.i    ,self.j)
+            self.iis, self.jjs = np.ix_(self.i_s  ,self.js)
 
             # 2D MATRIX OF LONGITUDES AND LATITUDES IN DEGREES
-            self.lon_deg   = np.full( (self.nx +2*self.nb,self.ny+2*self.nb),
+            self.lon_deg   = np.full(
+                    (self.nx +2*self.nb,self.ny+2*self.nb,1),
                                         np.nan, dtype=wp)
-            self.lat_deg   = np.full( (self.nx +2*self.nb,self.ny+2*self.nb),
+            self.lat_deg   = np.full(
+                    (self.nx +2*self.nb,self.ny+2*self.nb,1),
                                         np.nan, dtype=wp)
-            self.lon_is_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb),
+            self.lon_is_deg = np.full(
+                    (self.nxs+2*self.nb,self.ny+2*self.nb,1),
                                         np.nan, dtype=wp)
-            self.lat_is_deg = np.full( (self.nxs+2*self.nb,self.ny+2*self.nb),
+            self.lat_is_deg = np.full(
+                    (self.nxs+2*self.nb,self.ny+2*self.nb,1),
                                         np.nan, dtype=wp)
-            self.lon_js_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb),
+            self.lon_js_deg = np.full(
+                    (self.nx+2*self.nb,self.nys+2*self.nb,1),
                                         np.nan, dtype=wp)
-            self.lat_js_deg = np.full( (self.nx+2*self.nb,self.nys+2*self.nb),
+            self.lat_js_deg = np.full(
+                    (self.nx+2*self.nb,self.nys+2*self.nb,1),
                                         np.nan, dtype=wp)
-            self.dlon_rad_2D = np.full( (self.nx +2*self.nb,self.nys+2*self.nb),
-                                        self.dlon_rad, dtype=wp)
-            self.dlat_rad_2D = np.full( (self.nxs+2*self.nb,self.ny +2*self.nb),
-                                        self.dlat_rad, dtype=wp)
+            self.dlon_rad = np.full(
+                    (self.nx +2*self.nb,self.nys+2*self.nb,1),
+                                        self.dlon_rad_1D, dtype=wp)
+            self.dlat_rad = np.full(
+                    (self.nxs+2*self.nb,self.ny +2*self.nb,1),
+                                        self.dlat_rad_1D, dtype=wp)
 
             for j in range(self.nb, self.ny+self.nb):
-                self.lon_deg[self.ii,j] = self.lon0_deg + \
-                                        (self.ii-self.nb+0.5)*self.dlon_deg
-                self.lon_is_deg[self.iis,j] = self.lon0_deg + \
-                                        (self.iis-self.nb)*self.dlon_deg
+                self.lon_deg[self.ii,j,0] = (self.lon0_deg +
+                                    (self.ii-self.nb+0.5)*self.dlon_deg)
+                self.lon_is_deg[self.iis,j,0] = (self.lon0_deg +
+                                    (self.iis-self.nb)*self.dlon_deg)
             for j_s in range(self.nb, self.nys+self.nb):
-                self.lon_js_deg[self.ii,j_s] = self.lon0_deg + \
-                                        (self.ii-self.nb+0.5)*self.dlon_deg
-
+                self.lon_js_deg[self.ii,j_s,0] = (self.lon0_deg +
+                                    (self.ii-self.nb+0.5)*self.dlon_deg)
             for i in range(self.nb, self.nx+self.nb):
-                self.lat_deg[i,self.jj] = self.lat0_deg + \
-                                        (self.jj-self.nb+0.5)*self.dlat_deg
-                self.lat_js_deg[i,self.jjs] = self.lat0_deg + \
-                                        (self.jjs-self.nb)*self.dlat_deg
+                self.lat_deg[i,self.jj,0] = (self.lat0_deg +
+                                    (self.jj-self.nb+0.5)*self.dlat_deg)
+                self.lat_js_deg[i,self.jjs,0] = (self.lat0_deg +
+                                    (self.jjs-self.nb)*self.dlat_deg)
             for i_s in range(self.nb, self.nxs+self.nb):
-                self.lat_is_deg[i_s,self.jj] = self.lat0_deg + \
-                                        (self.jj-self.nb+0.5)*self.dlat_deg
+                self.lat_is_deg[i_s,self.jj,0] = (self.lat0_deg +
+                                    (self.jj-self.nb+0.5)*self.dlat_deg)
 
 
             # 2D MATRIX OF LONGITUDES AND LATITUDES IN RADIANS
@@ -211,54 +189,60 @@ class Grid:
             self.lat_js_rad = self.lat_js_deg/180*np.pi
 
             # 2D MATRIX OF GRID SPACING IN METERS
-            self.dx   = np.full( (self.nx +2*self.nb,self.ny +2*self.nb),
+            self.dx   = np.full(
+                        (self.nx +2*self.nb,self.ny +2*self.nb,1),
                                 np.nan, dtype=wp)
-            self.dxjs = np.full( (self.nx +2*self.nb,self.nys+2*self.nb),
+            self.dxjs = np.full(
+                        (self.nx +2*self.nb,self.nys+2*self.nb,1),
                                 np.nan, dtype=wp)
-            self.dyis = np.full( (self.nxs+2*self.nb,self.ny +2*self.nb),
+            self.dyis = np.full(
+                        (self.nxs+2*self.nb,self.ny +2*self.nb,1),
                                 np.nan, dtype=wp)
 
-            self.dx[self.iijj] = ( np.cos( self.lat_rad[self.iijj] ) *
-                                        self.dlon_rad*con_rE )
-            self.dxjs[self.iijjs] = ( np.cos( self.lat_js_rad[self.iijjs] ) *
-                                        self.dlon_rad*con_rE )
-            self.dyis[self.iisjj] = self.dlat_rad*con_rE 
+            self.dx[self.ii,self.jj,0] = (
+                        np.cos( self.lat_rad[self.ii,self.jj,0] ) *
+                                    self.dlon_rad_1D*con_rE )
+            self.dxjs[self.ii,self.jjs,0] = ( 
+                        np.cos( self.lat_js_rad[self.ii,self.jjs,0] ) *
+                                    self.dlon_rad_1D*con_rE )
+            self.dyis[self.iis,self.jj,0] = self.dlat_rad_1D*con_rE 
             self.dx   = self.exchange_BC(self.dx)
             self.dxjs = self.exchange_BC(self.dxjs)
             self.dyis = self.exchange_BC(self.dyis)
             self.dy = self.dlat_rad*con_rE
 
-
             if not i_curved_earth:
-                maxdx = np.max(self.dx[self.iijj])
-                self.dx[self.iijj] = maxdx
+                maxdx = np.max(self.dx[self.ii,self.jj])
+                self.dx[self.ii,self.jj] = maxdx
 
-            self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb),
+            self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb, 1),
                                 np.nan, dtype=wp)
-            for i in self.ii:
-                for j in self.jj:
-                    self.A[i,j] = lat_lon_recangle_area(self.lat_rad[i,j],
-                            self.dlon_rad, self.dlat_rad, i_curved_earth)
+            for i in self.i:
+                for j in self.j:
+                    self.A[i,j,0] = lat_lon_recangle_area(self.lat_rad[i,j,0],
+                            self.dlon_rad_1D, self.dlat_rad_1D, i_curved_earth)
             self.A = self.exchange_BC(self.A)
 
             if i_curved_earth:
-                print('fraction of earth covered: ' + \
+                print('fraction of earth covered: ' +
                         str(np.round(np.sum(
-                            self.A[self.iijj])/(4*np.pi*con_rE**2),2)))
+                        self.A[self.ii,self.jj,0])/(4*np.pi*con_rE**2),2)))
             else:
-                print('fraction of cylinder covered: ' + \
+                print('fraction of cylinder covered: ' +
                         str(np.round(np.sum(
-                            self.A[self.iijj])/(2*np.pi**2*con_rE**2),2)))
+                        self.A[self.ii,self.jj,0])/(2*np.pi**2*con_rE**2),2)))
 
             # CORIOLIS FORCE
-            self.corf    = np.full( (self.nx +2*self.nb, self.ny +2*self.nb), 
+            self.corf    = np.full(
+                            (self.nx +2*self.nb, self.ny +2*self.nb,1), 
                                     np.nan, dtype=wp)
-            self.corf_is = np.full( (self.nxs+2*self.nb, self.ny +2*self.nb),
+            self.corf_is = np.full(
+                            (self.nxs+2*self.nb, self.ny +2*self.nb,1),
                                     np.nan, dtype=wp)
-            self.corf[self.iijj] = 2*con_omega*np.sin(
-                                                self.lat_rad[self.iijj])
-            self.corf_is[self.iisjj] = 2*con_omega*np.sin(
-                                                self.lat_is_rad[self.iisjj])
+            self.corf[self.ii,self.jj,0] = 2*con_omega*np.sin(
+                                        self.lat_rad[self.ii,self.jj,0])
+            self.corf_is[self.iis,self.jj,0] = 2*con_omega*np.sin(
+                                        self.lat_is_rad[self.iis,self.jj,0])
 
             # SIGMA LEVELS
             self.level  = np.arange(0,self.nz )
@@ -267,6 +251,11 @@ class Grid:
             self.sigma_vb = np.full( self.nzs, np.nan, dtype=wp)
             self.dsigma   = np.full( self.nz , np.nan, dtype=wp)
 
+            set_up_sigma_levels(self)
+            self.dsigma       = np.expand_dims(
+                                np.expand_dims(self.dsigma   , 0),0)
+            self.sigma_vb     = np.expand_dims(
+                                np.expand_dims(self.sigma_vb , 0),0)
 
             # TIME STEP
             mindx = np.nanmin(self.dx)
@@ -286,7 +275,19 @@ class Grid:
             self.sim_time_sec = 0
             self.GMT = GMT_initialization
 
-    
+            # TIMER
+            self.timer = Timer()
+
+            # NUMERICAL DIFUSION
+            self.POTT_dif_coef  = np.zeros((1,1,nz), dtype=wp)
+            self.UVFLX_dif_coef = np.zeros((1,1,nz), dtype=wp)
+            vert_reduce = 5.0
+            self.POTT_dif_coef[0,0,self.k] = (POTT_dif_coef * 
+                                    np.exp(-vert_reduce*(nz-self.k-1)/nz))
+            vert_reduce = .0
+            self.UVFLX_dif_coef[0,0,self.k] = (UVFLX_dif_coef * 
+                                    np.exp(-vert_reduce*(nz-self.k-1)/nz))
+
         # STUFF THAT SHOULD HAPPEN BOTH FOR NEW GRID OR LOADED GRID
         self.rad_1 = 0
         self.rad_2 = 0
@@ -295,55 +296,18 @@ class Grid:
         self.rad_lwsolv = 0
         self.rad_swsolv = 0
 
-
-
-
-        # ADJUST TO NEW SETUP OF MODEL
-        self.i   = np.arange((self.nb),(self.nx +self.nb)) 
-        self.i_s = np.arange((self.nb),(self.nxs+self.nb)) 
-        self.j   = np.arange((self.nb),(self.ny +self.nb)) 
-        self.js  = np.arange((self.nb),(self.nys+self.nb)) 
-        self.ii,  self.jj  = np.ix_(self.i    ,self.j)
-        self.iis, self.jjs = np.ix_(self.i_s  ,self.js)
-
-
-        self.corf         = np.expand_dims(self.corf,       axis=2)
-        self.corf_is      = np.expand_dims(self.corf_is,    axis=2)
-        self.lon_rad      = np.expand_dims(self.lon_rad,    axis=2)
-        self.lat_rad      = np.expand_dims(self.lat_rad,    axis=2)
-        self.lat_is_rad   = np.expand_dims(self.lat_is_rad, axis=2)
-        self.dlon_rad     = np.expand_dims(self.dlon_rad_2D,axis=2)
-        self.dlat_rad     = np.expand_dims(self.dlat_rad_2D,axis=2)
-        self.A            = np.expand_dims(self.A,          axis=2)
-        self.dyis         = np.expand_dims(self.dyis,       axis=2)
-        self.dxjs         = np.expand_dims(self.dxjs,       axis=2)
-
-        self.lon_is_rad   = np.expand_dims(self.lon_is_rad, axis=2)
-        self.lon_js_rad   = np.expand_dims(self.lon_js_rad, axis=2)
-        self.lat_js_rad   = np.expand_dims(self.lat_js_rad, axis=2)
-
-        self.lon_deg      = np.expand_dims(self.lon_deg,    axis=2)
-        self.lat_deg      = np.expand_dims(self.lat_deg,    axis=2)
-
-        set_up_sigma_levels(self)
-
-        self.dsigma       = np.expand_dims(
-                            np.expand_dims(self.dsigma   , 0),0)
-        self.sigma_vb     = np.expand_dims(
-                            np.expand_dims(self.sigma_vb , 0),0)
-
-        self.corfd        = cuda.to_device(self.corf       )
-        self.corf_isd     = cuda.to_device(self.corf_is    )
-        self.lat_radd     = cuda.to_device(self.lat_rad    )
-        self.lat_is_radd  = cuda.to_device(self.lat_is_rad )
-        self.dlon_radd    = cuda.to_device(self.dlon_rad   )
-        self.dlat_radd    = cuda.to_device(self.dlat_rad   )
-        self.Ad           = cuda.to_device(self.A          )
-        self.dyisd        = cuda.to_device(self.dyis       )
-        self.dxjsd        = cuda.to_device(self.dxjs       )
-        self.dsigmad      = cuda.to_device(self.dsigma     )
-        self.sigma_vbd    = cuda.to_device(self.sigma_vb   )
-
+        self.GRF = {CPU:{},GPU:{}}
+        grid_field_names = ['corf', 'corf_is', 'A',
+                            'sigma_vb', 'dsigma',
+                            'dxjs', 'dyis',
+                            'lat_rad', 'lat_is_rad', 'dlat_rad', 'dlon_rad',
+                            'POTT_dif_coef', 'UVFLX_dif_coef']
+        for field_name in grid_field_names:
+            exec('self.GRF[CPU][field_name] = self.'+field_name)
+            if gpu_enable:
+                self.GRF[GPU][field_name] = cuda.to_device(
+                                    self.GRF[CPU][field_name])
+                                    
 
         
     def exchange_BC(self, FIELD):

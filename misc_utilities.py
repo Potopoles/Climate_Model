@@ -2,10 +2,9 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          utilities.py  
 Author:             Christoph Heim
 Date created:       20190530
-Last modified:      20190530
+Last modified:      20190531
 License:            MIT
 
 Functions and classes used for support:

@@ -19,8 +19,7 @@ import numpy as np
 import cupy as cp
 from numba import cuda, njit, prange, vectorize
 
-from namelist import (POTT_dif_coef,
-                    i_POTT_main_switch,
+from namelist import (i_POTT_main_switch,
                     i_POTT_radiation, i_POTT_microphys,
                     i_POTT_hor_adv, i_POTT_vert_adv, i_POTT_num_dif)
 from io_read_namelist import (wp, wp_int)
@@ -54,7 +53,7 @@ def add_up_tendencies_py(
             UFLX, UFLX_ip1, VFLX, VFLX_jp1,
             COLP, COLP_im1, COLP_ip1, COLP_jm1, COLP_jp1,
             POTTVB, POTTVB_kp1, WWIND, WWIND_kp1,
-            COLP_NEW, A, dsigma, k):
+            COLP_NEW, A, dsigma, POTT_dif_coef, k):
 
     dPOTTdt = wp(0.)
 
@@ -98,7 +97,8 @@ num_dif = njit(num_dif_pw_py, device=True, inline=True)
 vert_adv = njit(vert_adv_py, device=True, inline=True)
 add_up_tendencies = njit(add_up_tendencies_py, device=True, inline=True)
 
-def launch_cuda_kernel(A, dsigma, dPOTTdt, POTT, UFLX, VFLX, COLP,
+def launch_cuda_kernel(A, dsigma, POTT_dif_coef,
+                        dPOTTdt, POTT, UFLX, VFLX, COLP,
                          POTTVB, WWIND, COLP_NEW):
 
     i, j, k = cuda.grid(3)
@@ -115,7 +115,7 @@ def launch_cuda_kernel(A, dsigma, dPOTTdt, POTT, UFLX, VFLX, COLP,
             POTTVB[i  ,j  ,k], POTTVB[i  ,j  ,k+1],
             WWIND[i  ,j  ,k], WWIND[i  ,j  ,k+1],
             COLP_NEW[i  ,j  ,0], A[i  ,j  ,0],
-            dsigma[0  ,0  ,k], k)
+            dsigma[0  ,0  ,k], POTT_dif_coef[0  ,0  ,k], k)
 
 
 POTT_tendency_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel))\
@@ -131,7 +131,8 @@ vert_adv = njit(vert_adv_py)
 num_dif = njit(num_dif_pw_py)
 add_up_tendencies = njit(add_up_tendencies_py)
 
-def launch_numba_cpu(A, dsigma, dPOTTdt, POTT, UFLX, VFLX, COLP,
+def launch_numba_cpu(A, dsigma, POTT_dif_coef,
+                    dPOTTdt, POTT, UFLX, VFLX, COLP,
                          POTTVB, WWIND, COLP_NEW):
 
     for i in prange(nb,nx+nb):
@@ -149,7 +150,7 @@ def launch_numba_cpu(A, dsigma, dPOTTdt, POTT, UFLX, VFLX, COLP,
                         POTTVB[i  ,j  ,k], POTTVB[i  ,j  ,k+1],
                         WWIND[i  ,j  ,k], WWIND[i  ,j  ,k+1],
                         COLP_NEW[i  ,j  ,0], A[i  ,j  ,0],
-                        dsigma[0  ,0  ,k], k)
+                        dsigma[0  ,0  ,k], POTT_dif_coef[0  ,0  ,k], k)
 
 
 POTT_tendency_cpu = njit(parallel=True)(launch_numba_cpu)

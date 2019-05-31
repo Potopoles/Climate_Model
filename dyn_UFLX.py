@@ -24,7 +24,7 @@ from namelist import (i_UVFLX_main_switch,
                     i_UVFLX_hor_adv, i_UVFLX_vert_adv,
                     i_UVFLX_coriolis,
                     i_UVFLX_num_dif, i_UVFLX_pre_grad)
-from io_read_namelist import (UVFLX_dif_coef, wp, wp_int)
+from io_read_namelist import (wp, wp_int)
 from io_constants import con_rE
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 from misc_gpu_functions import cuda_kernel_decorator
@@ -91,7 +91,8 @@ def add_up_tendencies_py(
             lat_is_rad,
             dlon_rad, dlat_rad,
             dyis,
-            dsigma, sigma_vb, sigma_vb_kp1):
+            dsigma, sigma_vb, sigma_vb_kp1,
+            UVFLX_dif_coef):
     """
     Compute and add up all tendency contributions of UFLUX.
     """
@@ -169,7 +170,8 @@ def launch_cuda_main_kernel(dUFLXdt, UFLX,
                     corf_is, lat_is_rad,
                     dlon_rad, dlat_rad,
                     dyis,
-                    dsigma, sigma_vb):
+                    dsigma, sigma_vb,
+                    UVFLX_dif_coef):
 
     i, j, k = cuda.grid(3)
 
@@ -238,7 +240,8 @@ def launch_cuda_main_kernel(dUFLXdt, UFLX,
             dyis        [i  ,j  ,0  ],
             # GR vertical
             dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
-            sigma_vb    [0  ,0  ,k+1])
+            sigma_vb    [0  ,0  ,k+1],
+            UVFLX_dif_coef[0,0,k])
 
 UFLX_tendency_gpu = cuda.jit(cuda_kernel_decorator(
                             launch_cuda_main_kernel))(
@@ -265,7 +268,8 @@ def launch_numba_cpu_main(dUFLXdt, UFLX,
                         corf_is, lat_is_rad,
                         dlon_rad, dlat_rad,
                         dyis,
-                        dsigma, sigma_vb):
+                        dsigma, sigma_vb,
+                        UVFLX_dif_coef):
 
 
 
@@ -330,6 +334,7 @@ def launch_numba_cpu_main(dUFLXdt, UFLX,
             dyis        [i  ,j  ,0  ],
             # GR vertical
             dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
-            sigma_vb    [0  ,0  ,k+1])
+            sigma_vb    [0  ,0  ,k+1],
+            UVFLX_dif_coef[0,0,k])
 
 UFLX_tendency_cpu = njit(parallel=True)(launch_numba_cpu_main)

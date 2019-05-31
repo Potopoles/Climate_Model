@@ -1,6 +1,6 @@
 import numpy as np
 import time
-from namelist import comp_mode, i_radiation, i_microphysics
+from namelist import i_comp_mode, i_radiation, i_microphysics
 from org_namelist import wp
 #from surface_model_cuda import soil_temperature_euler_forward_gpu,\
 #                              calc_albedo_gpu, calc_evaporation_capacity_gpu
@@ -64,7 +64,7 @@ class surface:
 
     def advance_timestep(self, GR, CF, GF, RAD):
 
-        if comp_mode in [0,1]:
+        if i_comp_mode in [0,1]:
             dSOILTEMPdt = np.zeros( (GR.nx, GR.ny) , dtype=wp)
 
             if i_radiation > 0:
@@ -85,7 +85,7 @@ class surface:
                                                         / evapity_thresh), 1)
 
 
-        elif comp_mode == 2:
+        elif i_comp_mode == 2:
 
             dSOILTEMPdt = cuda.device_array( (GR.nx, GR.ny, 1), dtype=GF.SOILTEMP.dtype)
 

@@ -95,11 +95,6 @@ class ModelFields:
         self.GR.timer.stop('copy')
 
 
-
-
-
-
-
     def allocate_fields(self, GR):
         """
         1 DYNAMICAL CORE FIELDS
@@ -259,7 +254,6 @@ class ModelFields:
         # surface elevation [m]
         f['HSURF']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, 1      ), 
                                     np.nan, dtype=wp)
-
 
 
         #######################################################################

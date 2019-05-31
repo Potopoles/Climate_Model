@@ -24,7 +24,7 @@ from namelist import (i_UVFLX_main_switch,
                     i_UVFLX_hor_adv, i_UVFLX_vert_adv,
                     i_UVFLX_coriolis,
                     i_UVFLX_num_dif, i_UVFLX_pre_grad)
-from io_read_namelist import (UVFLX_dif_coef, wp, wp_int)
+from io_read_namelist import (wp, wp_int)
 from io_constants import con_rE
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 from misc_gpu_functions import cuda_kernel_decorator
@@ -69,7 +69,6 @@ def add_up_tendencies_py(
             VFLX_im1, VFLX_ip1, VFLX_jm1, VFLX_jp1,
             UWIND, UWIND_jm1,
             UWIND_ip1, UWIND_ip1_jm1,
-
             VWIND        , VWIND_jm1     ,
             VWIND_jp1    , VWIND_im1     ,
             VWIND_ip1    , VWIND_jm1_im1 ,
@@ -79,23 +78,19 @@ def add_up_tendencies_py(
             QFLX         , QFLX_ip1      ,
             SFLX_jm1     , SFLX_ip1      ,
             TFLX         , TFLX_jm1_ip1  ,
-
-
             PHI, PHI_jm1,
             POTT, POTT_jm1,
             PVTF, PVTF_jm1,
             PVTFVB, PVTFVB_jm1,
             PVTFVB_jm1_kp1, PVTFVB_kp1,
             WWIND_VWIND, WWIND_VWIND_kp1,
-
             COLP, COLP_jm1,
-
             corf, corf_jm1,
             lat_rad, lat_rad_jm1,
             dlon_rad, dlat_rad,
             dxjs,
-
-            dsigma, sigma_vb, sigma_vb_kp1):
+            dsigma, sigma_vb, sigma_vb_kp1,
+            UVFLX_dif_coef):
     """
     Compute and add up all tendency contributions of VFLUX.
     """
@@ -173,7 +168,8 @@ def launch_cuda_main_kernel(dVFLXdt, VFLX,
                     corf, lat_rad,
                     dlon_rad, dlat_rad,
                     dxjs,
-                    dsigma, sigma_vb):
+                    dsigma, sigma_vb,
+                    UVFLX_dif_coef):
 
     i, j, k = cuda.grid(3)
 
@@ -228,7 +224,8 @@ def launch_cuda_main_kernel(dVFLXdt, VFLX,
             dxjs        [i  ,j  ,0  ],
             # GR vertical
             dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
-            sigma_vb    [0  ,0  ,k+1])
+            sigma_vb    [0  ,0  ,k+1],
+            UVFLX_dif_coef[0,0,k])
 
 
 VFLX_tendency_gpu = cuda.jit(cuda_kernel_decorator(
@@ -253,7 +250,8 @@ def launch_numba_cpu_main(dVFLXdt, VFLX,
                     corf, lat_rad,
                     dlon_rad, dlat_rad,
                     dxjs,
-                    dsigma, sigma_vb):
+                    dsigma, sigma_vb,
+                    UVFLX_dif_coef):
 
     for i in prange(nb,nx+nb):
         for j in range(nb,nys+nb):
@@ -307,6 +305,7 @@ def launch_numba_cpu_main(dVFLXdt, VFLX,
             dxjs        [i  ,j  ,0  ],
             # GR vertical
             dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
-            sigma_vb    [0  ,0  ,k+1])
+            sigma_vb    [0  ,0  ,k+1],
+            UVFLX_dif_coef[0,0,k])
 
 VFLX_tendency_cpu = njit(parallel=True)(launch_numba_cpu_main)

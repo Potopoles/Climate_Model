@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 """
 ###############################################################################
-File name:          io_functions.py  
 Author:             Christoph Heim
 Date created:       20181001
 Last modified:      20190531
@@ -14,7 +13,7 @@ Helper functions for IO.
 import copy
 import numpy as np
 
-from namelist import comp_mode, nth_ts_print_diag
+from namelist import i_comp_mode, nth_ts_print_diag
 from io_read_namelist import wp
 from io_constants import con_kappa, con_g 
 ###############################################################################
@@ -25,37 +24,38 @@ def NC_output_diagnostics(GR, UWIND, VWIND, WWIND, POTT,
                         COLP, PVTF, PVTFVB, PHI, PHIVB, RHO, QV, QC):
 
     # VORTICITY
-    VORT = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), np.nan, dtype=wp)
+    VORT = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ),
+                np.nan, dtype=wp)
     for k in range(0,GR.nz):
-        VORT[:,:,k][GR.iijj] = (   \
-                                + ( VWIND[:,:,k][GR.iijj_ip1    ] + \
-                                    VWIND[:,:,k][GR.iijj_ip1_jp1] ) / 2 \
-                                - ( VWIND[:,:,k][GR.iijj_im1    ] + \
-                                    VWIND[:,:,k][GR.iijj_im1_jp1] ) / 2 \
-                               ) / (2*GR.dx[GR.iijj]) \
+        VORT[:,:,k][GR.ii,GR.jj] = (   \
+                                + ( VWIND[:,:,k][GR.ii+1,GR.jj] + \
+                                    VWIND[:,:,k][GR.ii+1,GR.jj+1] ) / 2 \
+                                - ( VWIND[:,:,k][GR.ii-1,GR.jj] + \
+                                    VWIND[:,:,k][GR.ii-1,GR.jj+1] ) / 2 \
+                               ) / (2*GR.dx[GR.ii,GR.jj,0]) \
                                - ( \
-                                + ( UWIND[:,:,k][GR.iijj_jp1    ] + \
-                                    UWIND[:,:,k][GR.iijj_ip1_jp1] ) / 2 \
-                                - ( UWIND[:,:,k][GR.iijj_jm1    ] + \
-                                    UWIND[:,:,k][GR.iijj_ip1_jm1] ) / 2 \
-                               ) / (2*GR.dy) \
+                                + ( UWIND[:,:,k][GR.ii,GR.jj+1] + \
+                                    UWIND[:,:,k][GR.ii+1,GR.jj+1] ) / 2 \
+                                - ( UWIND[:,:,k][GR.ii,GR.jj-1] + \
+                                    UWIND[:,:,k][GR.ii+1,GR.jj-1] ) / 2 \
+                               ) / (2*GR.dy[GR.ii,GR.jj,0]) \
 
 
     # vertical wind in m/s
     WWIND_ms = copy.deepcopy(WWIND)
     for ks in range(1,GR.nzs-1):
-        WWIND_ms[:,:,ks][GR.iijj] = (( PHI[:,:,ks][GR.iijj] - 
-                                        PHI[:,:,ks-1][GR.iijj] ) /
+        WWIND_ms[:,:,ks][GR.ii,GR.jj] = (( PHI[:,:,ks][GR.ii,GR.jj] - 
+                                        PHI[:,:,ks-1][GR.ii,GR.jj] ) /
                                     ( con_g * 0.5 * (GR.dsigma[0,0,ks] + 
                                         GR.dsigma[0,0,ks-1] ) ) * 
-                                            WWIND[:,:,ks][GR.iijj] )
+                                            WWIND[:,:,ks][GR.ii,GR.jj] )
 
 
     # water vapor path and liquid water path
     ALTVB = PHIVB / con_g
-    dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
-    WVP = np.sum(QV[GR.iijj]*dz*RHO[GR.iijj],2)
-    CWP = np.sum(QC[GR.iijj]*dz*RHO[GR.iijj],2)
+    dz = ALTVB[:,:,:-1][GR.ii,GR.jj] -  ALTVB[:,:,1:][GR.ii,GR.jj]
+    WVP = np.sum(QV[GR.ii,GR.jj]*dz*RHO[GR.ii,GR.jj],2)
+    CWP = np.sum(QC[GR.ii,GR.jj]*dz*RHO[GR.ii,GR.jj],2)
 
 
     return(VORT, WWIND_ms, WVP, CWP)
@@ -94,7 +94,7 @@ def print_ts_info(GR, F):
     
 
     if GR.ts % nth_ts_print_diag == 0:
-        if comp_mode == 2:
+        if i_comp_mode == 2:
             F.copy_device_to_host(F.PRINT_DIAG_FIELDS)
         GR.timer.start('diag')
         vmax, mean_wind, mean_temp, mean_colp = \
@@ -110,8 +110,8 @@ def print_ts_info(GR, F):
                 '  K  COLP: ' + str(np.round(mean_colp,2)) + ' Pa')
 
         # test for crash
-        if ((np.sum(np.isnan(F.host['UWIND'][GR.iisjj])) > 0) |
-           (np.max(F.host['UWIND'][GR.iisjj]) > 500)):
+        if ((np.sum(np.isnan(F.host['UWIND'][GR.iis,GR.jj])) > 0) |
+           (np.max(F.host['UWIND'][GR.iis,GR.jj]) > 500)):
             raise ValueError('MODEL CRASH')
 
     if GR.ts % nth_ts_print_diag == 0:

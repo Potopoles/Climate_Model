@@ -31,7 +31,7 @@ from datetime import timedelta
 
 from namelist import (i_time_stepping,
                     i_load_from_restart, i_save_to_restart,
-                    i_radiation, njobs, comp_mode,
+                    i_radiation, i_comp_mode,
                     i_microphysics, i_surface_scheme)
 from io_read_namelist import (gpu_enable, CPU, GPU)
 from main_grid import Grid
@@ -43,9 +43,9 @@ from dyn_matsuno import step_matsuno as time_stepper
 
 from dyn_org_discretizations import DiagnosticsFactory
 ###############################################################################
-if comp_mode == 1:
+if i_comp_mode == 1:
     Diagnostics = DiagnosticsFactory(target=CPU)
-elif comp_mode == 2:
+elif i_comp_mode == 2:
     Diagnostics = DiagnosticsFactory(target=GPU)
 
 ####################################################################
@@ -90,7 +90,7 @@ while GR.ts < GR.nts:
     # SECONDARY DIAGNOSTICS (related to physics)
     ####################################################################
     GR.timer.start('diag')
-    Diagnostics.secondary_diag(GR,
+    Diagnostics.secondary_diag(
             **F.get(Diagnostics.fields_secondary_diag,
                     target=Diagnostics.target))
     GR.timer.stop('diag')
@@ -105,7 +105,7 @@ while GR.ts < GR.nts:
     #    # Asynchroneous Radiation
     #    if RAD.i_async_radiation:
     #        if RAD.done == 1:
-    #            if comp_mode == 2:
+    #            if i_comp_mode == 2:
     #                GF.copy_radiation_fields_to_device(GR, CF)
     #                GF.copy_radiation_fields_to_host(GR)
     #            RAD.done = 0
@@ -113,10 +113,10 @@ while GR.ts < GR.nts:
     #    # Synchroneous Radiation
     #    else:
     #        if GR.ts % RAD.rad_nth_ts == 0:
-    #            if comp_mode == 2:
+    #            if i_comp_mode == 2:
     #                GF.copy_radiation_fields_to_host(GR)
     #            RAD.calc_radiation(GR, CF)
-    #            if comp_mode == 2:
+    #            if i_comp_mode == 2:
     #                GF.copy_radiation_fields_to_device(GR, CF)
     #    GR.timer.stop('rad')
 
@@ -168,7 +168,7 @@ while GR.ts < GR.nts:
     ####################################################################
     if GR.ts % GR.i_out_nth_ts == 0:
         # copy GPU fields to CPU
-        if comp_mode == 2:
+        if i_comp_mode == 2:
             F.copy_device_to_host(F.ALL_FIELDS)
 
         # write file
@@ -184,7 +184,7 @@ while GR.ts < GR.nts:
     if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
         pass
         # copy GPU fields to CPU
-        #if comp_mode == 2:
+        #if i_comp_mode == 2:
         #    GF.copy_all_fields_to_host(GR)
 
         #GR.timer.start('IO')
@@ -253,14 +253,14 @@ GR.timer.print_report()
 
 
 ## TODO
-#if comp_mode == 1:
+#if i_comp_mode == 1:
 #    CF.COLP          = np.expand_dims(CF.COLP, axis=2)
 #    CF.dCOLPdt       = np.expand_dims(CF.dCOLPdt, axis=2)
 #    CF.COLP_NEW      = np.expand_dims(CF.COLP_NEW, axis=2)
 #    CF.COLP_OLD      = np.expand_dims(CF.COLP_OLD, axis=2)
 #    CF.HSURF         = np.expand_dims(CF.HSURF, axis=2)
 #    F.old_to_new(CF, host=True)
-#elif comp_mode == 2:
+#elif i_comp_mode == 2:
 #    GF.COLP          = cp.expand_dims(GF.COLP, axis=2)
 #    GF.dCOLPdt       = cp.expand_dims(GF.dCOLPdt, axis=2)
 #    GF.COLP_NEW      = cp.expand_dims(GF.COLP_NEW, axis=2)
