@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190531
+Last modified:      20190601
 License:            MIT
 
 Load namelist and process variables if necessary such that
@@ -16,7 +16,8 @@ import numpy as np
 from namelist import (working_precision,
                     UVFLX_dif_coef, POTT_dif_coef, COLP_dif_coef,
                     i_comp_mode, nb, lon0_deg, lon1_deg,
-                    pair_top, i_time_stepping)
+                    pair_top, i_time_stepping, nz_soil,
+                    i_radiation, i_surface_scheme)
 ###############################################################################
 
 ###############################################################################
@@ -27,6 +28,8 @@ if nb > 1:
 if lon0_deg != 0 or lon1_deg != 360:
     raise NotImplementedError('In x direction only periodic boundaries '+
                             'implemented.')
+if nz_soil > 1:
+    raise NotImplementedError('nz_soil > 1 not yet implemented')
 
 ###############################################################################
 # COMPUTATION
@@ -66,3 +69,7 @@ if COLP_dif_coef > 0:
 
 # model top pressure 
 pair_top = wp(pair_top)
+
+
+if i_radiation and not i_surface_scheme:
+    raise ValueError('i_radiation = 1 requires i_surface_scheme = 1')

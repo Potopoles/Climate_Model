@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190531
+Last modified:      20190601
 License:            MIT
 
 Write fields to nc file.
@@ -190,7 +190,6 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
 
     # RADIATION VARIABLES
     if i_radiation:
-        raise NotImplementedError()
         SWDIFFLXDO_out =ncf.createVariable('SWDIFFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
         SWDIRFLXDO_out =ncf.createVariable('SWDIRFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
         SWFLXUP_out = ncf.createVariable('SWFLXUP', 'f4', ('time', 'levels', 'lat', 'lon',) )
@@ -200,15 +199,24 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
         LWFLXDO_out = ncf.createVariable('LWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
         LWFLXNET_out = ncf.createVariable('LWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
         dPOTTdt_RAD_out=ncf.createVariable('dPOTTdt_RAD', 'f4', ('time', 'level', 'lat', 'lon',) )
-        #SWFLXDIV_out = ncf.createVariable('SWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
-        #LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
+        SWFLXDIV_out = ncf.createVariable('SWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
+        LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # SURF VARIABLES
     if i_surface_scheme:
-        raise NotImplementedError()
+
+        # create variables
+        SURFTEMP_out = ncf.createVariable('SURFTEMP', 'f4', ('time', 'lat', 'lon',) )
+
+        # fill in values
         if output_fields['SURFTEMP']:
-            SURFTEMP_out = ncf.createVariable('SURFTEMP', 'f4', ('time', 'lat', 'lon',) )
-            SURFTEMP_out[-1,:,:] = F.SOILTEMP[:,:,0].T
+            SURFTEMP_out[-1,:,:] = F.host['SOILTEMP'][:,:,0].T
+
+        #if i_microphysics:
+        #    SOILMOIST_out[-1,:,:] = SURF.MOIST.T
+        #    RAINRATE_out[-1,:,:] = SURF.RAINRATE.T*3600 # mm/h
+        #    ACCRAIN_out[-1,:,:] = SURF.ACCRAIN.T # mm
+        #    SOILEVAPITY_out[-1,:,:] = SURF.SOILEVAPITY.T
         #if i_microphysics:
         #    SOILMOIST_out = ncf.createVariable('SOILMOIST', 'f4', ('time', 'lat', 'lon',) )
         #    RAINRATE_out = ncf.createVariable('RAINRATE', 'f4', ('time', 'lat', 'lon',) )
@@ -218,11 +226,11 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
             if output_fields['SURFALBEDSW']:
                 SURFALBEDSW_out = ncf.createVariable('SURFALBEDSW', 'f4',
                                                     ('time', 'lat', 'lon',) )
-                SURFALBEDSW_out[0,:,:] = F.SURFALBEDSW.T
+                SURFALBEDSW_out[0,:,:] = F.host['SURFALBEDSW'][:,:,0].T
             if output_fields['SURFALBEDLW']:
                 SURFALBEDLW_out = ncf.createVariable('SURFALBEDLW', 'f4',
                                                     ('time', 'lat', 'lon',) )
-                SURFALBEDLW_out[0,:,:] = F.SURFALBEDLW.T
+                SURFALBEDLW_out[0,:,:] = F.host['SURFALBEDLW'][:,:,0].T
 
 
     # MICROPHYSICS VARIABLES
@@ -242,28 +250,17 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
     ################################################################################
     ################################################################################
 
-    if i_surface_scheme:
-        raise NotImplementedError()
-        pass
-        #if i_microphysics:
-        #    SOILMOIST_out[-1,:,:] = SURF.MOIST.T
-        #    RAINRATE_out[-1,:,:] = SURF.RAINRATE.T*3600 # mm/h
-        #    ACCRAIN_out[-1,:,:] = SURF.ACCRAIN.T # mm
-        #    SOILEVAPITY_out[-1,:,:] = SURF.SOILEVAPITY.T
-
 
     for k in range(0,GR.nz):
 
         # RADIATION VARIABLES
         if i_radiation > 0:
-            raise NotImplementedError()
-            dPOTTdt_RAD_out[-1,k,:,:] = F.dPOTTdt_RAD[:,:,k].T * 3600
-            #SWFLXDIV_out[-1,k,:,:] = RAD.SWFLXDIV[:,:,k].T 
-            #LWFLXDIV_out[-1,k,:,:] = RAD.LWFLXDIV[:,:,k].T 
+            dPOTTdt_RAD_out[-1,k,:,:] = F.host['dPOTTdt_RAD'][:,:,k].T * 3600
+            SWFLXDIV_out[-1,k,:,:] = F.host['SWFLXDIV'][:,:,k].T 
+            LWFLXDIV_out[-1,k,:,:] = F.host['LWFLXDIV'][:,:,k].T 
 
         # MICROPHYSICS VARIABLES
         if i_microphysics:
-            raise NotImplementedError()
             RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
             dQVdt_MIC_out[-1,k,:,:] = F.dQVdt_MIC[:,:,k].T * 3600
             dQCdt_MIC_out[-1,k,:,:] = F.dQCdt_MIC[:,:,k].T * 3600
@@ -276,15 +273,14 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
 
         # RADIATION VARIABLES
         if i_radiation > 0:
-            raise NotImplementedError()
-            SWDIFFLXDO_out[-1,ks,:,:] = RAD.SWDIFFLXDO[:,:,ks].T
-            SWDIRFLXDO_out[-1,ks,:,:] = RAD.SWDIRFLXDO[:,:,ks].T
-            SWFLXUP_out[-1,ks,:,:] = RAD.SWFLXUP[:,:,ks].T
-            SWFLXDO_out[-1,ks,:,:] = RAD.SWFLXDO[:,:,ks].T
-            SWFLXNET_out[-1,ks,:,:] = F.SWFLXNET[:,:,ks].T
-            LWFLXUP_out[-1,ks,:,:] = RAD.LWFLXUP[:,:,ks].T
-            LWFLXDO_out[-1,ks,:,:] = RAD.LWFLXDO[:,:,ks].T
-            LWFLXNET_out[-1,ks,:,:] = F.LWFLXNET[:,:,ks].T
+            SWDIFFLXDO_out[-1,ks,:,:] = F.host['SWDIFFLXDO'][:,:,ks].T
+            SWDIRFLXDO_out[-1,ks,:,:] = F.host['SWDIRFLXDO'][:,:,ks].T
+            SWFLXUP_out[-1,ks,:,:] = F.host['SWFLXUP'][:,:,ks].T
+            SWFLXDO_out[-1,ks,:,:] = F.host['SWFLXDO'][:,:,ks].T
+            SWFLXNET_out[-1,ks,:,:] = F.host['SWFLXNET'][:,:,ks].T
+            LWFLXUP_out[-1,ks,:,:] = F.host['LWFLXUP'][:,:,ks].T
+            LWFLXDO_out[-1,ks,:,:] = F.host['LWFLXDO'][:,:,ks].T
+            LWFLXNET_out[-1,ks,:,:] = F.host['LWFLXNET'][:,:,ks].T
 
 
     ncf.close()

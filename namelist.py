@@ -161,7 +161,7 @@ i_sync_context = 1
 ###############################################################################
 # 1: testsuite equality
 # 2: longtime run
-i_simulation_mode = 2
+i_simulation_mode = 1
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 1:
@@ -174,8 +174,8 @@ if i_simulation_mode == 1:
     output_path = '../output_test'
     i_sim_n_days = 0.36*1
     i_out_nth_hour = 4*1
-    i_surface_scheme = 0
-    i_radiation = 0
+    i_surface_scheme = 1
+    i_radiation = 1
     i_microphysics = 0
     i_turbulence = 0
 

@@ -202,7 +202,7 @@ def rad_solar_zenith_angle(GR, SOLZEN):
             np.sin(eps_ob/180*np.pi)*np.sin(lamb_ec/180*np.pi))            
 
     # HOUR ANGLE
-    sec_of_local_noon = GR.lon_rad[GR.iijj]/(2*np.pi)*86400
+    sec_of_local_noon = GR.lon_rad[GR.ii,GR.jj,0]/(2*np.pi)*86400
     sec_of_day = timedelta(hours=GR.GMT.hour,
                               minutes=GR.GMT.minute,
                               seconds=GR.GMT.second).total_seconds()
@@ -211,9 +211,9 @@ def rad_solar_zenith_angle(GR, SOLZEN):
 
 
     #SOLZEN[:,:] = np.cos(hour_angle)
-    SOLZEN[:,:] = np.arccos( \
-                    + np.sin(GR.lat_rad[GR.iijj]) * np.sin(sol_declin) \
-                    + np.cos(GR.lat_rad[GR.iijj]) * \
+    SOLZEN[:,:,0] = np.arccos( \
+                    + np.sin(GR.lat_rad[GR.ii,GR.jj,0]) * np.sin(sol_declin) \
+                    + np.cos(GR.lat_rad[GR.ii,GR.jj,0]) * \
                                 np.cos(sol_declin) * np.cos(hour_angle) )
 
     return(SOLZEN)

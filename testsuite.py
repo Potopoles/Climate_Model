@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """
-File name:          testsuite.py  
-Author:             Christoph Heim (CH)
+###############################################################################
+Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190530
+Last modified:      20190601
 License:            MIT
 
 Compare output fields of two simulations and check if they are
 identical.
+###############################################################################
 """
 import os
 import numpy as np
@@ -24,6 +25,7 @@ test_path = '../output_test'
 file = 'out0002.nc'
 
 test_fields = ['UWIND','VWIND','WWIND','PSURF','POTT','PHI']
+test_fields.extend(['SURFTEMP'])
 ####################################################################
 
 

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190531
+Last modified:      20190601
 License:            MIT
 
 Setup and store model fields. Have each field in memory (for CPU)
@@ -14,10 +14,12 @@ and if GPU enabled also on GPU.
 import numpy as np
 from numba import cuda
 
-from namelist import i_surface_scheme
-from io_read_namelist import wp, CPU, GPU
+from namelist import (i_surface_scheme, nz_soil,
+                      i_radiation)
+from io_read_namelist import wp, wp_int, CPU, GPU
 from io_initial_conditions import initialize_fields
 from radiation.org_radiation import Radiation
+from srfc_main import Surface
 ###############################################################################
 
 class ModelFields:
@@ -26,6 +28,9 @@ class ModelFields:
     ALL_FIELDS          = 'all_fields'
     PRINT_DIAG_FIELDS   = 'print_diag_fields'
     NC_OUT_DIAG_FIELDS  = 'nc_out_diag_fields'
+    SRFC_FIELDS         = 'srfc_fields'
+    RAD_TO_DEVICE_FIELDS= 'rad_to_device_fields'
+    RAD_TO_HOST_FIELDS  = 'rad_to_device_fields'
 
     
     def __init__(self, GR, gpu_enable):
@@ -40,6 +45,10 @@ class ModelFields:
         self.set_field_groups()
 
 
+        #######################################################################
+        ## INITIALIZE FIELDS
+        #######################################################################
+        ## DYNAMICS
         fields_to_init = ['POTTVB', 'WWIND', 'HSURF',
                         'COLP', 'PSURF', 'PVTF', 'PVTFVB',
                         'POTT', 'TAIR', 'TAIRVB', 'PAIR', 
@@ -48,15 +57,23 @@ class ModelFields:
         self.set(initialize_fields(GR, **self.get(fields_to_init)))
 
 
+        ## SURFACE
+        if i_surface_scheme:
+            if gpu_enable:
+                self.SURF = Surface(GR, self, target=GPU)
+            else:
+                self.SURF = Surface(GR, self, target=CPU)
+        else:
+            self.SURF = None
+
         ## RADIATION
-        #if i_radiation:
-        #    if SURF is None:
-        #        raise ValueError('Soil model must be used for i_radiation > 0')
-        #    RAD = radiation(GR, i_radiation)
-        #    rad_njobs_orig = RAD.njobs_rad
-        #    RAD.njobs_rad = 4
-        #    RAD.calc_radiation(GR, CF)
-        #    RAD.njobs_rad = rad_njobs_orig
+        if i_radiation:
+            RAD = Radiation(GR)
+            rad_njobs_orig = RAD.njobs_rad
+            RAD.njobs_rad = 4
+            RAD.calc_radiation(GR, self)
+            RAD.njobs_rad = rad_njobs_orig
+            self.RAD = RAD
         
 
         if self.gpu_enable:
@@ -70,7 +87,18 @@ class ModelFields:
             self.PRINT_DIAG_FIELDS:     ['COLP', 'WIND', 'POTT'],
             self.NC_OUT_DIAG_FIELDS:    ['UWIND', 'VWIND' ,'WWIND' ,'POTT',
                                          'COLP', 'PVTF' ,'PVTFVB', 'PHI',
-                                         'PHIVB', 'RHO', 'QV', 'QC']
+                                         'PHIVB', 'RHO', 'QV', 'QC'],
+            self.SRFC_FIELDS:           ['HSURF', 'OCEANMASK', 'SOILDEPTH',
+                                         'SOILCP', 'SOILRHO',
+                                         'SOILTEMP', 'dSOILTEMPdt', 'SOILMOIST',
+                                         'SOILEVAPITY',
+                                         'SURFALBEDSW', 'SURFALBEDLW',
+                                         'RAINRATE', 'ACCRAIN'],
+            self.RAD_TO_DEVICE_FIELDS:  ['dPOTTdt_RAD', 'SWFLXNET', 'LWFLXNET'],
+            self.RAD_TO_HOST_FIELDS:    ['RHO', 'TAIR', 'PHIVB', 'SOILTEMP',
+                                         'SURFALBEDLW', 'SURFALBEDSW', 'QC'],
+
+
         }
 
 
@@ -274,28 +302,41 @@ class ModelFields:
         ### 2 SURFACE FIELDS 
         #######################################################################
         #######################################################################
-        # TODO: Add comments
         if i_surface_scheme: 
+            # 1 if grid point is ocean [-]
             f['OCEANMASK']   = np.full( ( GR.nx, GR.ny, 1      ),
-                                        np.nan, dtype=wp)
+                                        0, dtype=wp_int)
+            # depth of soil [m]
             f['SOILDEPTH']   = np.full( ( GR.nx, GR.ny, 1      ),
                                         np.nan, dtype=wp)
+            # heat capcity of soil [J kg-1 K-1]
             f['SOILCP']      = np.full( ( GR.nx, GR.ny, 1      ), 
                                         np.nan, dtype=wp)
+            # density of soil [kg m-3]
             f['SOILRHO']     = np.full( ( GR.nx, GR.ny, 1      ), 
                                         np.nan, dtype=wp)
+            # soil temperature [K]
             f['SOILTEMP']    = np.full( ( GR.nx, GR.ny, nz_soil), 
                                         np.nan, dtype=wp)
+            # change of soil temperature with time [K s-1]
+            f['dSOILTEMPdt'] = np.full( ( GR.nx, GR.ny, nz_soil), 
+                                        np.nan, dtype=wp)
+            # moisture content of soil [kg m-2]
             f['SOILMOIST']   = np.full( ( GR.nx, GR.ny, 1      ), 
                                         np.nan, dtype=wp)
+            # evaporation likliness of soil [-]
             f['SOILEVAPITY'] = np.full( ( GR.nx, GR.ny, 1      ), 
                                         np.nan, dtype=wp)
+            # surface albedo for shortwave radiation [-]
             f['SURFALBEDSW'] = np.full( ( GR.nx, GR.ny, 1      ), 
                                         np.nan, dtype=wp)
+            # surface albedo for longwave radiation [-]
             f['SURFALBEDLW'] = np.full( ( GR.nx, GR.ny, 1      ), 
                                         np.nan, dtype=wp)
+            # rain rate at surface [kg m-2 s-1]
             f['RAINRATE']    = np.full( ( GR.nx, GR.ny, 1      ), 
                                         np.nan, dtype=wp)
+            # accumulated rain during simulation at surface [kg m-2]
             f['ACCRAIN']     = np.full( ( GR.nx, GR.ny, 1      ), 
                                         np.nan, dtype=wp)
 
@@ -315,6 +356,36 @@ class ModelFields:
         # net shortwave flux (direction?) [W m-2]
         f['SWFLXNET']        = np.full( ( GR.nx, GR.ny, GR.nzs ),
                                         np.nan, dtype=wp)
+
+        # solar zenith angle
+        f['SOLZEN']          = np.full( ( GR.nx, GR.ny, 1      ),
+                                        np.nan, dtype=wp)
+        
+        # cos solar zenith angle
+        f['MYSUN']           = np.full( ( GR.nx, GR.ny, 1      ),
+                                        np.nan, dtype=wp)
+
+        # incoming shortwave at TOA
+        f['SWINTOA']         = np.full( ( GR.nx, GR.ny, 1      ),
+                                        np.nan, dtype=wp)
+
+        f['LWFLXUP']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['LWFLXDO']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['SWDIFFLXDO']      = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['SWDIRFLXDO']      = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['SWFLXUP']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['SWFLXDO']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['LWFLXDIV']        = np.full( ( GR.nx, GR.ny, GR.nz  ),
+                                        np.nan, dtype=wp)
+        f['SWFLXDIV']        = np.full( ( GR.nx, GR.ny, GR.nz  ),
+                                        np.nan, dtype=wp)
+        f['TOTFLXDIV']       = np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan, dtype=wp)
 
         #######################################################################
         #######################################################################

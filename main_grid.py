@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190523
+Last modified:      20190601
 License:            MIT
 
 Set up computational and geographical grid for simulation.
@@ -62,11 +62,14 @@ if gpu_enable:
         raise NotImplementedError('Vertical reduction for GPU ' +
                                     'needs nz of 2**x')
 
-# GPU threads per block and blocks per grid
+# THREADS PER BLOCK
 # normal case
 tpb     = (2,       2,      nz )
 # case of vertically staggered variable
 tpb_ks  = (tpb[0],  tpb[1], nzs)
+# 2D (e.g. surface) field
+tpb_2D  = (2,       2,      1 )
+# BLOCKS PER GRID
 # normal case
 bpg = (math.ceil((nxs+2*nb)/tpb[0]), math.ceil((nys+2*nb)/tpb[1]), 1)
 # case of single column (when shared arrays are used in vertical
@@ -178,7 +181,6 @@ class Grid:
             for i_s in range(self.nb, self.nxs+self.nb):
                 self.lat_is_deg[i_s,self.jj,0] = (self.lat0_deg +
                                     (self.jj-self.nb+0.5)*self.dlat_deg)
-
 
             # 2D MATRIX OF LONGITUDES AND LATITUDES IN RADIANS
             self.lon_rad = self.lon_deg/180*np.pi

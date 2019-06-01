@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190531
+Last modified:      20190601
 License:            MIT
 
 Simple global climate model, hydrostatic and on a lat-lon grid.
@@ -100,24 +100,25 @@ while GR.ts < GR.nts:
     # RADIATION
     ####################################################################
     if i_radiation:
-        GR.timer.start('rad')
         # Asynchroneous Radiation
-        if RAD.i_async_radiation:
-            if RAD.done == 1:
+        if F.RAD.i_async_radiation:
+            if F.RAD.done == 1:
                 if i_comp_mode == 2:
-                    GF.copy_radiation_fields_to_device(GR, CF)
-                    GF.copy_radiation_fields_to_host(GR)
-                RAD.done = 0
-                _thread.start_new_thread(RAD.calc_radiation, (GR, CF))
+
+                    F.copy_host_to_device(F.RAD_TO_DEVICE_FIELDS)
+                    F.copy_device_to_host(F.RAD_TO_HOST_FIELDS)
+                    #GF.copy_radiation_fields_to_device(GR, F)
+                    #GF.copy_radiation_fields_to_host(GR)
+                F.RAD.done = 0
+                _thread.start_new_thread(F.RAD.calc_radiation, (GR, F))
         # Synchroneous Radiation
         else:
-            if GR.ts % RAD.rad_nth_ts == 0:
+            if GR.ts % F.RAD.rad_nth_ts == 0:
                 if i_comp_mode == 2:
                     GF.copy_radiation_fields_to_host(GR)
-                RAD.calc_radiation(GR, CF)
+                F.RAD.calc_radiation(GR, F)
                 if i_comp_mode == 2:
-                    GF.copy_radiation_fields_to_device(GR, CF)
-        GR.timer.stop('rad')
+                    GF.copy_radiation_fields_to_device(GR, F)
 
     #print('RADIATION timerstarts:')
     #try:
@@ -137,11 +138,11 @@ while GR.ts < GR.nts:
     ####################################################################
     # EARTH SURFACE
     ####################################################################
-    #if i_surface_scheme:
-    #    t_start = time.time()
-    #    SURF.advance_timestep(GR, CF, GF, RAD)
-    #    t_end = time.time()
-    #    GR.soil_comp_time += t_end - t_start
+    if i_surface_scheme:
+        GR.timer.start('srfc')
+        F.SURF.advance_timestep(GR, **F.get(F.SURF.fields_timestep,
+                                target=F.SURF.target))
+        GR.timer.stop('srfc')
 
 
     ####################################################################

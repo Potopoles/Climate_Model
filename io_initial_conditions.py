@@ -93,15 +93,6 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
                                     TAIR, TAIRVB, RHO,
                                     PVTF, PVTFVB, UWIND, VWIND, WIND)
 
-        ########################################################################
-        ## INITIALIZE NON-ATMOSPHERIC COMPONENTS
-        ########################################################################
-
-        ## SURF MODEL
-        #if i_surface:
-        #    SURF = surface(GR, CF)
-        #else:
-        #    SURF = None
 
         ########################################################################
         ## INITIALIZE PROCESSES

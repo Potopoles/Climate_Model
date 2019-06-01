@@ -1,13 +1,13 @@
 import numpy as np
 import cython
-from io_read_namelist import wp
+from io_read_namelist import wp_str
 from radiation.namelist_radiation import njobs_rad, planck_n_lw_bins, emissivity_surface
 from io_constants import con_c, con_h, con_kb
 from libc.math cimport exp, pi
 
-if wp == 'float64':
+if wp_str == 'float64':
     from numpy import float64 as wp_np
-elif wp == 'float32':
+elif wp_str == 'float32':
     from numpy import float32 as wp_np
 ctypedef fused wp_cy:
     double
