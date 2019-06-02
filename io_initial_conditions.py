@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190531
+Last modified:      20190602
 License:            MIT
 
 Functions to initialize the model fields and set up an average
@@ -25,105 +25,70 @@ from namelist import (i_load_from_restart, i_use_topo,
                     POTT_gaussian_pert, POTT_random_pert)
 from io_read_namelist import wp, pair_top
 from io_constants import con_kappa, con_g, con_cp, con_Rd
+###############################################################################
 
 def initialize_fields(GR, POTTVB, WWIND, HSURF,
                         COLP, PSURF, PVTF, PVTFVB,
                         POTT, TAIR, TAIRVB, PAIR,
                         UWIND, VWIND, WIND, RHO,
                         PHI, PHIVB):
-    if i_load_from_restart:
-        F, RAD, SURF, MIC, TURB = load_restart_fields(GR)
+
+    #######################################################################
+    # SET INITIAL FIELD VALUES
+    #######################################################################
+
+    # need to have non-nan-values because values from
+    # half-level 0 and GR.nzs are used in calculation.
+    POTTVB[:] = 0
+    WWIND[:] = 0
+
+    #  LOAD TOPOGRAPHY (HSURF)
+    if i_use_topo:
+        HSURF = load_topo(GR, HSURF) 
     else:
+        HSURF[:] = 0.
 
-        #######################################################################
-        # SET INITIAL FIELD VALUES
-        #######################################################################
-
-        # need to have non-nan-values because values from
-        # half-level 0 and GR.nzs are used in calculation.
-        POTTVB[:] = 0
-        WWIND[:] = 0
-
-        #  LOAD TOPOGRAPHY (HSURF)
-        if i_use_topo:
-            HSURF = load_topo(GR, HSURF) 
-        else:
-            HSURF[:] = 0.
-
-        ## INITIALIZE PROFILE
-        COLP, PSURF, POTT, TAIR, PAIR = set_up_profile(
-                                GR, COLP, HSURF, PSURF, PVTF,
-                                PVTFVB, POTT, TAIR, PAIR)
+    ## INITIALIZE PROFILE
+    COLP, PSURF, POTT, TAIR, PAIR = set_up_profile(
+                            GR, COLP, HSURF, PSURF, PVTF,
+                            PVTFVB, POTT, TAIR, PAIR)
 
 
-        # INITIAL CONDITIONS
-        COLP[:,:,0] = gaussian2D(GR, COLP[:,:,0], COLP_gaussian_pert,
-                                np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
-        COLP[:,:,0] = random2D(GR, COLP[:,:,0], COLP_random_pert)
+    # INITIAL CONDITIONS
+    COLP[:,:,0] = gaussian2D(GR, COLP[:,:,0], COLP_gaussian_pert,
+                            np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+    COLP[:,:,0] = random2D(GR, COLP[:,:,0], COLP_random_pert)
 
-        for k in range(0,GR.nz):
-            UWIND[GR.iis,GR.jj,k] = uwind_0
-            UWIND[:,:,k] = gaussian2D(GR, UWIND[:,:,k], UWIND_gaussian_pert, 
-                         np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
-            UWIND[:,:,k] = random2D(GR, UWIND[:,:,k], UWIND_random_pert)
+    for k in range(0,GR.nz):
+        UWIND[GR.iis,GR.jj,k] = uwind_0
+        UWIND[:,:,k] = gaussian2D(GR, UWIND[:,:,k], UWIND_gaussian_pert, 
+                     np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+        UWIND[:,:,k] = random2D(GR, UWIND[:,:,k], UWIND_random_pert)
 
-            VWIND[:,:,k][GR.ii,GR.jjs] = vwind_0
-            VWIND[:,:,k] = gaussian2D(GR, VWIND[:,:,k], VWIND_gaussian_pert,
-                         np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
-            VWIND[:,:,k] = random2D(GR, VWIND[:,:,k], VWIND_random_pert)
+        VWIND[:,:,k][GR.ii,GR.jjs] = vwind_0
+        VWIND[:,:,k] = gaussian2D(GR, VWIND[:,:,k], VWIND_gaussian_pert,
+                     np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+        VWIND[:,:,k] = random2D(GR, VWIND[:,:,k], VWIND_random_pert)
 
-            POTT[:,:,k] = gaussian2D(GR, POTT[:,:,k], POTT_gaussian_pert,
-                         np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
-            POTT[:,:,k] = random2D(GR, POTT[:,:,k], POTT_random_pert)
+        POTT[:,:,k] = gaussian2D(GR, POTT[:,:,k], POTT_gaussian_pert,
+                     np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+        POTT[:,:,k] = random2D(GR, POTT[:,:,k], POTT_random_pert)
 
-        # BOUNDARY EXCHANGE OF INITIAL CONDITIONS
-        COLP    = GR.exchange_BC(COLP)
-        UWIND   = GR.exchange_BC(UWIND)
-        VWIND   = GR.exchange_BC(VWIND)
-        POTT    = GR.exchange_BC(POTT)
+    # BOUNDARY EXCHANGE OF INITIAL CONDITIONS
+    COLP    = GR.exchange_BC(COLP)
+    UWIND   = GR.exchange_BC(UWIND)
+    VWIND   = GR.exchange_BC(VWIND)
+    POTT    = GR.exchange_BC(POTT)
 
-        ## PRIMARY DIAGNOSTIC FIELDS
-        diagnose_fields_init(GR, PHI, PHIVB, PVTF, PVTFVB,
-                                            HSURF, POTT, COLP, POTTVB)
+    ## PRIMARY DIAGNOSTIC FIELDS
+    diagnose_fields_init(GR, PHI, PHIVB, PVTF, PVTFVB,
+                                        HSURF, POTT, COLP, POTTVB)
 
-        ## SECONDARY DIAGNOSTIC FIELDS
-        PAIR, TAIR, TAIRVB, RHO, WIND = diagnose_secondary_fields(
-                                    GR, COLP, PAIR, PHI, POTT, POTTVB,
-                                    TAIR, TAIRVB, RHO,
-                                    PVTF, PVTFVB, UWIND, VWIND, WIND)
-
-
-        ########################################################################
-        ## INITIALIZE PROCESSES
-        ########################################################################
-
-        ## MOISTURE & MICROPHYSICS
-        #if i_microphysics:
-        #    MIC = microphysics(GR, CF, i_microphysics, CF.TAIR, CF.PAIR) 
-        #else:
-        #    MIC = None
-
-        ## RADIATION
-        #if i_radiation:
-        #    if SURF is None:
-        #        raise ValueError('Soil model must be used for i_radiation > 0')
-        #    RAD = radiation(GR, i_radiation)
-        #    rad_njobs_orig = RAD.njobs_rad
-        #    RAD.njobs_rad = 4
-        #    #t_start = time.time()
-        #    RAD.calc_radiation(GR, CF)
-        #    #t_end = time.time()
-        #    #GR.rad_comp_time += t_end - t_start
-        #    RAD.njobs_rad = rad_njobs_orig
-        #else:
-        #    RAD = None
-
-        ## TURBULENCE 
-        #if i_turbulence:
-        #    raise NotImplementedError('Baustelle')
-        #    TURB = turbulence(GR, i_turbulence) 
-        #else:
-        #    TURB = None
+    ## SECONDARY DIAGNOSTIC FIELDS
+    PAIR, TAIR, TAIRVB, RHO, WIND = diagnose_secondary_fields(
+                                GR, COLP, PAIR, PHI, POTT, POTTVB,
+                                TAIR, TAIRVB, RHO,
+                                PVTF, PVTFVB, UWIND, VWIND, WIND)
 
 
     out = {}
@@ -136,16 +101,16 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
     out['WWIND']        = WWIND
     out['WIND']        = WIND
 
-    out['PVTF']        = PVTF
+    out['PVTF']         = PVTF
     out['PVTFVB']       = PVTFVB
-    out['POTT']        = POTT
+    out['POTT']         = POTT
     out['POTTVB']       = POTTVB
-    out['TAIR']        = TAIR
-    out['TAIRVB']        = TAIRVB
+    out['TAIR']         = TAIR
+    out['TAIRVB']       = TAIRVB
 
-    out['PHI']        = PHI
+    out['PHI']          = PHI
     out['PHIVB']        = PHIVB
-    out['RHO']        = RHO
+    out['RHO']          = RHO
 
     return(out)
 

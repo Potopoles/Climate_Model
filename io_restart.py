@@ -14,10 +14,8 @@ import numpy as np
 import os
 import pickle
 
-from namelist import i_comp_mode
-from io_read_namelist import wp, gpu_enable, GPU#, pair_top,
-#from radiation.namelist_radiation import njobs_rad
-from io_constants import con_g, con_Rd, con_kappa, con_cp
+from namelist import i_comp_mode, i_radiation, njobs_rad
+from io_read_namelist import wp, gpu_enable, GPU
 ###############################################################################
 
 
@@ -99,8 +97,9 @@ def load_restart_fields(GR):
             inp = pickle.load(f)
     F = inp['F']
     #RAD = inp['RAD']
-    F.RAD.done = 1
-    F.RAD.njobs_rad = njobs_rad
+    if i_radiation:
+        F.RAD.done = 1
+        F.RAD.njobs_rad = njobs_rad
     #SOIL = inp['SOIL'] 
     #MIC = inp['MIC'] 
     #TURB = inp['TURB'] 

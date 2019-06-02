@@ -63,8 +63,6 @@ GR = Grid()
 F = ModelFields(GR, gpu_enable)
 
 # TODO: not yet moved to new model setup
-RAD = None
-SURF = None
 MIC = None
 TURB = None
 
@@ -72,7 +70,7 @@ TURB = None
 ####################################################################
 # OUTPUT AT TIMESTEP 0 (before start of simulation)
 ####################################################################
-constant_fields_to_NC(GR, F, RAD, SURF)
+constant_fields_to_NC(GR, F)
 
 
 ####################################################################
@@ -165,7 +163,7 @@ while GR.ts < GR.nts:
         # write file
         GR.timer.start('IO')
         GR.nc_output_count += 1
-        output_to_NC(GR, F, RAD, SURF, MIC)
+        output_to_NC(GR, F)
         GR.timer.stop('IO')
 
 

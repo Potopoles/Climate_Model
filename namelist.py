@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190531
+Last modified:      20190602
 License:            MIT
 
 Namelist for user input.
@@ -133,9 +133,9 @@ output_fields = {
 }
 
 # RESTART FILES
-i_load_from_restart = 1
+i_load_from_restart = 0
 i_save_to_restart   = 1
-i_restart_nth_day   = 1.00
+i_restart_nth_day   = 5.00
 
 ###############################################################################
 # COMPUTATION SETTINGS
@@ -149,7 +149,7 @@ working_precision = 'float32'
 #working_precision = 'float64'
 
 # 1: CPU, 2: GPU
-i_comp_mode = 2
+i_comp_mode = 1
 
 # in case of computation on GPU only:
 i_sync_context = 1
@@ -187,16 +187,16 @@ if i_simulation_mode == 1:
 
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
-    nz = 8
-    lat0_deg = -80
-    lat1_deg = 80
-    dlat_deg = 4.0
-    dlon_deg = 4.0
+    nz = 16
+    lat0_deg = -81
+    lat1_deg = 81
+    dlat_deg = 3.0
+    dlon_deg = 3.0
     output_path = '../output'
-    i_sim_n_days = 5#*365.00
-    i_out_nth_hour = 24
+    i_sim_n_days = 10*365.00
+    i_out_nth_hour = 5*24
     i_surface_scheme = 1
-    i_radiation = 0
+    i_radiation = 1
     i_microphysics = 0
     i_turbulence = 0
 
@@ -232,9 +232,11 @@ elif dlat_deg == 1.5:
 elif dlat_deg <= 1:
     UVFLX_dif_coef = 10
 
+POTT_dif_coef = 1E-5
+
 # TODO does it work like this? Can decrease even more?
-UVFLX_dif_coef *= 2.0
-#POTT_dif_coef *= 0.
+UVFLX_dif_coef  *= 2.0
+POTT_dif_coef   *= 1.0
 
 
 
@@ -263,10 +265,15 @@ if i_async_radiation:
 else:
     njobs_rad = 4
 
-sigma_abs_gas_SW_in = 1.7E-5
-sigma_sca_gas_SW_in = 1.72E-5 # lamb = 0.5 mym, jacobson page 301
-sigma_abs_gas_LW_in = 1.7E-4
-sigma_sca_gas_LW_in = 1.72E-7 
+#sigma_abs_gas_SW_in = 1.7E-5
+#sigma_sca_gas_SW_in = 1.72E-5 # lamb = 0.5 mym, jacobson page 301
+#sigma_abs_gas_LW_in = 1.7E-4
+#sigma_sca_gas_LW_in = 1.72E-7 
+
+sigma_abs_gas_SW_in = wp(1.7E-5  )
+sigma_sca_gas_SW_in = wp(1.72E-5 ) # lamb = 0.5 mym, jacobson page 301
+sigma_abs_gas_LW_in = wp(2.7E-4  )
+sigma_sca_gas_LW_in = wp(1.72E-7 ) 
 
 # surface emissivity
 emissivity_surface = 1

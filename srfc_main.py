@@ -40,7 +40,8 @@ evapity_thresh = wp(10.)
 class Surface:
 
     fields_timestep = ['SOILTEMP', 'LWFLXNET', 'SWFLXNET', 'SOILCP',
-                       'SOILRHO', 'SOILDEPTH']
+                       'SOILRHO', 'SOILDEPTH', 'OCEANMASK',
+                       'SURFALBEDSW', 'SURFALBEDLW']
 
 
     def __init__(self, GR, F, target):
@@ -82,20 +83,25 @@ class Surface:
 
 
     def advance_timestep(self, GR, SOILTEMP, LWFLXNET, SWFLXNET,
-                        SOILCP, SOILRHO, SOILDEPTH):
+                        SOILCP, SOILRHO, SOILDEPTH, OCEANMASK,
+                        SURFALBEDSW, SURFALBEDLW):
 
         if self.target == GPU:
             advance_timestep_srfc_gpu[bpg, tpb_2D](SOILTEMP,
                                    LWFLXNET, SWFLXNET, SOILCP,
-                                   SOILRHO, SOILDEPTH, GR.dt)
+                                   SOILRHO, SOILDEPTH, OCEANMASK,
+                                   SURFALBEDSW, SURFALBEDLW, GR.dt)
+            #raise NotImplementedError()
 
         elif self.target == CPU:
             advance_timestep_srfc_cpu(SOILTEMP,
                                    LWFLXNET, SWFLXNET, SOILCP,
-                                   SOILRHO, SOILDEPTH, GR.dt)
+                                   SOILRHO, SOILDEPTH, OCEANMASK,
+                                   SURFALBEDSW, SURFALBEDLW, GR.dt)
+            #calc_albedo(SURFALBEDSW, SURFALBEDLW, SOILTEMP,
+            #            SOILMOIST, OCEANMASK)
 
 
-        #    self.calc_albedo(GR, CF)
 
         #    # calc evaporation capacity
         #    CF.SOILEVAPITY[CF.OCEANMASK == 0] = \
@@ -103,27 +109,26 @@ class Surface:
         #                                                / evapity_thresh), 1)
 
 
-        #    calc_albedo_gpu[GR.main_griddim_xy_in, GR.blockdim_xy, GR.stream]\
-        #                        (GF.SURFALBEDSW, GF.SURFALBEDLW, GF.OCEANMASK, GF.SOILTEMP)
-
         #    calc_evaporation_capacity_gpu[GR.riddim_xy_in, GR.blockdim_xy, GR.stream]\
         #                        (GF.SOILEVAPITY, GF.SOILMOIST, GF.OCEANMASK, GF.SOILTEMP)
 
 
 
-    def calc_albedo(self, SURFALBEDSW, SURFALBEDLW, SOILTEMP, SOILMOIST, OCEANMASK):
+    # TODO IS USED FOR INITIALIZATION ONLY. CHANGE TO NORMAL FUNCTION?
+    def calc_albedo(self, SURFALBEDSW, SURFALBEDLW, SOILTEMP,
+                    SOILMOIST, OCEANMASK):
         ## ALBEDO
         # forest
-        SURFALBEDSW[:] = 0.2
-        SURFALBEDLW[:] = 0.0
+        SURFALBEDSW[:] = wp(0.2)
+        SURFALBEDLW[:] = wp(0.0)
         # ocean
-        SURFALBEDSW[OCEANMASK == 1] = 0.05
-        SURFALBEDLW[OCEANMASK == 1] = 0.00
+        SURFALBEDSW[OCEANMASK == 1] = wp(0.05)
+        SURFALBEDLW[OCEANMASK == 1] = wp(0.00)
         # ice (land and sea)
         #SURFALBEDSW[(SOILTEMP[:,:,0] <= 273.15) & (SOILMOIST[:,:,0] > 10)] = 0.6
         #SURFALBEDLW[(SOILTEMP[:,:,0] <= 273.15) & (SOILMOIST[:,:,0] > 10)] = 0.2
-        SURFALBEDSW[(SOILTEMP[:,:,0] <= 273.15)] = 0.6
-        SURFALBEDLW[(SOILTEMP[:,:,0] <= 273.15)] = 0.2
+        SURFALBEDSW[(SOILTEMP[:,:,0] <= wp(273.15))] = wp(0.6)
+        SURFALBEDLW[(SOILTEMP[:,:,0] <= wp(273.15))] = wp(0.2)
 
 
 

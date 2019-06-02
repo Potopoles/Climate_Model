@@ -15,9 +15,10 @@ import numpy as np
 from numba import cuda
 
 from namelist import (i_surface_scheme, nz_soil,
-                      i_radiation)
+                      i_radiation, i_load_from_restart)
 from io_read_namelist import wp, wp_int, CPU, GPU
 from io_initial_conditions import initialize_fields
+from io_restart import load_restart_fields
 from rad_main import Radiation
 from srfc_main import Surface
 ###############################################################################
@@ -35,50 +36,76 @@ class ModelFields:
     
     def __init__(self, GR, gpu_enable):
 
-        self.GR = GR
-        self.gpu_enable = gpu_enable
-
-        self.host   = {}
-        self.device = {}
-
-        self.allocate_fields(GR)
-        self.set_field_groups()
-
-
-        #######################################################################
-        ## INITIALIZE FIELDS
-        #######################################################################
-        ## DYNAMICS
-        fields_to_init = ['POTTVB', 'WWIND', 'HSURF',
-                        'COLP', 'PSURF', 'PVTF', 'PVTFVB',
-                        'POTT', 'TAIR', 'TAIRVB', 'PAIR', 
-                        'UWIND', 'VWIND', 'WIND', 'RHO',
-                        'PHI', 'PHIVB']
-        self.set(initialize_fields(GR, **self.get(fields_to_init)))
-
-
-        ## SURFACE
-        if i_surface_scheme:
-            if gpu_enable:
-                self.SURF = Surface(GR, self, target=GPU)
-            else:
-                self.SURF = Surface(GR, self, target=CPU)
+        if i_load_from_restart:
+            loaded_F = load_restart_fields(GR)
+            self.__dict__ = loaded_F.__dict__
+            self.device = {}
+            if self.gpu_enable:
+                self.copy_host_to_device(field_group=self.ALL_FIELDS)
         else:
-            self.SURF = None
 
-        ## RADIATION
-        if i_radiation:
-            RAD = Radiation(GR)
-            rad_njobs_orig = RAD.njobs_rad
-            RAD.njobs_rad = 4
-            RAD.calc_radiation(GR, self)
-            RAD.njobs_rad = rad_njobs_orig
-            self.RAD = RAD
-        
+            # TODO remove GR from F.
+            self.GR = GR
+            self.gpu_enable = gpu_enable
 
-        if self.gpu_enable:
-            self.copy_host_to_device(field_group=self.ALL_FIELDS)
-        #######################################################################
+            self.host   = {}
+            self.device = {}
+
+            self.allocate_fields(GR)
+            self.set_field_groups()
+
+
+            ###################################################################
+            ## INITIALIZE FIELDS
+            ###################################################################
+            ## DYNAMICS
+            fields_to_init = ['POTTVB', 'WWIND', 'HSURF',
+                            'COLP', 'PSURF', 'PVTF', 'PVTFVB',
+                            'POTT', 'TAIR', 'TAIRVB', 'PAIR', 
+                            'UWIND', 'VWIND', 'WIND', 'RHO',
+                            'PHI', 'PHIVB']
+            self.set(initialize_fields(GR, **self.get(fields_to_init)))
+
+            ###################################################################
+            ## INITIALIZE PROCESSES
+            ###################################################################
+
+            ## SURFACE
+            if i_surface_scheme:
+                if gpu_enable:
+                    self.SURF = Surface(GR, self, target=GPU)
+                else:
+                    self.SURF = Surface(GR, self, target=CPU)
+            else:
+                self.SURF = None
+
+            ## RADIATION
+            if i_radiation:
+                RAD = Radiation(GR)
+                rad_njobs_orig = RAD.njobs_rad
+                RAD.njobs_rad = 4
+                RAD.calc_radiation(GR, self)
+                RAD.njobs_rad = rad_njobs_orig
+                self.RAD = RAD
+
+            ## MOISTURE & MICROPHYSICS
+            #if i_microphysics:
+            #    MIC = microphysics(GR, CF, i_microphysics, CF.TAIR, CF.PAIR) 
+            #else:
+            #    MIC = None
+
+            ## TURBULENCE 
+            #if i_turbulence:
+            #    raise NotImplementedError('Baustelle')
+            #    TURB = turbulence(GR, i_turbulence) 
+            #else:
+            #    TURB = None
+
+            
+
+            if self.gpu_enable:
+                self.copy_host_to_device(field_group=self.ALL_FIELDS)
+            ###################################################################
 
     def set_field_groups(self):
 

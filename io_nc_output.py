@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190601
+Last modified:      20190602
 License:            MIT
 
 Write fields to nc file.
@@ -21,7 +21,7 @@ from io_functions import NC_output_diagnostics
 ###############################################################################
 
 
-def output_to_NC(GR, F, RAD, SURF, MIC):
+def output_to_NC(GR, F):
 
     print('###########################################')
     print('###########################################')
@@ -287,7 +287,7 @@ def output_to_NC(GR, F, RAD, SURF, MIC):
 
 
 
-def constant_fields_to_NC(GR, F, RAD, SURF):
+def constant_fields_to_NC(GR, F):
 
     print('###########################################')
     print('###########################################')
