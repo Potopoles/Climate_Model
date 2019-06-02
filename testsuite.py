@@ -17,7 +17,7 @@ import xarray as xr
 
 # USER INPUT
 ####################################################################
-tolerance = 1E-6
+tolerance = 1E-4
 
 ref_path = '../output_ref'
 test_path = '../output_test'
@@ -26,6 +26,7 @@ file = 'out0002.nc'
 
 test_fields = ['UWIND','VWIND','WWIND','PSURF','POTT','PHI']
 test_fields.extend(['SURFTEMP'])
+test_fields.extend(['SWFLXNET', 'LWFLXNET', 'dPOTTdt_RAD'])
 ####################################################################
 
 

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190531
+Last modified:      20190602
 License:            MIT
 
 Functions to write restart files and load model from restart files.
@@ -15,13 +15,13 @@ import os
 import pickle
 
 from namelist import i_comp_mode
-from io_read_namelist import wp, pair_top
+from io_read_namelist import wp, gpu_enable, GPU#, pair_top,
 #from radiation.namelist_radiation import njobs_rad
 from io_constants import con_g, con_Rd, con_kappa, con_cp
 ###############################################################################
 
 
-def write_restart(GR, CF, RAD, SOIL, MIC, TURB):
+def write_restart(GR, F):
 
     print('###########################################')
     print('###########################################')
@@ -37,67 +37,45 @@ def write_restart(GR, CF, RAD, SOIL, MIC, TURB):
     #RAD.done = 1 # make sure async radiation starts to run after loading
 
     # temporarily remove unpicklable GR objects for GPU 
-    if hasattr(GR, 'stream'):
+    if gpu_enable:
+        grf_gpu = GR.GRF[GPU]
+        fields_gpu = F.device
+        fields_cpu = F.host
+        del GR.GRF[GPU]
+        del F.device
 
-        stream      =   GR.stream     
-        zonal       =   GR.zonal   
-        zonals      =   GR.zonals  
-        zonalvb     =   GR.zonalvb 
-        merid       =   GR.merid   
-        merids      =   GR.merids  
-        meridvb     =   GR.meridvb 
-        Ad          =   GR.Ad         
-        dxjsd       =   GR.dxjsd      
-        corfd       =   GR.corfd      
-        corf_isd    =   GR.corf_isd   
-        lat_radd    =   GR.lat_radd   
-        latis_radd  =   GR.latis_radd 
-        dsigmad     =   GR.dsigmad    
-        sigma_vbd   =   GR.sigma_vbd  
-
-        del GR.stream     
-        del GR.zonal   
-        del GR.zonals  
-        del GR.zonalvb 
-        del GR.merid   
-        del GR.merids  
-        del GR.meridvb 
-        del GR.Ad         
-        del GR.dxjsd      
-        del GR.corfd      
-        del GR.corf_isd   
-        del GR.lat_radd   
-        del GR.latis_radd 
-        del GR.dsigmad    
-        del GR.sigma_vbd  
 
     out = {}
     out['GR'] = GR
-    out['CF'] = CF
-    out['RAD'] = RAD
-    out['SOIL'] = SOIL
-    out['MIC'] = MIC
-    out['TURB'] = TURB
+    out['F'] = F
+    #out['RAD'] = RAD
+    #out['SOIL'] = SOIL
+    #out['MIC'] = MIC
+    #out['TURB'] = TURB
     with open(filename, 'wb') as f:
         pickle.dump(out, f)
 
     # restore unpicklable GR objects for GPU 
-    if i_comp_mode == 2:
-        GR.stream      =   stream     
-        GR.zonal       =   zonal   
-        GR.zonals      =   zonals  
-        GR.zonalvb     =   zonalvb 
-        GR.merid       =   merid   
-        GR.merids      =   merids  
-        GR.meridvb     =   meridvb 
-        GR.Ad          =   Ad         
-        GR.dxjsd       =   dxjsd      
-        GR.corfd       =   corfd      
-        GR.corf_isd    =   corf_isd   
-        GR.lat_radd    =   lat_radd   
-        GR.latis_radd  =   latis_radd 
-        GR.dsigmad     =   dsigmad    
-        GR.sigma_vbd   =   sigma_vbd  
+    #if i_comp_mode == 2:
+    if gpu_enable:
+        GR.GRF[GPU] = grf_gpu
+        F.device = fields_gpu
+
+        #GR.stream      =   stream     
+        #GR.zonal       =   zonal   
+        #GR.zonals      =   zonals  
+        #GR.zonalvb     =   zonalvb 
+        #GR.merid       =   merid   
+        #GR.merids      =   merids  
+        #GR.meridvb     =   meridvb 
+        #GR.Ad          =   Ad         
+        #GR.dxjsd       =   dxjsd      
+        #GR.corfd       =   corfd      
+        #GR.corf_isd    =   corf_isd   
+        #GR.lat_radd    =   lat_radd   
+        #GR.latis_radd  =   latis_radd 
+        #GR.dsigmad     =   dsigmad    
+        #GR.sigma_vbd   =   sigma_vbd  
 
 
 def load_restart_grid(dlat_deg, dlon_deg, nz):
@@ -119,13 +97,14 @@ def load_restart_fields(GR):
     if os.path.exists(filename):
         with open(filename, 'rb') as f:
             inp = pickle.load(f)
-    CF = inp['CF']
-    RAD = inp['RAD']
-    RAD.done = 1
-    RAD.njobs_rad = njobs_rad
-    SOIL = inp['SOIL'] 
-    MIC = inp['MIC'] 
-    TURB = inp['TURB'] 
-    return(CF, RAD, SOIL, MIC, TURB)
+    F = inp['F']
+    #RAD = inp['RAD']
+    F.RAD.done = 1
+    F.RAD.njobs_rad = njobs_rad
+    #SOIL = inp['SOIL'] 
+    #MIC = inp['MIC'] 
+    #TURB = inp['TURB'] 
+    #return(F, RAD, SOIL, MIC, TURB)
+    return(F)
 
 

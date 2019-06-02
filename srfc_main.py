@@ -39,14 +39,12 @@ evapity_thresh = wp(10.)
 
 class Surface:
 
-    fields_timestep = ['SOILTEMP']
+    fields_timestep = ['SOILTEMP', 'LWFLXNET', 'SWFLXNET', 'SOILCP',
+                       'SOILRHO', 'SOILDEPTH']
 
 
     def __init__(self, GR, F, target):
 
-        ##############################################################################
-        # SET INITIAL VALUES
-        ##############################################################################
         F.set(self.initial_conditions(GR, **F.get(F.field_groups[F.SRFC_FIELDS])))
 
         self.target = target
@@ -67,7 +65,7 @@ class Surface:
         fields['SOILRHO']    [fields['OCEANMASK'] == 1] = rho_water
 
         fields['SOILTEMP']   [:,:,0]                    = (295 - 
-                                            np.sin(GR.lat_rad[GR.ii,GR.jj,0])**2*25)
+                                    np.sin(GR.lat_rad[GR.ii,GR.jj,0])**2*25)
 
         fields['SOILMOIST']  [fields['OCEANMASK'] == 0] = moisture_soil
         fields['SOILMOIST']  [fields['OCEANMASK'] == 1] = moisture_ocean
@@ -83,27 +81,19 @@ class Surface:
 
 
 
-        ##############################################################################
-    def advance_timestep(self, GR, SOILTEMP):
+    def advance_timestep(self, GR, SOILTEMP, LWFLXNET, SWFLXNET,
+                        SOILCP, SOILRHO, SOILDEPTH):
 
         if self.target == GPU:
-            advance_timestep_srfc_gpu[bpg, tpb_2D](SOILTEMP, GR.dt)
+            advance_timestep_srfc_gpu[bpg, tpb_2D](SOILTEMP,
+                                   LWFLXNET, SWFLXNET, SOILCP,
+                                   SOILRHO, SOILDEPTH, GR.dt)
 
         elif self.target == CPU:
-            advance_timestep_srfc_cpu(SOILTEMP, GR.dt)
+            advance_timestep_srfc_cpu(SOILTEMP,
+                                   LWFLXNET, SWFLXNET, SOILCP,
+                                   SOILRHO, SOILDEPTH, GR.dt)
 
-        #if i_comp_mode == 1:
-        #    #dSOILTEMPdt = np.zeros( (GR.nx, GR.ny) , dtype=wp)
-
-        #    if i_radiation > 0:
-        #        dSOILTEMPdt = (CF.LWFLXNET[:,:,GR.nzs-1] + CF.SWFLXNET[:,:,GR.nzs-1])/ \
-        #                        (CF.SOILCP * CF.SOILRHO * CF.SOILDEPTH)
-
-        #    if i_microphysics > 0:
-        #        dSOILTEMPdt = dSOILTEMPdt - ( MIC.surf_evap_flx * MIC.lh_cond_water ) / \
-        #                                    (CF.SOILCP * CF.SOILRHO * CF.SOILDEPTH)
-
-        #    CF.SOILTEMP[:,:,0] = CF.SOILTEMP[:,:,0] + GR.dt * dSOILTEMPdt
 
         #    self.calc_albedo(GR, CF)
 
@@ -113,16 +103,6 @@ class Surface:
         #                                                / evapity_thresh), 1)
 
 
-        #elif i_comp_mode == 2:
-
-        #    #dSOILTEMPdt = cuda.device_array( (GR.nx, GR.ny, 1), dtype=GF.SOILTEMP.dtype)
-
-        #    soil_temperature_euler_forward_gpu[GR.griddim_xy_in, GR.blockdim_xy, GR.stream]\
-        #                        (dSOILTEMPdt, GF.SOILTEMP, GF.LWFLXNET, GF.SWFLXNET,
-        #                        GF.SOILCP, GF.SOILRHO, GF.SOILDEPTH, GR.dt)
-        #    if i_microphysics > 0:
-        #        raise NotImplementedError()
-
         #    calc_albedo_gpu[GR.main_griddim_xy_in, GR.blockdim_xy, GR.stream]\
         #                        (GF.SURFALBEDSW, GF.SURFALBEDLW, GF.OCEANMASK, GF.SOILTEMP)
 
@@ -131,7 +111,6 @@ class Surface:
 
 
 
-        ##############################################################################
     def calc_albedo(self, SURFALBEDSW, SURFALBEDLW, SOILTEMP, SOILMOIST, OCEANMASK):
         ## ALBEDO
         # forest
@@ -141,8 +120,10 @@ class Surface:
         SURFALBEDSW[OCEANMASK == 1] = 0.05
         SURFALBEDLW[OCEANMASK == 1] = 0.00
         # ice (land and sea)
-        SURFALBEDSW[(SOILTEMP[:,:,0] <= 273.15) & (SOILMOIST[:,:,0] > 10)] = 0.6
-        SURFALBEDLW[(SOILTEMP[:,:,0] <= 273.15) & (SOILMOIST[:,:,0] > 10)] = 0.2
+        #SURFALBEDSW[(SOILTEMP[:,:,0] <= 273.15) & (SOILMOIST[:,:,0] > 10)] = 0.6
+        #SURFALBEDLW[(SOILTEMP[:,:,0] <= 273.15) & (SOILMOIST[:,:,0] > 10)] = 0.2
+        SURFALBEDSW[(SOILTEMP[:,:,0] <= 273.15)] = 0.6
+        SURFALBEDLW[(SOILTEMP[:,:,0] <= 273.15)] = 0.2
 
 
 

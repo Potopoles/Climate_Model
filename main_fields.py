@@ -18,7 +18,7 @@ from namelist import (i_surface_scheme, nz_soil,
                       i_radiation)
 from io_read_namelist import wp, wp_int, CPU, GPU
 from io_initial_conditions import initialize_fields
-from radiation.org_radiation import Radiation
+from rad_main import Radiation
 from srfc_main import Surface
 ###############################################################################
 
@@ -83,7 +83,7 @@ class ModelFields:
     def set_field_groups(self):
 
         self.field_groups = {
-            self.ALL_FIELDS:            self.host.keys(),
+            self.ALL_FIELDS:            list(self.host.keys()),
             self.PRINT_DIAG_FIELDS:     ['COLP', 'WIND', 'POTT'],
             self.NC_OUT_DIAG_FIELDS:    ['UWIND', 'VWIND' ,'WWIND' ,'POTT',
                                          'COLP', 'PVTF' ,'PVTFVB', 'PHI',
@@ -94,9 +94,9 @@ class ModelFields:
                                          'SOILEVAPITY',
                                          'SURFALBEDSW', 'SURFALBEDLW',
                                          'RAINRATE', 'ACCRAIN'],
-            self.RAD_TO_DEVICE_FIELDS:  ['dPOTTdt_RAD', 'SWFLXNET', 'LWFLXNET'],
-            self.RAD_TO_HOST_FIELDS:    ['RHO', 'TAIR', 'PHIVB', 'SOILTEMP',
-                                         'SURFALBEDLW', 'SURFALBEDSW', 'QC'],
+            #self.RAD_TO_DEVICE_FIELDS:  ['dPOTTdt_RAD', 'SWFLXNET', 'LWFLXNET'],
+            #self.RAD_TO_HOST_FIELDS:    ['RHO', 'TAIR', 'PHIVB', 'SOILTEMP',
+            #                             'SURFALBEDLW', 'SURFALBEDSW', 'QC'],
 
 
         }
@@ -348,7 +348,8 @@ class ModelFields:
         #######################################################################
         #######################################################################
         # potential temperature change due to radiation [K s-1]
-        f['dPOTTdt_RAD']     = np.full( ( GR.nx, GR.ny, GR.nz  ), 
+        f['dPOTTdt_RAD']     = np.full(
+                                    ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
                                         np.nan, dtype=wp)
         # net longwave flux (direction?) [W m-2]
         f['LWFLXNET']        = np.full( ( GR.nx, GR.ny, GR.nzs ),
@@ -413,32 +414,4 @@ class ModelFields:
                             np.nan, dtype=wp)
 
         self.host = f
-
-
-
-
-#def copy_radiation_fields_to_device(self, GR, CF):
-#    GR.timer.start('copy')
-
-#    self.dPOTTdt_RAD      = cuda.to_device(CF.dPOTTdt_RAD,  GR.stream) 
-#    self.SWFLXNET         = cuda.to_device(CF.SWFLXNET,     GR.stream) 
-#    self.LWFLXNET         = cuda.to_device(CF.LWFLXNET,     GR.stream) 
-
-#    GR.stream.synchronize()
-
-#    GR.timer.stop('copy')
-
-#def copy_radiation_fields_to_host(self, GR):
-#    GR.timer.start('copy')
-#    self.RHO               .to_host(GR.stream)
-#    self.TAIR              .to_host(GR.stream)
-#    self.PHIVB             .to_host(GR.stream) 
-#    self.SOILTEMP          .to_host(GR.stream) 
-#    self.SURFALBEDLW       .to_host(GR.stream) 
-#    self.SURFALBEDSW       .to_host(GR.stream) 
-#    self.QC                .to_host(GR.stream) 
-
-#    GR.stream.synchronize()
-
-#    GR.timer.stop('copy')
 

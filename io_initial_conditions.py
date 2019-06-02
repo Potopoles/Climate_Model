@@ -32,8 +32,7 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
                         UWIND, VWIND, WIND, RHO,
                         PHI, PHIVB):
     if i_load_from_restart:
-        raise NotImplementedError
-        #CF, RAD, SURF, MIC, TURB = load_restart_fields(GR)
+        F, RAD, SURF, MIC, TURB = load_restart_fields(GR)
     else:
 
         #######################################################################

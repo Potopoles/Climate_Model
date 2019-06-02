@@ -64,7 +64,7 @@ i_POTT_main_switch      = 1
 i_POTT_hor_adv          = 1
 i_POTT_vert_adv         = 1
 i_POTT_num_dif          = 1
-i_POTT_radiation        = 0
+i_POTT_radiation        = 1
 i_POTT_microphys        = 0
 
 # prognostics computation of momentum
@@ -133,9 +133,9 @@ output_fields = {
 }
 
 # RESTART FILES
-i_load_from_restart = 0
-i_save_to_restart = 1
-i_restart_nth_day = 5.00
+i_load_from_restart = 1
+i_save_to_restart   = 1
+i_restart_nth_day   = 1.00
 
 ###############################################################################
 # COMPUTATION SETTINGS
@@ -146,7 +146,7 @@ CFL = 0.7
 
 # working precision
 working_precision = 'float32'
-working_precision = 'float64'
+#working_precision = 'float64'
 
 # 1: CPU, 2: GPU
 i_comp_mode = 2
@@ -161,7 +161,7 @@ i_sync_context = 1
 ###############################################################################
 # 1: testsuite equality
 # 2: longtime run
-i_simulation_mode = 1
+i_simulation_mode = 2
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 1:
@@ -179,24 +179,29 @@ if i_simulation_mode == 1:
     i_microphysics = 0
     i_turbulence = 0
 
+    ## TODO
+    #run_how = 1
+    #nz = 32
+    #i_sim_n_days = 0.01*1
+
 
 ## LONGTIME RUN
 elif i_simulation_mode == 2:
-    nz = 32
+    nz = 8
     lat0_deg = -80
     lat1_deg = 80
-    dlat_deg = 1.0
-    dlon_deg = 1.0
+    dlat_deg = 4.0
+    dlon_deg = 4.0
     output_path = '../output'
-    i_sim_n_days = 20.#*365.00
-    i_out_nth_hour = 12
+    i_sim_n_days = 5#*365.00
+    i_out_nth_hour = 24
     i_surface_scheme = 1
     i_radiation = 0
     i_microphysics = 0
     i_turbulence = 0
 
 ###############################################################################
-# DIFUSION
+# DIFFUSION
 ###############################################################################
 UVFLX_dif_coef = 0 # important
 # creates instabilities and acceleration in steep terrain
@@ -234,3 +239,37 @@ UVFLX_dif_coef *= 2.0
 
 
 
+
+
+###############################################################################
+# RADIATION
+###############################################################################
+# PSEUDO RADIATION SCHEME (not realistic but fast)
+pseudo_rad_inpRate = 0.00020
+pseudo_rad_outRate = 5.0E-7
+
+# RADIATION SCHEME
+#rad_nth_hour = 2.5
+rad_nth_hour = 3.9
+
+if i_comp_mode == 2:
+    i_async_radiation = 1
+else:
+    i_async_radiation = 0
+i_async_radiation = 0
+
+if i_async_radiation:
+    njobs_rad = 1
+else:
+    njobs_rad = 4
+
+sigma_abs_gas_SW_in = 1.7E-5
+sigma_sca_gas_SW_in = 1.72E-5 # lamb = 0.5 mym, jacobson page 301
+sigma_abs_gas_LW_in = 1.7E-4
+sigma_sca_gas_LW_in = 1.72E-7 
+
+# surface emissivity
+emissivity_surface = 1
+
+# longwave
+planck_n_lw_bins = 5

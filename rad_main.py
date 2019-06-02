@@ -4,34 +4,26 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190601
+Last modified:      20190602
 License:            MIT
 
 Main script of radiation scheme.
 ###############################################################################
 """
+import time, scipy
 import numpy as np
-import scipy
-import time
-from radiation.namelist_radiation import \
-        pseudo_rad_inpRate, pseudo_rad_outRate, \
-        rad_nth_hour, i_async_radiation, planck_n_lw_bins
-from io_constants import con_cp, con_g
-from io_read_namelist import CPU, GPU
-from radiation.shortwave import rad_solar_zenith_angle, \
-       calc_current_solar_constant
-from radiation.longwave import org_longwave
-from radiation.shortwave import org_shortwave
-import matplotlib.pyplot as plt
-
+#import matplotlib.pyplot as plt
 import multiprocessing as mp
-from radiation.namelist_radiation import njobs_rad
+
+from namelist import (pseudo_rad_inpRate, pseudo_rad_outRate,
+                      rad_nth_hour, i_async_radiation, planck_n_lw_bins,
+                      njobs_rad)
+from io_constants import con_cp, con_g
+from io_read_namelist import wp, CPU, GPU
+from rad_shortwave import (org_shortwave, rad_solar_zenith_angle,
+                           calc_current_solar_constant)
+from rad_longwave import org_longwave
 ###############################################################################
-
-
-
-
-
 
 class Radiation:
 
@@ -50,7 +42,6 @@ class Radiation:
         self.i_async_radiation = i_async_radiation
 
         self.njobs_rad = njobs_rad
-
 
         self.rad_nth_hour = rad_nth_hour 
         self.rad_nth_ts = int(self.rad_nth_hour * 3600/GR.dt)
@@ -85,7 +76,7 @@ class Radiation:
         nu1 = nu1*100 # 1/m
         dnu = (nu1 - nu0)/(nnu)
         #dnu = 5000 # 1/m
-        nus = np.arange(nu0,nu1+1,dnu)
+        nus = np.arange(nu0,nu1+1,dnu).astype(wp)
         nus_center = nus[:-1]+dnu/2
         lambdas = 1./nus
         self.planck_lambdas_center = 1./nus_center
@@ -100,7 +91,8 @@ class Radiation:
         
 
         #if GR.ts % self.rad_nth_ts == 0:
-        print('START RADIATION')
+        print('###########################################')
+        print('RADIATION START')
         self.simple_radiation(GR, **F.get(self.fields_radiation, target=CPU))
         #self.simple_radiation_par(GR, CF)
 
@@ -108,13 +100,15 @@ class Radiation:
         t_end = time.time()
         GR.timer.stop('rad')
         sim_t_end = GR.sim_time_sec
+
             
+        print('###########################################')
+        print('RADIATION DONE')
+        print('took ' + str(round(t_end-t_start,0)) + ' seconds.')
         if self.i_async_radiation:
-            print('###########################################')
-            print('RADIATION DONE')
-            print('took ' + str(round(t_end-t_start,0)) + ' seconds.')
-            print('took ' + str(round((sim_t_end-sim_t_start)/3600,1)) + ' simulated hours.')
-            print('###########################################')
+            print('took ' + str(round((sim_t_end-sim_t_start)/3600,1)) + 
+                    ' simulated hours.')
+        print('###########################################')
 
 
 
@@ -125,8 +119,8 @@ class Radiation:
                         LWFLXUP, SWDIFFLXDO, SWDIRFLXDO, SWFLXUP, SWFLXDO,
                         LWFLXNET, SWFLXNET, SWFLXDIV, LWFLXDIV, TOTFLXDIV,
                         dPOTTdt_RAD):
-        #t0 = time.time()
 
+        #GR.timer.start('prep')
         ALTVB = PHIVB / con_g
         dz = ALTVB[:,:,:-1][GR.ii,GR.jj] -  ALTVB[:,:,1:][GR.ii,GR.jj]
 
@@ -135,16 +129,13 @@ class Radiation:
         MYSUN[MYSUN < 0] = 0
         self.solar_constant = calc_current_solar_constant(GR) 
         SWINTOA = self.solar_constant * np.cos(SOLZEN)
-        #t1 = time.time()
-        #GR.rad_1 += t1 - t0
+        #GR.timer.stop('prep')
 
+        GR.timer.start('lw')
         for i in range(0,GR.nx):
-            #i = 10
             i_ref = i+GR.nb
             for j in range(0,GR.ny):
-                #j = 10
                 j_ref = j+GR.nb
-
 
                 # LONGWAVE
                 # toon et al 1989 method
@@ -153,32 +144,38 @@ class Radiation:
                 #                                TAIRVB[i_ref,j_ref,:], RHO[i_ref,j_ref], \
                 #                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
                 # self-manufactured method
-                #t0 = time.time()
-                                    #org_longwave(GR.nz, GR.nzs, dz[i,j],
                 down_diffuse, up_diffuse = \
-                            org_longwave(GR.nz, GR.nzs, dz[i,j],
+                            org_longwave(GR, GR.nz, GR.nzs, dz[i,j],
                                         TAIR[i_ref,j_ref,:],    RHO[i_ref,j_ref],
                                         SOILTEMP[i,j,0],        SURFALBEDLW[i,j,0],
                                         QC[i,j,:],
-                                        self.planck_lambdas_center, self.planck_dlambdas)
+                                        self.planck_lambdas_center,
+                                        self.planck_dlambdas)
 
                 LWFLXDO[i,j,:] = - down_diffuse
                 LWFLXUP[i,j,:] =   up_diffuse
-                #t1 = time.time()
-                #GR.rad_lw += t1 - t0
+
+        LWFLXNET[:] = LWFLXDO[:] - LWFLXUP[:] 
+        GR.timer.stop('lw')
+
+        GR.timer.start('sw')
+        for i in range(0,GR.nx):
+            i_ref = i+GR.nb
+            for j in range(0,GR.ny):
+                j_ref = j+GR.nb
 
                 # SHORTWAVE
-                #t0 = time.time()
                 if MYSUN[i,j] > 0:
 
                     # toon et al 1989 method
                     down_diffuse, up_diffuse, down_direct = \
-                                        org_shortwave(GR.nz, GR.nzs, dz[i,j], self.solar_constant,
-                                                    RHO[i_ref,j_ref],
-                                                    SWINTOA[i,j,0],
-                                                    MYSUN[i,j,0],
-                                                    SURFALBEDSW[i,j,0],
-                                                    QC[i,j,:])
+                                    org_shortwave(GR.nz, GR.nzs, dz[i,j],
+                                                self.solar_constant,
+                                                RHO[i_ref,j_ref],
+                                                SWINTOA[i,j,0],
+                                                MYSUN[i,j,0],
+                                                SURFALBEDSW[i,j,0],
+                                                QC[i,j,:])
 
                     SWDIFFLXDO[i,j,:] = - down_diffuse
                     SWDIRFLXDO[i,j,:] = - down_direct
@@ -189,14 +186,11 @@ class Radiation:
                     SWDIRFLXDO[i,j,:] = 0
                     SWFLXUP   [i,j,:] = 0
                     SWFLXDO   [i,j,:] = 0
-                #t1 = time.time()
-                #GR.rad_sw += t1 - t0
 
+        SWFLXNET[:] = SWFLXDO[:] - SWFLXUP[:] 
+        GR.timer.stop('sw')
 
-        #t0 = time.time()
-        LWFLXNET = LWFLXDO - LWFLXUP 
-        SWFLXNET = SWFLXDO - SWFLXUP 
-
+        #GR.timer.start('finish')
         for k in range(0,GR.nz):
 
             SWFLXDIV[:,:,k] = ( SWFLXNET[:,:,k] - SWFLXNET[:,:,k+1] ) \
@@ -205,11 +199,9 @@ class Radiation:
                                / dz[:,:,k]
             TOTFLXDIV[:,:,k] = SWFLXDIV[:,:,k] + LWFLXDIV[:,:,k]
             
-            dPOTTdt_RAD[:,:,k] = 1/(con_cp * RHO[:,:,k][GR.ii,GR.jj]) * \
+            dPOTTdt_RAD[GR.ii,GR.jj,k] = 1/(con_cp * RHO[:,:,k][GR.ii,GR.jj]) * \
                                                 TOTFLXDIV[:,:,k]
-        #t1 = time.time()
-        #GR.rad_2 += t1 - t0
-
+        #GR.timer.stop('finish')
 
 
 

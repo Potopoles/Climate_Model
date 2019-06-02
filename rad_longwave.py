@@ -1,13 +1,29 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+###############################################################################
+Author:             Christoph Heim
+Date created:       20181001
+Last modified:      20190602
+License:            MIT
+
+Organize computation of longwave radiation.
+###############################################################################
+"""
 import numpy as np
 import time
 import scipy
 from io_constants import con_h, con_c, con_kb
-from radiation.namelist_radiation import  \
-                            sigma_abs_gas_LW_in, sigma_sca_gas_LW_in, \
-                            emissivity_surface, planck_n_lw_bins
-from bin.longwave_cython import calc_planck_intensity_c, calc_surface_emission_c, \
-                                rad_calc_LW_RTE_matrix_c
+from namelist import (sigma_abs_gas_LW_in, sigma_sca_gas_LW_in,
+                      emissivity_surface, planck_n_lw_bins)
+from io_read_namelist import wp
+from bin.rad_longwave_cython import (calc_planck_intensity_c,
+                                     calc_surface_emission_c, 
+                                     rad_calc_LW_RTE_matrix_c)
 
+
+#from namelist import run_how
+run_how = 1
 
 ###################################################################################
 ###################################################################################
@@ -15,16 +31,18 @@ from bin.longwave_cython import calc_planck_intensity_c, calc_surface_emission_c
 ###################################################################################
 ###################################################################################
 
-def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_col,
+def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf,
+                albedo_surface_LW, qc_col,
                 planck_lambdas_center, planck_dlambdas):
 
+    #GR.timer.start('01')
     # LONGWAVE
     g_a = 0.0
     #albedo_surface_LW = 1
     #qc_col = np.minimum(qc_col, 0.003)
-    sigma_abs_gas_LW = np.repeat(sigma_abs_gas_LW_in, nz)
+    sigma_abs_gas_LW = np.repeat(sigma_abs_gas_LW_in, nz).astype(wp)
     #sigma_abs_gas_LW = sigma_abs_gas_LW + qc_col*1E-5
-    sigma_sca_gas_LW = np.repeat(sigma_sca_gas_LW_in, nz)
+    sigma_sca_gas_LW = np.repeat(sigma_sca_gas_LW_in, nz).astype(wp)
     #sigma_sca_gas_LW = sigma_sca_gas_LW + qc_col*1E-5
     sigma_tot_LW = sigma_abs_gas_LW + sigma_sca_gas_LW
 
@@ -40,35 +58,50 @@ def org_longwave(nz, nzs, dz, tair_col, rho_col, tsurf, albedo_surface_LW, qc_co
     # quadrature
     my1 = 1/np.sqrt(3)
 
-    gamma1 = np.zeros(nz)
+    gamma1 = np.zeros(nz, dtype=wp)
     gamma1[:] = ( 1 - omega_s*(1+g_a)/2 ) / my1
 
-    gamma2 = np.zeros(nz)
+    gamma2 = np.zeros(nz, dtype=wp)
     gamma2[:] = omega_s*(1-g_a) / (2*my1)
+    #GR.timer.stop('01')
 
+    #GR.timer.start('02')
     # emission fields
-    #B_air = 2*np.pi * (1 - omega_s) * \
-    #        calc_planck_intensity(tair_col, planck_lambdas_center, planck_dlambdas)
-    B_air = np.asarray(calc_planck_intensity_c(tair_col, omega_s, \
+    if run_how == 0:
+        B_air = 2*np.pi * (1 - omega_s) * \
+            calc_planck_intensity(tair_col, planck_lambdas_center,
+                                    planck_dlambdas)
+    elif run_how == 1:
+        B_air = np.asarray(calc_planck_intensity_c(tair_col, omega_s, \
                                 planck_lambdas_center, planck_dlambdas))
+    #GR.timer.stop('02')
 
-    #B_surf = emissivity_surface * np.pi * \
-    #        calc_planck_intensity(tsurf, planck_lambdas_center, planck_dlambdas)
-    B_surf = calc_surface_emission_c(tsurf, \
-                    planck_lambdas_center, planck_dlambdas)
+    #GR.timer.start('03')
+    #if run_how == 0:
+    B_surf = emissivity_surface * np.pi * \
+        calc_planck_intensity(tsurf, planck_lambdas_center,
+                            planck_dlambdas)
+    #elif run_how == 1:
+    #    B_surf = calc_surface_emission_c(tsurf, \
+    #                planck_lambdas_center, planck_dlambdas)
+    #GR.timer.stop('03')
 
+    #GR.timer.start('04')
     # calculate radiative fluxes
-    #A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
-    #                    B_air, B_surf, albedo_surface_LW)
-    A_mat, g_vec = rad_calc_LW_RTE_matrix_c(nz, nzs, dtau, gamma1, gamma2,
+    if run_how == 0:
+        A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
                         B_air, B_surf, albedo_surface_LW)
-    A_mat = np.asarray(A_mat)
-    g_vec = np.asarray(g_vec)
+    elif run_how == 1:
+        A_mat, g_vec = rad_calc_LW_RTE_matrix_c(nz, nzs, dtau, gamma1, gamma2,
+                            B_air, B_surf, albedo_surface_LW)
+        A_mat = np.asarray(A_mat)
+        g_vec = np.asarray(g_vec)
+    #GR.timer.stop('04')
 
-
-
+    #GR.timer.start('05')
     #fluxes = scipy.sparse.linalg.spsolve(A_mat, g_vec)
     fluxes = scipy.linalg.solve_banded((2,2), A_mat, g_vec)
+    #GR.timer.stop('05')
 
     up_diffuse = fluxes[range(1,len(fluxes),2)]
     down_diffuse = - fluxes[range(0,len(fluxes),2)]

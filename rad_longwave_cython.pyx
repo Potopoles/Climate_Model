@@ -1,7 +1,7 @@
 import numpy as np
 import cython
 from io_read_namelist import wp_str
-from radiation.namelist_radiation import njobs_rad, planck_n_lw_bins, emissivity_surface
+from namelist import njobs_rad, planck_n_lw_bins, emissivity_surface
 from io_constants import con_c, con_h, con_kb
 from libc.math cimport exp, pi
 

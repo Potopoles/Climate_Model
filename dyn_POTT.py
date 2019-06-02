@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190531
+Last modified:      20190602
 License:            MIT
 
 Computation of potential virtual temperature (POTT) tendency
@@ -20,8 +20,8 @@ import cupy as cp
 from numba import cuda, njit, prange, vectorize
 
 from namelist import (i_POTT_main_switch,
-                    i_POTT_radiation, i_POTT_microphys,
-                    i_POTT_hor_adv, i_POTT_vert_adv, i_POTT_num_dif)
+                      i_POTT_hor_adv, i_POTT_vert_adv, i_POTT_num_dif)
+from io_read_namelist import i_POTT_radiation, i_POTT_microphys
 from io_read_namelist import (wp, wp_int)
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 from misc_gpu_functions import cuda_kernel_decorator
@@ -34,10 +34,8 @@ from dyn_functions import (hor_adv_py, vert_adv_py,
 ###############################################################################
 ### DEVICE UNSPECIFIC PYTHON FUNCTIONS
 ###############################################################################
-def radiation():
-    raise NotImplementedError()
-#    dPOTTdt[i,j,k] = dPOTTdt[i,j,k] + \
-#                        dPOTTdt_RAD[i-1,j-1,k]*COLP[i,j] # TODO add boundaries
+def radiation_py(dPOTTdt_RAD, COLP):
+    return(dPOTTdt_RAD * COLP)
 
 
 def microphysics():
@@ -53,7 +51,7 @@ def add_up_tendencies_py(
             UFLX, UFLX_ip1, VFLX, VFLX_jp1,
             COLP, COLP_im1, COLP_ip1, COLP_jm1, COLP_jp1,
             POTTVB, POTTVB_kp1, WWIND, WWIND_kp1,
-            COLP_NEW, A, dsigma, POTT_dif_coef, k):
+            COLP_NEW, dPOTTdt_RAD, A, dsigma, POTT_dif_coef, k):
 
     dPOTTdt = wp(0.)
 
@@ -81,6 +79,9 @@ def add_up_tendencies_py(
                 COLP, COLP_im1, COLP_ip1,
                 COLP_jm1, COLP_jp1,
                 POTT_dif_coef)
+        # RADIATION
+        if i_POTT_radiation:
+            dPOTTdt = dPOTTdt + radiation(dPOTTdt_RAD, COLP)
 
     return(dPOTTdt)
 
@@ -95,11 +96,12 @@ def add_up_tendencies_py(
 hor_adv = njit(hor_adv_py, device=True, inline=True)
 num_dif = njit(num_dif_pw_py, device=True, inline=True)
 vert_adv = njit(vert_adv_py, device=True, inline=True)
+radiation = njit(radiation_py, device=True, inline=True)
 add_up_tendencies = njit(add_up_tendencies_py, device=True, inline=True)
 
 def launch_cuda_kernel(A, dsigma, POTT_dif_coef,
                         dPOTTdt, POTT, UFLX, VFLX, COLP,
-                         POTTVB, WWIND, COLP_NEW):
+                         POTTVB, WWIND, COLP_NEW, dPOTTdt_RAD):
 
     i, j, k = cuda.grid(3)
     if i >= nb and i < nx+nb and j >= nb and j < ny+nb:
@@ -114,7 +116,8 @@ def launch_cuda_kernel(A, dsigma, POTT_dif_coef,
             COLP[i  ,j-1,0], COLP[i  ,j+1,0],
             POTTVB[i  ,j  ,k], POTTVB[i  ,j  ,k+1],
             WWIND[i  ,j  ,k], WWIND[i  ,j  ,k+1],
-            COLP_NEW[i  ,j  ,0], A[i  ,j  ,0],
+            COLP_NEW[i  ,j  ,0], dPOTTdt_RAD[i  ,j  ,k],
+            A[i  ,j  ,0],
             dsigma[0  ,0  ,k], POTT_dif_coef[0  ,0  ,k], k)
 
 
@@ -129,11 +132,12 @@ POTT_tendency_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel))\
 hor_adv = njit(hor_adv_py)
 vert_adv = njit(vert_adv_py)
 num_dif = njit(num_dif_pw_py)
+radiation = njit(radiation_py)
 add_up_tendencies = njit(add_up_tendencies_py)
 
 def launch_numba_cpu(A, dsigma, POTT_dif_coef,
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
-                         POTTVB, WWIND, COLP_NEW):
+                    POTTVB, WWIND, COLP_NEW, dPOTTdt_RAD):
 
     for i in prange(nb,nx+nb):
         for j in range(nb,ny+nb):
@@ -149,7 +153,8 @@ def launch_numba_cpu(A, dsigma, POTT_dif_coef,
                         COLP[i  ,j-1,0], COLP[i  ,j+1,0],
                         POTTVB[i  ,j  ,k], POTTVB[i  ,j  ,k+1],
                         WWIND[i  ,j  ,k], WWIND[i  ,j  ,k+1],
-                        COLP_NEW[i  ,j  ,0], A[i  ,j  ,0],
+                        COLP_NEW[i  ,j  ,0], dPOTTdt_RAD[i  ,j  ,k],
+                        A[i  ,j  ,0],
                         dsigma[0  ,0  ,k], POTT_dif_coef[0  ,0  ,k], k)
 
 

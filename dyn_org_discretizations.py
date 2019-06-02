@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190531
+Last modified:      20190602
 License:            MIT
 
 SPATIAL DISCRETIZATION
@@ -64,7 +64,8 @@ class TendencyFactory:
                                   'UWIND', 'VWIND', 'WWIND',
                                   'COLP', 'dCOLPdt', 'COLP_NEW', 'COLP_OLD']
         self.fields_temperature = ['dPOTTdt', 'POTT', 'UFLX', 'VFLX',
-                             'COLP', 'POTTVB', 'WWIND', 'COLP_NEW']
+                             'COLP', 'POTTVB', 'WWIND', 'COLP_NEW',
+                             'dPOTTdt_RAD']
         self.fields_momentum = ['dUFLXdt', 'dVFLXdt',
                         'UWIND', 'VWIND', 'WWIND',
                         'UFLX', 'VFLX',
@@ -110,19 +111,19 @@ class TendencyFactory:
 
     def temperature(self, GRF,
                     dPOTTdt, POTT, UFLX, VFLX,
-                    COLP, POTTVB, WWIND, COLP_NEW):
+                    COLP, POTTVB, WWIND, COLP_NEW, dPOTTdt_RAD):
         """
         """
         if self.target == GPU:
             POTT_tendency_gpu[bpg, tpb](GRF['A'], GRF['dsigma'],
                     GRF['POTT_dif_coef'],
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
-                    POTTVB, WWIND, COLP_NEW)
+                    POTTVB, WWIND, COLP_NEW, dPOTTdt_RAD)
         elif self.target == CPU:
             POTT_tendency_cpu(GRF['A'], GRF['dsigma'],
                     GRF['POTT_dif_coef'],
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
-                    POTTVB, WWIND, COLP_NEW)
+                    POTTVB, WWIND, COLP_NEW, dPOTTdt_RAD)
 
 
     def momentum(self, GRF,

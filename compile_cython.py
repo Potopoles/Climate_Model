@@ -27,7 +27,7 @@ all = ['wind_cython',
 
 all_par = ['wind_cython_par']
 
-all_rad = ['longwave_cython']
+all_rad = ['rad_longwave_cython']
 
 #strings = all_par
 strings = all
@@ -41,8 +41,8 @@ strings = all_rad
 #strings = ['continuity_cython']
 #strings = ['jacobson_cython']
 
-#folder = ''
-folder = 'radiation/'
+folder = ''
+#folder = 'radiation/'
 
 for string in strings:
     if remove_existing:

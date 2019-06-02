@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190601
+Last modified:      20190602
 License:            MIT
 
 Load namelist and process variables if necessary such that
@@ -17,7 +17,8 @@ from namelist import (working_precision,
                     UVFLX_dif_coef, POTT_dif_coef, COLP_dif_coef,
                     i_comp_mode, nb, lon0_deg, lon1_deg,
                     pair_top, i_time_stepping, nz_soil,
-                    i_radiation, i_surface_scheme)
+                    i_radiation, i_surface_scheme,
+                    i_POTT_radiation, i_POTT_microphys)
 ###############################################################################
 
 ###############################################################################
@@ -57,6 +58,11 @@ else:
 # names of host and device
 CPU = 'CPU'
 GPU = 'GPU'
+
+if i_POTT_radiation and not i_radiation:
+    i_POTT_radiation = 0
+if i_POTT_microphys and not i_microphys:
+    i_POTT_microphys = 0
 
 ###############################################################################
 # PHYSICAL PROPERTIES

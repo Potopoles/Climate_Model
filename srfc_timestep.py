@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190601
-Last modified:      20190601
+Last modified:      20190602
 License:            MIT
 
 Time step in surface scheme.
@@ -14,9 +14,9 @@ Tendencies are only implemented for 1 soil layer (nz_soil = 1)
 """
 from numba import cuda, njit, prange
 #import numpy as np
-#from namelist import i_radiation, i_microphysics
+from namelist import i_radiation#, i_microphysics
 from io_read_namelist import wp, wp_str
-from main_grid import nx,ny
+from main_grid import nx,ny,nzs
 from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 
@@ -24,26 +24,31 @@ from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 ### DEVICE UNSPECIFIC PYTHON FUNCTIONS
 ###############################################################################
-def tendency_SOILTEMP_py():
+def tendency_SOILTEMP_py(LWFLXNET_srfc, SWFLXNET_srfc,
+                         SOILCP, SOILRHO, SOILDEPTH):
 
     dSOILTEMPdt = wp(0.)
 
-    #if i_radiation:
-    #    dSOILTEMPdt += (LWFLXNET[i,j,nzs-1] + SWFLXNET[i,j,nzs-1])/ \
-    #                    (SOILCP[i,j] * SOILRHO[i,j] * SOILDEPTH[i,j])
+    if i_radiation:
+        dSOILTEMPdt += ( (LWFLXNET_srfc + SWFLXNET_srfc) /
+                         (SOILCP * SOILRHO * SOILDEPTH) )
+
+    #dSOILTEMPdt = wp(0.0001)
 
     #if i_microphysics > 0:
     #    dSOILTEMPdt = dSOILTEMPdt - ( MIC.surf_evap_flx * MIC.lh_cond_water ) / \
     #                                (CF.SOILCP * CF.SOILRHO * CF.SOILDEPTH)
-    dSOILTEMPdt = wp(0.0001)
     return(dSOILTEMPdt)
 
 
 def timestep_SOILTEMP_py(SOILTEMP, dSOILTEMPdt, dt):
     return(SOILTEMP + dt * dSOILTEMPdt)
 
-def run_full_timestep_py(SOILTEMP, dt):
-    dSOILTEMPdt     = tendency_SOILTEMP()
+
+def run_full_timestep_py(SOILTEMP, LWFLXNET_srfc, SWFLXNET_srfc,
+                         SOILCP, SOILRHO, SOILDEPTH, dt):
+    dSOILTEMPdt     = tendency_SOILTEMP(LWFLXNET_srfc, SWFLXNET_srfc,
+                                        SOILCP, SOILRHO, SOILDEPTH)
     SOILTEMP        = timestep_SOILTEMP(SOILTEMP, dSOILTEMPdt, dt)
     return(SOILTEMP)
 
@@ -89,11 +94,15 @@ def run_full_timestep_py(SOILTEMP, dt):
 tendency_SOILTEMP = njit(tendency_SOILTEMP_py, device=True, inline=True)
 timestep_SOILTEMP = njit(timestep_SOILTEMP_py, device=True, inline=True)
 run_full_timestep = njit(run_full_timestep_py, device=True, inline=True)
-def launch_cuda_kernel(SOILTEMP, dt):
+def launch_cuda_kernel(SOILTEMP, LWFLXNET, SWFLXNET, SOILCP,
+                       SOILRHO, SOILDEPTH, dt):
 
     i, j = cuda.grid(2)
     if i < nx and j < ny:
-        SOILTEMP[i,j,0] = run_full_timestep(SOILTEMP[i,j,0], dt) 
+        SOILTEMP[i,j,0] = run_full_timestep(SOILTEMP[i,j,0],
+                          LWFLXNET[i,j,nzs-1], SWFLXNET[i,j,nzs-1],
+                          SOILCP[i,j,0], SOILRHO[i,j,0],
+                          SOILDEPTH[i,j,0], dt) 
 
 advance_timestep_srfc_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel,
                             non_3D={'dt':wp_str}))(launch_cuda_kernel)
@@ -107,10 +116,14 @@ advance_timestep_srfc_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel,
 tendency_SOILTEMP = njit(tendency_SOILTEMP_py)
 timestep_SOILTEMP = njit(timestep_SOILTEMP_py)
 run_full_timestep = njit(run_full_timestep_py)
-def launch_numba_cpu(SOILTEMP, dt):
+def launch_numba_cpu(SOILTEMP, LWFLXNET, SWFLXNET, SOILCP,
+                       SOILRHO, SOILDEPTH, dt):
 
     for i in prange(nx):
         for j in range(ny):
-            SOILTEMP[i,j,0] = run_full_timestep(SOILTEMP[i,j,0], dt) 
+            SOILTEMP[i,j,0] = run_full_timestep(SOILTEMP[i,j,0],
+                          LWFLXNET[i,j,nzs-1], SWFLXNET[i,j,nzs-1],
+                          SOILCP[i,j,0], SOILRHO[i,j,0],
+                          SOILDEPTH[i,j,0], dt) 
 
 advance_timestep_srfc_cpu = njit(parallel=True)(launch_numba_cpu) 

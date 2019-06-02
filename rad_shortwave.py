@@ -1,9 +1,21 @@
-import numpy as np
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+"""
+###############################################################################
+Author:             Christoph Heim
+Date created:       20181001
+Last modified:      20190602
+License:            MIT
+
+Organize computation of shortwave radiation.
+###############################################################################
+"""
 import scipy
+import numpy as np
 from datetime import timedelta
+
 from io_constants import solar_constant_0
-from radiation.namelist_radiation import \
-                            sigma_abs_gas_SW_in, sigma_sca_gas_SW_in
+from namelist import sigma_abs_gas_SW_in, sigma_sca_gas_SW_in
 
 
 ###################################################################################

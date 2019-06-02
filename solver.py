@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190601
+Last modified:      20190602
 License:            MIT
 
 Simple global climate model, hydrostatic and on a lat-lon grid.
@@ -47,6 +47,10 @@ if i_comp_mode == 1:
     Diagnostics = DiagnosticsFactory(target=CPU)
 elif i_comp_mode == 2:
     Diagnostics = DiagnosticsFactory(target=GPU)
+
+#import numba
+#print(numba.config.NUMBA_DEFAULT_NUM_THREADS)
+#quit()
 
 ####################################################################
 # CREATE MODEL GRID
@@ -99,41 +103,28 @@ while GR.ts < GR.nts:
     ####################################################################
     # RADIATION
     ####################################################################
+
     if i_radiation:
         # Asynchroneous Radiation
         if F.RAD.i_async_radiation:
             if F.RAD.done == 1:
                 if i_comp_mode == 2:
+                    raise NotImplementedError(
+                        'Copying not working for async and gpu')
+                    F.copy_host_to_device(F.ALL_FIELDS)
+                    F.copy_device_to_host(F.ALL_FIELDS)
 
-                    F.copy_host_to_device(F.RAD_TO_DEVICE_FIELDS)
-                    F.copy_device_to_host(F.RAD_TO_HOST_FIELDS)
-                    #GF.copy_radiation_fields_to_device(GR, F)
-                    #GF.copy_radiation_fields_to_host(GR)
                 F.RAD.done = 0
                 _thread.start_new_thread(F.RAD.calc_radiation, (GR, F))
         # Synchroneous Radiation
         else:
             if GR.ts % F.RAD.rad_nth_ts == 0:
                 if i_comp_mode == 2:
-                    GF.copy_radiation_fields_to_host(GR)
+                    F.copy_device_to_host(F.ALL_FIELDS)
                 F.RAD.calc_radiation(GR, F)
                 if i_comp_mode == 2:
-                    GF.copy_radiation_fields_to_device(GR, F)
+                    F.copy_host_to_device(F.ALL_FIELDS)
 
-    #print('RADIATION timerstarts:')
-    #try:
-    #    tot = GR.rad_1 + GR.rad_2 + GR.rad_lw + GR.rad_lwsolv + GR.rad_sw
-    #    print(tot)
-    #    print('rad_1     :  ' + str(int(100*GR.rad_1/tot)) + '\t\t' + str(GR.rad_1))
-    #    print('rad_2     :  ' + str(int(100*GR.rad_2/tot)) + '\t\t' + str(GR.rad_2))
-    #    print('rad_lw    :  ' + str(int(100*GR.rad_lw/tot)) + '\t\t' + str(GR.rad_lw))
-    #    print('rad_lwsolv:  ' + str(int(100*GR.rad_lwsolv/tot)) + '\t\t' + str(GR.rad_lwsolv))
-    #    print('rad_sw    :  ' + str(int(100*GR.rad_sw/tot)) + '\t\t' + str(GR.rad_sw))
-    #except ZeroDivisionError:
-    #    pass
-    #print('RADIATION timersend:')
-    #quit()
-    
 
     ####################################################################
     # EARTH SURFACE
@@ -182,14 +173,15 @@ while GR.ts < GR.nts:
     # WRITE RESTART FILE
     ####################################################################
     if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
-        pass
         # copy GPU fields to CPU
-        #if i_comp_mode == 2:
-        #    GF.copy_all_fields_to_host(GR)
+        if i_comp_mode == 2:
+            F.copy_device_to_host(F.ALL_FIELDS)
 
-        #GR.timer.start('IO')
-        #write_restart(GR, CF, RAD, SURF, MIC, TURB)
-        #GR.timer.stop('IO')
+        # write file
+        GR.timer.start('IO')
+        GR.nc_output_count += 1
+        write_restart(GR, F)
+        GR.timer.stop('IO')
 
     GR.timer.stop('total')
 # TIME LOOP STOP
