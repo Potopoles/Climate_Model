@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190518
-Last modified:      20190531
+Last modified:      20190604
 License:            MIT
 
 Prepare computation of horizontal momentum flux tendencies
@@ -17,14 +17,14 @@ Chapter 7.4, page 214ff
 """
 import time
 import numpy as np
-import cupy as cp
 from math import sin, cos
 from numba import cuda, njit, prange
 
 from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
-from io_read_namelist import (wp, wp_int)
+from io_read_namelist import (wp, wp_int, gpu_enable)
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
-from misc_gpu_functions import cuda_kernel_decorator
+if gpu_enable:
+    from misc_gpu_functions import cuda_kernel_decorator
 from dyn_functions import (interp_WWIND_UVWIND_py,
                     calc_momentum_fluxes_isjs_py, calc_momentum_fluxes_ijs_py,
                     calc_momentum_fluxes_isj_py, calc_momentum_fluxes_ij_py)
@@ -168,9 +168,10 @@ def launch_cuda_prep_adv_kernel(WWIND_UWIND, WWIND_VWIND,
                                         VFLX_ip1_jp1, VFLX_jm1,
                                         VFLX_jp1)
 
-UVFLX_prep_adv_gpu = cuda.jit(cuda_kernel_decorator(
-                    launch_cuda_prep_adv_kernel))(
-                    launch_cuda_prep_adv_kernel)
+if gpu_enable:
+    UVFLX_prep_adv_gpu = cuda.jit(cuda_kernel_decorator(
+                        launch_cuda_prep_adv_kernel))(
+                        launch_cuda_prep_adv_kernel)
 
 ###############################################################################
 

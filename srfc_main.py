@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190601
+Last modified:      20190604
 License:            MIT
 
 Main script of surface scheme.
@@ -15,9 +15,11 @@ import numpy as np
 from numba import cuda
 
 from namelist import i_comp_mode, i_radiation, i_microphysics
-from io_read_namelist import wp, GPU, CPU
+from io_read_namelist import wp, GPU, CPU, gpu_enable
 from main_grid import tpb_2D, bpg
-from srfc_timestep import advance_timestep_srfc_gpu, advance_timestep_srfc_cpu
+from srfc_timestep import advance_timestep_srfc_cpu
+if gpu_enable:
+    from srfc_timestep import advance_timestep_srfc_gpu
 ###############################################################################
 
 ###############################################################################

@@ -17,13 +17,15 @@ from io_constants import con_h, con_c, con_kb
 from namelist import (sigma_abs_gas_LW_in, sigma_sca_gas_LW_in,
                       emissivity_surface, planck_n_lw_bins)
 from io_read_namelist import wp
-from bin.rad_longwave_cython import (calc_planck_intensity_c,
-                                     calc_surface_emission_c, 
-                                     rad_calc_LW_RTE_matrix_c)
-
 
 #TODO
-run_how = 1
+run_cython = 0
+if run_cython:
+    from bin.rad_longwave_cython import (calc_planck_intensity_c,
+                                         calc_surface_emission_c, 
+                                         rad_calc_LW_RTE_matrix_c)
+
+
 
 ###################################################################################
 ###################################################################################
@@ -67,31 +69,31 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf,
 
     #GR.timer.start('02')
     # emission fields
-    if run_how == 0:
+    if run_cython == 0:
         B_air = 2*np.pi * (1 - omega_s) * \
             calc_planck_intensity(tair_col, planck_lambdas_center,
                                     planck_dlambdas)
-    elif run_how == 1:
+    elif run_cython == 1:
         B_air = np.asarray(calc_planck_intensity_c(tair_col, omega_s, \
                                 planck_lambdas_center, planck_dlambdas))
     #GR.timer.stop('02')
 
     #GR.timer.start('03')
-    #if run_how == 0:
+    #if run_cython == 0:
     B_surf = emissivity_surface * np.pi * \
         calc_planck_intensity(tsurf, planck_lambdas_center,
                             planck_dlambdas)
-    #elif run_how == 1:
+    #elif run_cython == 1:
     #    B_surf = calc_surface_emission_c(tsurf, \
     #                planck_lambdas_center, planck_dlambdas)
     #GR.timer.stop('03')
 
     #GR.timer.start('04')
     # calculate radiative fluxes
-    if run_how == 0:
+    if run_cython == 0:
         A_mat, g_vec = rad_calc_LW_RTE_matrix(nz, nzs, dtau, gamma1, gamma2,
                         B_air, B_surf, albedo_surface_LW)
-    elif run_how == 1:
+    elif run_cython == 1:
         A_mat, g_vec = rad_calc_LW_RTE_matrix_c(nz, nzs, dtau, gamma1, gamma2,
                             B_air, B_surf, albedo_surface_LW)
         A_mat = np.asarray(A_mat)

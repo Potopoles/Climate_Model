@@ -4,18 +4,19 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190531
+Last modified:      20190604
 License:            MIT
 
 Perform a matsuno time integration.
 ###############################################################################
 """
 from namelist import i_comp_mode
-from io_read_namelist import CPU, GPU
+from io_read_namelist import CPU, GPU, gpu_enable
 from main_grid import tpb, bpg
-from misc_gpu_functions import set_equal
 from dyn_tendencies import compute_tendencies
 from dyn_org_discretizations import (PrognosticsFactory, DiagnosticsFactory) 
+if gpu_enable:
+    from misc_gpu_functions import set_equal
 ###############################################################################
 if i_comp_mode == 1:
     Prognostics = PrognosticsFactory(target=CPU)

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190529
-Last modified:      20190531
+Last modified:      20190604
 License:            MIT
 
 Functions for prognostic step for both CPU and GPU.
@@ -12,15 +12,15 @@ Functions for prognostic step for both CPU and GPU.
 """
 import time
 import numpy as np
-import cupy as cp
 from numba import cuda, njit, prange
 from math import pow
 
 from namelist import (pair_top)
-from io_read_namelist import (wp, wp_str, wp_int)
+from io_read_namelist import (wp, wp_str, wp_int, gpu_enable)
 from io_constants import con_g, con_Rd, con_kappa, con_cp
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
-from misc_gpu_functions import cuda_kernel_decorator
+if gpu_enable:
+    from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 
 
@@ -173,8 +173,9 @@ def make_timestep_gpu(COLP, COLP_OLD,
                 A        [i+1,j-1,0  ], A        [i+1,j+1,0  ],   
                 dt, j)
 
-make_timestep_gpu = cuda.jit(cuda_kernel_decorator(make_timestep_gpu,
-                        non_3D={'dt':wp_str}))(make_timestep_gpu)
+if gpu_enable:
+    make_timestep_gpu = cuda.jit(cuda_kernel_decorator(make_timestep_gpu,
+                            non_3D={'dt':wp_str}))(make_timestep_gpu)
 
 
 

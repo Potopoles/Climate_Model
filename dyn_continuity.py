@@ -21,11 +21,12 @@ import numpy as np
 from numba import cuda, njit, prange, vectorize
 
 from namelist import (i_COLP_main_switch)
-from io_read_namelist import (wp_str, wp, wp_numba, wp_int)
+from io_read_namelist import (wp_str, wp, wp_numba, wp_int, gpu_enable)
 from main_grid import (nx,nxs,ny,nys,nz,nzs,nb,
                   shared_nz)
-from misc_gpu_functions import cuda_kernel_decorator
 from dyn_functions import euler_forward_py
+if gpu_enable:
+    from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 
 
@@ -50,10 +51,6 @@ calc_VFLX       = njit(calc_VFLX_py, device=True, inline=True)
 calc_FLXDIV     = njit(calc_FLXDIV_py, device=True, inline=True)
 euler_forward   = njit(euler_forward_py, device=True, inline=True)
 
-#sum_reduce = cuda.reduce(lambda a, b: a + b)
-@cuda.reduce
-def sum_reduce(a, b):
-    return(a+b)
 
 def launch_cuda_main_kernel(UFLX, VFLX, FLXDIV,
                     UWIND, VWIND, WWIND,
@@ -138,7 +135,8 @@ def launch_cuda_main_kernel(UFLX, VFLX, FLXDIV,
         cuda.syncthreads()
 
 
-continuity_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_main_kernel,
+if gpu_enable:
+    continuity_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_main_kernel,
                     non_3D={'dt':wp_str}))(launch_cuda_main_kernel)
 
 

@@ -14,9 +14,10 @@ Tendencies are only implemented for 1 soil layer (nz_soil = 1)
 """
 from numba import cuda, njit, prange
 from namelist import i_radiation#, i_microphysics
-from io_read_namelist import wp, wp_str, wp_int
+from io_read_namelist import wp, wp_str, wp_int, gpu_enable
 from main_grid import nx,ny,nzs
-from misc_gpu_functions import cuda_kernel_decorator
+if gpu_enable:
+    from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 
 
@@ -101,13 +102,11 @@ def launch_cuda_kernel(SOILTEMP, LWFLXNET, SWFLXNET, SOILCP,
                           SOILCP[i,j,0], SOILRHO[i,j,0],
                           SOILDEPTH[i,j,0], OCEANMASK[i,j,0], dt) 
 
-advance_timestep_srfc_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel,
-                        non_3D={'dt':wp_str,'OCEANMASK':'int32[:,:,:]'}))(
-                        launch_cuda_kernel)
-#advance_timestep_srfc_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel,
-#                        non_3D={'dt':wp_str}))(launch_cuda_kernel)
-
-
+if gpu_enable:
+    advance_timestep_srfc_gpu = cuda.jit(cuda_kernel_decorator(
+                    launch_cuda_kernel,
+                    non_3D={'dt':wp_str,'OCEANMASK':'int32[:,:,:]'}))(
+                    launch_cuda_kernel)
 
 
 ###############################################################################

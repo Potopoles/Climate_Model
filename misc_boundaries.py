@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190531
+Last modified:      20190604
 License:            MIT
 
 Functions to implement lateral boundary conditions for both GPU and CPU.
@@ -13,9 +13,10 @@ Functions to implement lateral boundary conditions for both GPU and CPU.
 import numpy as np
 from numba import njit, cuda
 
-from io_read_namelist import wp
-from misc_gpu_functions import cuda_kernel_decorator
+from io_read_namelist import wp, gpu_enable
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
+if gpu_enable:
+    from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 
 def exchange_BC_cpu(FIELD):
@@ -72,6 +73,8 @@ def exchange_BC_gpu(FIELD):
                 FIELD[i,j,k] = FIELD[i,1,k] 
             elif j == ny+1:
                 FIELD[i,j,k] = FIELD[i,ny,k] 
-exchange_BC_gpu = cuda.jit(cuda_kernel_decorator(
-                            exchange_BC_gpu))(exchange_BC_gpu)
+
+if gpu_enable:
+    exchange_BC_gpu = cuda.jit(cuda_kernel_decorator(
+                        exchange_BC_gpu))(exchange_BC_gpu)
 

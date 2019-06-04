@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190528
-Last modified:      20190531
+Last modified:      20190604
 License:            MIT
 
 Jacobson 2005
@@ -14,14 +14,14 @@ Chapter 7.6, page 221ff
 """
 import time
 import numpy as np
-import cupy as cp
 from numba import cuda, njit, prange
 from math import pow
 
-from io_read_namelist import (wp, wp_int, pair_top)
+from io_read_namelist import (wp, wp_int, pair_top, gpu_enable)
 from io_constants import con_g, con_Rd, con_kappa, con_cp
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
-from misc_gpu_functions import cuda_kernel_decorator
+if gpu_enable:
+    from misc_gpu_functions import cuda_kernel_decorator
 ###############################################################################
 
 
@@ -54,8 +54,9 @@ def diag_PVTF_gpu(COLP, PVTF, PVTFVB, sigma_vb):
         PVTFVB[i,j,k] = pow( pairvb_km12/wp(100000.) , con_kappa )
         if k == nz-1:
             PVTFVB[i,j,k+1] = pow( pairvb_kp12/wp(100000.) , con_kappa )
-diag_PVTF_gpu = cuda.jit(cuda_kernel_decorator(
-                        diag_PVTF_gpu))(diag_PVTF_gpu)
+if gpu_enable:
+    diag_PVTF_gpu = cuda.jit(cuda_kernel_decorator(
+                            diag_PVTF_gpu))(diag_PVTF_gpu)
 
 
 def diag_PHI_gpu(PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF):
@@ -79,7 +80,8 @@ def diag_PHI_gpu(PHI, PHIVB, PVTF, PVTFVB, POTT, HSURF):
 
             kiter = kiter - 1
             cuda.syncthreads()
-diag_PHI_gpu = cuda.jit(cuda_kernel_decorator(diag_PHI_gpu))(diag_PHI_gpu)
+if gpu_enable:
+    diag_PHI_gpu = cuda.jit(cuda_kernel_decorator(diag_PHI_gpu))(diag_PHI_gpu)
 
 
 
@@ -100,8 +102,9 @@ def diag_POTTVB_gpu(POTTVB, POTT, PVTF, PVTFVB):
                 # extrapolate model bottom POTTVB
                 POTTVB[i,j,k+1] = POTT[i,j,k  ] - (
                                         POTTVB[i,j,k] - POTT[i,j,k  ] )
-diag_POTTVB_gpu = cuda.jit(cuda_kernel_decorator(
-                           diag_POTTVB_gpu))(diag_POTTVB_gpu)
+if gpu_enable:
+    diag_POTTVB_gpu = cuda.jit(cuda_kernel_decorator(
+                               diag_POTTVB_gpu))(diag_POTTVB_gpu)
 
 
 
@@ -121,8 +124,9 @@ def diag_secondary_gpu(POTTVB, TAIRVB, PVTFVB,
                 ((UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k])/wp(2.))**wp(2.) +
                 ((VWIND[i  ,j  ,k] + VWIND[i  ,j+1,k])/wp(2.))**wp(2.) 
                       ) ** (wp(1.)/wp(2.))
-diag_secondary_gpu = cuda.jit(cuda_kernel_decorator(
-                           diag_secondary_gpu))(diag_secondary_gpu)
+if gpu_enable:
+    diag_secondary_gpu = cuda.jit(cuda_kernel_decorator(
+                               diag_secondary_gpu))(diag_secondary_gpu)
 
 
 ###############################################################################

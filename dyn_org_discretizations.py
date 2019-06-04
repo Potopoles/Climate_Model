@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190602
+Last modified:      20190604
 License:            MIT
 
 SPATIAL DISCRETIZATION
@@ -35,20 +35,31 @@ import numpy as np
 from numba import cuda
 
 from namelist import (i_UVFLX_hor_adv, i_UVFLX_vert_adv)
-from io_read_namelist import CPU, GPU
+from io_read_namelist import CPU, GPU, gpu_enable
 from main_grid import (nx,nxs,ny,nys,nz,nzs,nb,
                  tpb, tpb_ks, bpg, tpb_sc, bpg_sc)
-from misc_boundaries import exchange_BC_cpu, exchange_BC_gpu
-from dyn_continuity import (continuity_gpu, continuity_cpu)
-from dyn_POTT import POTT_tendency_gpu, POTT_tendency_cpu
-from dyn_UVFLX_prepare import (UVFLX_prep_adv_gpu, UVFLX_prep_adv_cpu)
-from dyn_UFLX import (UFLX_tendency_gpu, UFLX_tendency_cpu)
-from dyn_VFLX import (VFLX_tendency_gpu, VFLX_tendency_cpu)
-from dyn_diagnostics import (diag_PVTF_gpu, diag_PVTF_cpu,
-                             diag_PHI_gpu, diag_PHI_cpu,
-                             diag_POTTVB_gpu, diag_POTTVB_cpu,
-                             diag_secondary_gpu, diag_secondary_cpu)
-from dyn_timestep import make_timestep_gpu, make_timestep_cpu
+
+from misc_boundaries import exchange_BC_cpu
+from dyn_continuity import continuity_cpu
+from dyn_POTT import POTT_tendency_cpu
+from dyn_UVFLX_prepare import UVFLX_prep_adv_cpu
+from dyn_UFLX import UFLX_tendency_cpu
+from dyn_VFLX import VFLX_tendency_cpu
+
+from dyn_diagnostics import (diag_PVTF_cpu, diag_PHI_cpu,
+                             diag_POTTVB_cpu, diag_secondary_cpu)
+from dyn_timestep import make_timestep_cpu
+if gpu_enable:
+    from misc_boundaries import exchange_BC_gpu
+    from dyn_continuity import continuity_gpu
+    from dyn_POTT import POTT_tendency_gpu
+
+    from dyn_diagnostics import (diag_PVTF_gpu, diag_PHI_gpu,
+                                 diag_POTTVB_gpu, diag_secondary_gpu)
+    from dyn_timestep import make_timestep_gpu
+    from dyn_UVFLX_prepare import UVFLX_prep_adv_gpu
+    from dyn_UFLX import UFLX_tendency_gpu
+    from dyn_VFLX import VFLX_tendency_gpu
 ###############################################################################
 
 

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190511
-Last modified:      20190531
+Last modified:      20190604
 License:            MIT
 
 Computation of horizontal momentum flux in latitude
@@ -16,7 +16,6 @@ Chapter 7.4, page 214ff
 """
 import time
 import numpy as np
-import cupy as cp
 from math import sin, cos
 from numba import cuda, njit, prange, vectorize
 
@@ -24,10 +23,11 @@ from namelist import (i_UVFLX_main_switch,
                     i_UVFLX_hor_adv, i_UVFLX_vert_adv,
                     i_UVFLX_coriolis,
                     i_UVFLX_num_dif, i_UVFLX_pre_grad)
-from io_read_namelist import (wp, wp_int)
+from io_read_namelist import (wp, wp_int, gpu_enable)
 from io_constants import con_rE
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
-from misc_gpu_functions import cuda_kernel_decorator
+if gpu_enable:
+    from misc_gpu_functions import cuda_kernel_decorator
 
 from dyn_functions import (num_dif_py, pre_grad_py, UVFLX_hor_adv_py)
 ###############################################################################
@@ -228,9 +228,10 @@ def launch_cuda_main_kernel(dVFLXdt, VFLX,
             UVFLX_dif_coef[0,0,k])
 
 
-VFLX_tendency_gpu = cuda.jit(cuda_kernel_decorator(
-                            launch_cuda_main_kernel))(
-                            launch_cuda_main_kernel)
+if gpu_enable:
+    VFLX_tendency_gpu = cuda.jit(cuda_kernel_decorator(
+                                launch_cuda_main_kernel))(
+                                launch_cuda_main_kernel)
 
 
 ####################################################################

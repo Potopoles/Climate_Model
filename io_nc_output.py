@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190602
+Last modified:      20190604
 License:            MIT
 
 Write fields to nc file.
@@ -12,6 +12,7 @@ Write fields to nc file.
 """
 import numpy as np
 from netCDF4 import Dataset
+from pathlib import Path
 
 from namelist import (output_path, output_fields,
                      i_radiation, i_microphysics, i_surface_scheme)
@@ -36,6 +37,7 @@ def output_to_NC(GR, F):
 
     # CREATE AND OPEN FILE
     ###########################################################################
+    Path(output_path).mkdir(exist_ok=True)
     filename = output_path+'/out'+str(GR.nc_output_count).zfill(4)+'.nc'
     ncf = Dataset(filename, 'w', format='NETCDF4')
     ncf.close()
@@ -295,6 +297,7 @@ def constant_fields_to_NC(GR, F):
     print('###########################################')
     print('###########################################')
 
+    Path(output_path).mkdir(exist_ok=True)
     filename = output_path+'/constants.nc'
 
     ncf = Dataset(filename, 'w', format='NETCDF4')

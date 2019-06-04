@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190602
+Last modified:      20190604
 License:            MIT
 
 Computation of potential virtual temperature (POTT) tendency
@@ -16,15 +16,15 @@ Chapter 7.4, page 213
 """
 import time
 import numpy as np
-import cupy as cp
 from numba import cuda, njit, prange, vectorize
 
 from namelist import (i_POTT_main_switch,
                       i_POTT_hor_adv, i_POTT_vert_adv, i_POTT_num_dif)
-from io_read_namelist import i_POTT_radiation, i_POTT_microphys
-from io_read_namelist import (wp, wp_int)
+from io_read_namelist import (i_POTT_radiation, i_POTT_microphys,
+                              wp, wp_int, gpu_enable)
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
-from misc_gpu_functions import cuda_kernel_decorator
+if gpu_enable:
+    from misc_gpu_functions import cuda_kernel_decorator
 
 from dyn_functions import (hor_adv_py, vert_adv_py, 
                             num_dif_pw_py)
@@ -121,8 +121,9 @@ def launch_cuda_kernel(A, dsigma, POTT_dif_coef,
             dsigma[0  ,0  ,k], POTT_dif_coef[0  ,0  ,k], k)
 
 
-POTT_tendency_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel))\
-                            (launch_cuda_kernel)
+if gpu_enable:
+    POTT_tendency_gpu = cuda.jit(cuda_kernel_decorator(launch_cuda_kernel))\
+                                (launch_cuda_kernel)
 
 
 
