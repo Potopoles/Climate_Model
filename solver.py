@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190602
+Last modified:      20190604
 License:            MIT
 
 Simple global climate model, hydrostatic and on a lat-lon grid.
@@ -34,13 +34,12 @@ from namelist import (i_time_stepping,
                     i_radiation, i_comp_mode,
                     i_microphysics, i_surface_scheme)
 from io_read_namelist import (gpu_enable, CPU, GPU)
-from main_grid import Grid
-from main_fields import ModelFields
 from io_nc_output import constant_fields_to_NC, output_to_NC
 from io_restart import write_restart
 from io_functions import (print_ts_info)
+from main_grid import Grid
+from main_fields import ModelFields
 from dyn_matsuno import step_matsuno as time_stepper
-
 from dyn_org_discretizations import DiagnosticsFactory
 ###############################################################################
 if i_comp_mode == 1:
@@ -48,23 +47,16 @@ if i_comp_mode == 1:
 elif i_comp_mode == 2:
     Diagnostics = DiagnosticsFactory(target=GPU)
 
+## show number of CPU threads for numba.
 #import numba
 #print(numba.config.NUMBA_DEFAULT_NUM_THREADS)
 #quit()
 
 ####################################################################
-# CREATE MODEL GRID
+# CREATE MODEL GRID AND FIELDS
 ####################################################################
 GR = Grid()
-
-####################################################################
-# CREATE MODEL FIELDS
-####################################################################
 F = ModelFields(GR, gpu_enable)
-
-# TODO: not yet moved to new model setup
-MIC = None
-TURB = None
 
 
 ####################################################################
@@ -79,6 +71,7 @@ constant_fields_to_NC(GR, F)
 # TIME LOOP START
 while GR.ts < GR.nts:
     GR.timer.start('total')
+
     ####################################################################
     # SIMULATION STATUS
     ####################################################################
@@ -88,8 +81,10 @@ while GR.ts < GR.nts:
     GR.GMT += timedelta(seconds=GR.dt)
     print_ts_info(GR, F)
 
+
     ####################################################################
-    # SECONDARY DIAGNOSTICS (related to physics)
+    # SECONDARY DIAGNOSTICS (related to physics, but not affecting
+    #                        dynamics)
     ####################################################################
     GR.timer.start('diag')
     Diagnostics.secondary_diag(
@@ -101,27 +96,10 @@ while GR.ts < GR.nts:
     ####################################################################
     # RADIATION
     ####################################################################
-
     if i_radiation:
-        # Asynchroneous Radiation
-        if F.RAD.i_async_radiation:
-            if F.RAD.done == 1:
-                if i_comp_mode == 2:
-                    raise NotImplementedError(
-                        'Copying not working for async and gpu')
-                    F.copy_host_to_device(F.ALL_FIELDS)
-                    F.copy_device_to_host(F.ALL_FIELDS)
-
-                F.RAD.done = 0
-                _thread.start_new_thread(F.RAD.calc_radiation, (GR, F))
-        # Synchroneous Radiation
-        else:
-            if GR.ts % F.RAD.rad_nth_ts == 0:
-                if i_comp_mode == 2:
-                    F.copy_device_to_host(F.ALL_FIELDS)
-                F.RAD.calc_radiation(GR, F)
-                if i_comp_mode == 2:
-                    F.copy_host_to_device(F.ALL_FIELDS)
+        GR.timer.start('rad')
+        F.RAD.launch_radiation_calc(GR, F)
+        GR.timer.stop('rad')
 
 
     ####################################################################
@@ -136,12 +114,12 @@ while GR.ts < GR.nts:
 
     ####################################################################
     # MICROPHYSICS
+    # TODO: implement
     ####################################################################
     #if i_microphysics:
-    #    t_start = time.time()
-    #    MIC.calc_microphysics(GR, WIND, SURF, TAIR, PAIR, RHO, PHIVB)
-    #    t_end = time.time()
-    #    GR.mic_comp_time += t_end - t_start
+    #    GR.timer.start('mic')
+    #    F.MIC.calc_microphysics(GR, WIND, SURF, TAIR, PAIR, RHO, PHIVB)
+    #    GR.timer.stop('mic')
 
 
     ####################################################################
@@ -158,8 +136,7 @@ while GR.ts < GR.nts:
     if GR.ts % GR.i_out_nth_ts == 0:
         # copy GPU fields to CPU
         if i_comp_mode == 2:
-            F.copy_device_to_host(F.ALL_FIELDS)
-
+            F.copy_device_to_host(GR, F.ALL_FIELDS)
         # write file
         GR.timer.start('IO')
         GR.nc_output_count += 1
@@ -173,11 +150,9 @@ while GR.ts < GR.nts:
     if (GR.ts % GR.i_restart_nth_ts == 0) and i_save_to_restart:
         # copy GPU fields to CPU
         if i_comp_mode == 2:
-            F.copy_device_to_host(F.ALL_FIELDS)
-
+            F.copy_device_to_host(GR, F.ALL_FIELDS)
         # write file
         GR.timer.start('IO')
-        GR.nc_output_count += 1
         write_restart(GR, F)
         GR.timer.stop('IO')
 

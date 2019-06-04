@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190601
+Last modified:      20190604
 License:            MIT
 
 Setup and store model fields. Have each field in memory (for CPU)
@@ -30,8 +30,8 @@ class ModelFields:
     PRINT_DIAG_FIELDS   = 'print_diag_fields'
     NC_OUT_DIAG_FIELDS  = 'nc_out_diag_fields'
     SRFC_FIELDS         = 'srfc_fields'
-    RAD_TO_DEVICE_FIELDS= 'rad_to_device_fields'
-    RAD_TO_HOST_FIELDS  = 'rad_to_device_fields'
+    RAD_TO_DEVICE       = 'rad_to_device_fields'
+    RAD_TO_HOST         = 'rad_to_host_fields'
 
     
     def __init__(self, GR, gpu_enable):
@@ -41,11 +41,9 @@ class ModelFields:
             self.__dict__ = loaded_F.__dict__
             self.device = {}
             if self.gpu_enable:
-                self.copy_host_to_device(field_group=self.ALL_FIELDS)
+                self.copy_host_to_device(GR, field_group=self.ALL_FIELDS)
         else:
 
-            # TODO remove GR from F.
-            self.GR = GR
             self.gpu_enable = gpu_enable
 
             self.host   = {}
@@ -84,17 +82,20 @@ class ModelFields:
                 RAD = Radiation(GR)
                 rad_njobs_orig = RAD.njobs_rad
                 RAD.njobs_rad = 4
-                RAD.calc_radiation(GR, self)
                 RAD.njobs_rad = rad_njobs_orig
                 self.RAD = RAD
+                self.RAD.calc_radiation(GR, self)
 
             ## MOISTURE & MICROPHYSICS
+            # TODO reimplement
             #if i_microphysics:
-            #    MIC = microphysics(GR, CF, i_microphysics, CF.TAIR, CF.PAIR) 
+            #    self.MIC = microphysics(GR, CF, i_microphysics,
+            #        CF.TAIR, CF.PAIR) 
             #else:
             #    MIC = None
 
             ## TURBULENCE 
+            # TODO reimplement
             #if i_turbulence:
             #    raise NotImplementedError('Baustelle')
             #    TURB = turbulence(GR, i_turbulence) 
@@ -102,9 +103,8 @@ class ModelFields:
             #    TURB = None
 
             
-
             if self.gpu_enable:
-                self.copy_host_to_device(field_group=self.ALL_FIELDS)
+                self.copy_host_to_device(GR, field_group=self.ALL_FIELDS)
             ###################################################################
 
     def set_field_groups(self):
@@ -121,10 +121,13 @@ class ModelFields:
                                          'SOILEVAPITY',
                                          'SURFALBEDSW', 'SURFALBEDLW',
                                          'RAINRATE', 'ACCRAIN'],
-            #self.RAD_TO_DEVICE_FIELDS:  ['dPOTTdt_RAD', 'SWFLXNET', 'LWFLXNET'],
-            #self.RAD_TO_HOST_FIELDS:    ['RHO', 'TAIR', 'PHIVB', 'SOILTEMP',
-            #                             'SURFALBEDLW', 'SURFALBEDSW', 'QC'],
-
+            self.RAD_TO_DEVICE:         ['SOLZEN', 'MYSUN', 'SWINTOA',
+                                        'LWFLXDO', 'LWFLXUP', 'SWDIFFLXDO',
+                                        'SWDIRFLXDO', 'SWFLXUP', 'SWFLXDO',
+                                        'LWFLXNET', 'SWFLXNET', 'SWFLXDIV',
+                                        'LWFLXDIV', 'TOTFLXDIV', 'dPOTTdt_RAD'],
+            self.RAD_TO_HOST:           ['RHO', 'TAIR', 'PHIVB', 'SOILTEMP',
+                                         'SURFALBEDLW', 'SURFALBEDSW', 'QC'],
 
         }
 
@@ -149,18 +152,18 @@ class ModelFields:
                 self.device[field_name] = field
 
 
-    def copy_host_to_device(self, field_group):
-        self.GR.timer.start('copy')
+    def copy_host_to_device(self, GR, field_group):
+        GR.timer.start('copy')
         for field_name in self.field_groups[field_group]:
             self.device[field_name] = cuda.to_device(self.host[field_name]) 
-        self.GR.timer.stop('copy')
+        GR.timer.stop('copy')
 
 
-    def copy_device_to_host(self, field_group):
-        self.GR.timer.start('copy')
+    def copy_device_to_host(self, GR, field_group):
+        GR.timer.start('copy')
         for field_name in self.field_groups[field_group]:
             self.device[field_name].copy_to_host(self.host[field_name])
-        self.GR.timer.stop('copy')
+        GR.timer.stop('copy')
 
 
     def allocate_fields(self, GR):

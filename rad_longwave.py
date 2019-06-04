@@ -22,7 +22,7 @@ from bin.rad_longwave_cython import (calc_planck_intensity_c,
                                      rad_calc_LW_RTE_matrix_c)
 
 
-#from namelist import run_how
+#TODO
 run_how = 1
 
 ###################################################################################

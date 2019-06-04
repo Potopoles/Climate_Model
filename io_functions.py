@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190531
+Last modified:      20190604
 License:            MIT
 
 Helper functions for IO.
@@ -95,7 +95,7 @@ def print_ts_info(GR, F):
 
     if GR.ts % nth_ts_print_diag == 0:
         if i_comp_mode == 2:
-            F.copy_device_to_host(F.PRINT_DIAG_FIELDS)
+            F.copy_device_to_host(GR, F.PRINT_DIAG_FIELDS)
         GR.timer.start('diag')
         vmax, mean_wind, mean_temp, mean_colp = \
                     diagnose_print_diag_fields(GR, F.host['WIND'], 
@@ -131,7 +131,7 @@ def print_ts_info(GR, F):
             print(str(percentage_done) + ' %   ' + str(faster_than_reality) + \
                     ' faster than reality. ' + to_go_string)
             print('################')
-        except:
+        except ZeroDivisionError:
             pass
 
 

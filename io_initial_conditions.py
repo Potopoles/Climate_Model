@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190602
+Last modified:      20190604
 License:            MIT
 
 Functions to initialize the model fields and set up an average
@@ -167,7 +167,7 @@ def set_up_profile(GR, COLP, HSURF, PSURF, PVTF,
 
 
 def load_topo(GR, HSURF):
-    filename = '../elevation/elev.1-deg.nc'
+    filename = 'data/elev.1-deg.nc'
     ncf = Dataset(filename, 'r', format='NETCDF4')
     lon_inp = ncf['lon'][:]
     lat_inp = ncf['lat'][:]

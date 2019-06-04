@@ -10,20 +10,23 @@ License:            MIT
 Main script of radiation scheme.
 ###############################################################################
 """
-import time, scipy
+import time, scipy, copy
 import numpy as np
 #import matplotlib.pyplot as plt
 import multiprocessing as mp
 
 from namelist import (pseudo_rad_inpRate, pseudo_rad_outRate,
                       rad_nth_hour, i_async_radiation, planck_n_lw_bins,
-                      njobs_rad)
+                      njobs_rad, i_comp_mode)
 from io_constants import con_cp, con_g
 from io_read_namelist import wp, CPU, GPU
 from rad_shortwave import (org_shortwave, rad_solar_zenith_angle,
                            calc_current_solar_constant)
 from rad_longwave import org_longwave
 ###############################################################################
+
+        
+
 
 class Radiation:
 
@@ -46,27 +49,6 @@ class Radiation:
         self.rad_nth_hour = rad_nth_hour 
         self.rad_nth_ts = int(self.rad_nth_hour * 3600/GR.dt)
 
-        ## solar zenith angle
-        #self.SOLZEN = np.full( ( GR.nx, GR.ny ), np.nan)
-        #
-        ## cos solar zenith angle
-        #self.MYSUN = np.full( ( GR.nx, GR.ny ), np.nan)
-
-        ## incoming shortwave at TOA
-        #self.SWINTOA = np.full( ( GR.nx, GR.ny ), np.nan)
-
-        #self.LWFLXUP =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-        #self.LWFLXDO =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-        ##self.LWFLXNET =     np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-        #self.SWDIFFLXDO =   np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-        #self.SWDIRFLXDO =   np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-        #self.SWFLXUP =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-        #self.SWFLXDO =      np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-        ##self.SWFLXNET =     np.full( ( GR.nx, GR.ny, GR.nzs ), np.nan)
-        #self.LWFLXDIV =     np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan)
-        #self.SWFLXDIV =     np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan)
-        #self.TOTFLXDIV =    np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan)
-
 
         # Planck emission calculations
         nu0 = 50.
@@ -83,14 +65,37 @@ class Radiation:
         self.planck_dlambdas = np.diff(lambdas)
 
 
-    def calc_radiation(self, GR, F):
-        
-        t_start = time.time()
-        GR.timer.start('rad')
-        sim_t_start = GR.sim_time_sec
-        
+    def launch_radiation_calc(self, GR, F):
 
-        #if GR.ts % self.rad_nth_ts == 0:
+        # Asynchroneous Radiation
+        if F.RAD.i_async_radiation:
+            raise NotImplementedError(
+                'Copying not working for async on gpu. '+
+                'Get a strange error with SWFLXDO sometimes '+
+                'showing wrong pattern in output.')
+            if F.RAD.done == 1:
+                if i_comp_mode == 2:
+                    F.copy_host_to_device(GR, F.RAD_TO_DEVICE)
+                    F.copy_device_to_host(GR, F.RAD_TO_HOST)
+
+                F.RAD.done = 0
+                _thread.start_new_thread(F.RAD.calc_radiation, (GR, F))
+        # Synchroneous Radiation
+        else:
+            if GR.ts % F.RAD.rad_nth_ts == 0:
+                if i_comp_mode == 2:
+                    F.copy_device_to_host(GR, F.RAD_TO_HOST)
+                F.RAD.calc_radiation(GR, F)
+                if i_comp_mode == 2:
+                    F.copy_host_to_device(GR, F.RAD_TO_DEVICE)
+
+        
+    def calc_radiation(self, GR, F):
+
+
+        t_start = time.time()
+        sim_t_start = GR.sim_time_sec
+
         print('###########################################')
         print('RADIATION START')
         self.simple_radiation(GR, **F.get(self.fields_radiation, target=CPU))
@@ -98,7 +103,6 @@ class Radiation:
 
         self.done = 1
         t_end = time.time()
-        GR.timer.stop('rad')
         sim_t_end = GR.sim_time_sec
 
             
@@ -121,13 +125,15 @@ class Radiation:
                         dPOTTdt_RAD):
 
         #GR.timer.start('prep')
+        current_GMT = copy.copy(GR.GMT)
+
         ALTVB = PHIVB / con_g
         dz = ALTVB[:,:,:-1][GR.ii,GR.jj] -  ALTVB[:,:,1:][GR.ii,GR.jj]
 
-        SOLZEN = rad_solar_zenith_angle(GR, SOLZEN)
+        SOLZEN = rad_solar_zenith_angle(GR, current_GMT, SOLZEN)
         MYSUN = np.cos(SOLZEN)
         MYSUN[MYSUN < 0] = 0
-        self.solar_constant = calc_current_solar_constant(GR) 
+        self.solar_constant = calc_current_solar_constant(current_GMT) 
         SWINTOA = self.solar_constant * np.cos(SOLZEN)
         #GR.timer.stop('prep')
 

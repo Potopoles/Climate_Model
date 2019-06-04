@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190602
+Last modified:      20190604
 License:            MIT
 
 Namelist for user input.
@@ -53,9 +53,14 @@ POTT_gaussian_pert = 00
 POTT_random_pert = 0.0
 
 ###############################################################################
+###############################################################################
 # MODEL COMPONENTS
 ###############################################################################
+###############################################################################
+
+###############################################################################
 # DYNAMICS
+###############################################################################
 # prognostics computation of column pressure
 i_COLP_main_switch      = 1
 
@@ -75,16 +80,54 @@ i_UVFLX_coriolis        = 1
 i_UVFLX_num_dif         = 1
 i_UVFLX_pre_grad        = 1
 
+###############################################################################
 # SURFACE
+###############################################################################
 i_use_topo = 1
 n_topo_smooth = 20
 i_surface_scheme = 0
 nz_soil = 1
 
+###############################################################################
 # PHYSICS
+###############################################################################
 i_radiation = 0
 i_microphysics = 0
 i_turbulence = 0
+
+###############################################################################
+# RADIATION
+###############################################################################
+# PSEUDO RADIATION SCHEME (not realistic but fast)
+pseudo_rad_inpRate = 0.00020
+pseudo_rad_outRate = 5.0E-7
+# RADIATION SCHEME
+# taking a value 24 % rad_nth_hour != 0 causes the computed radiation field
+# to change its exact position over several days.
+rad_nth_hour = 3.9
+## TODO: async_radiation not working. see rad_main.py
+#if i_comp_mode == 2:
+#    i_async_radiation = 1
+#else:
+#    i_async_radiation = 0
+#if i_async_radiation:
+#    njobs_rad = 1
+#else:
+#    njobs_rad = 4
+i_async_radiation = 0
+njobs_rad = 4
+# TODO finish implementation of radiation scheme.
+# Temporary values representing "mean atmospheric gas/aerosol composition"
+sigma_abs_gas_SW_in = 1.7E-5
+sigma_sca_gas_SW_in = 1.72E-5 # lamb = 0.5 mym, jacobson page 301
+#sigma_abs_gas_LW_in = 1.7E-4
+sigma_abs_gas_LW_in = 3.7E-4  
+sigma_sca_gas_LW_in = 1.72E-7 
+# surface emissivity
+emissivity_surface = 1
+# longwave
+planck_n_lw_bins = 5
+
 
 ###############################################################################
 # IO SETTINGS
@@ -140,7 +183,7 @@ i_restart_nth_day   = 5.00
 ###############################################################################
 # COMPUTATION SETTINGS
 ###############################################################################
-# TIME DISCRETIZATION: MATSUNO, RK4 
+# TIME DISCRETIZATION: MATSUNO, RK4 (not implemented)
 i_time_stepping = 'MATSUNO'
 CFL = 0.7
 
@@ -161,31 +204,26 @@ i_sync_context = 1
 ###############################################################################
 # 1: testsuite equality
 # 2: longtime run
-i_simulation_mode = 2
+i_simulation_mode = 1
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 1:
     nz = 8
-    lat0_deg = -80
-    lat1_deg = 80
-    dlat_deg = 2
-    dlon_deg = 2
+    lat0_deg = -81
+    lat1_deg = 81
+    dlat_deg = 3
+    dlon_deg = 3
     output_path = '../output_ref'
     output_path = '../output_test'
     i_sim_n_days = 0.36*1
     i_out_nth_hour = 4*1
     i_surface_scheme = 1
     i_radiation = 1
+    rad_nth_hour = 3.9
     i_microphysics = 0
     i_turbulence = 0
 
-    ## TODO
-    #run_how = 1
-    #nz = 32
-    #i_sim_n_days = 0.01*1
-
-
-## LONGTIME RUN
+# LONGTIME RUN
 elif i_simulation_mode == 2:
     nz = 16
     lat0_deg = -81
@@ -193,21 +231,26 @@ elif i_simulation_mode == 2:
     dlat_deg = 3.0
     dlon_deg = 3.0
     output_path = '../output'
-    i_sim_n_days = 10*365.00
+    i_sim_n_days = 1*365.00
     i_out_nth_hour = 5*24
     i_surface_scheme = 1
     i_radiation = 1
+    rad_nth_hour = 3.9
     i_microphysics = 0
     i_turbulence = 0
 
+
 ###############################################################################
 # DIFFUSION
+# TODO: Add diffusion that is independent on grid spacing.
 ###############################################################################
-UVFLX_dif_coef = 0 # important
-# creates instabilities and acceleration in steep terrain
+# UVFLX: important
+UVFLX_dif_coef = 0 
+# POTT: does it create instabilities and acceleration in steep terrain?
 POTT_dif_coef = 1E-6 
-# not tested (but likely not good because of same reasons as POTT)
+# COLP: not tested 
 COLP_dif_coef = 0 
+# QV: not tested 
 QV_hor_dif_tau   = 0
 
 # automatically chose nice diffusion parameter depending on grid
@@ -234,7 +277,7 @@ elif dlat_deg <= 1:
 
 POTT_dif_coef = 1E-5
 
-# TODO does it work like this? Can decrease even more?
+# TODO does it work like this? Can decrease more?
 UVFLX_dif_coef  *= 2.0
 POTT_dif_coef   *= 1.0
 
@@ -243,40 +286,3 @@ POTT_dif_coef   *= 1.0
 
 
 
-###############################################################################
-# RADIATION
-###############################################################################
-# PSEUDO RADIATION SCHEME (not realistic but fast)
-pseudo_rad_inpRate = 0.00020
-pseudo_rad_outRate = 5.0E-7
-
-# RADIATION SCHEME
-#rad_nth_hour = 2.5
-rad_nth_hour = 3.9
-
-if i_comp_mode == 2:
-    i_async_radiation = 1
-else:
-    i_async_radiation = 0
-i_async_radiation = 0
-
-if i_async_radiation:
-    njobs_rad = 1
-else:
-    njobs_rad = 4
-
-#sigma_abs_gas_SW_in = 1.7E-5
-#sigma_sca_gas_SW_in = 1.72E-5 # lamb = 0.5 mym, jacobson page 301
-#sigma_abs_gas_LW_in = 1.7E-4
-#sigma_sca_gas_LW_in = 1.72E-7 
-
-sigma_abs_gas_SW_in = wp(1.7E-5  )
-sigma_sca_gas_SW_in = wp(1.72E-5 ) # lamb = 0.5 mym, jacobson page 301
-sigma_abs_gas_LW_in = wp(2.7E-4  )
-sigma_sca_gas_LW_in = wp(1.72E-7 ) 
-
-# surface emissivity
-emissivity_surface = 1
-
-# longwave
-planck_n_lw_bins = 5

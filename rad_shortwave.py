@@ -186,15 +186,16 @@ def rad_calc_SW_fluxes_toon(nz, nzs, dtau, gamma1, gamma2,
 
 
 
-def rad_solar_zenith_angle(GR, SOLZEN):
+def rad_solar_zenith_angle(GR, current_time, SOLZEN):
+
 
     #print(GR.GMT)
     #quit()
 
     # SOLAR DECLINATION ANGLE
     n_days_in_year = 365 # TODO: leap years
-    D_J = GR.GMT.timetuple().tm_yday
-    Y = GR.GMT.timetuple().tm_year
+    D_J = current_time.timetuple().tm_yday
+    Y = current_time.timetuple().tm_year
 
     if Y >= 2001:
         D_L = np.floor((Y - 2001)/4)
@@ -215,9 +216,12 @@ def rad_solar_zenith_angle(GR, SOLZEN):
 
     # HOUR ANGLE
     sec_of_local_noon = GR.lon_rad[GR.ii,GR.jj,0]/(2*np.pi)*86400
-    sec_of_day = timedelta(hours=GR.GMT.hour,
-                              minutes=GR.GMT.minute,
-                              seconds=GR.GMT.second).total_seconds()
+    #sec_of_day = timedelta(hours=GR.GMT.hour,
+    #                          minutes=GR.GMT.minute,
+    #                          seconds=GR.GMT.second).total_seconds()
+    sec_of_day = timedelta(hours=current_time.hour,
+                              minutes=current_time.minute,
+                              seconds=current_time.second).total_seconds()
     sec_past_local_noon = sec_of_day - sec_of_local_noon
     hour_angle = 2*np.pi * sec_past_local_noon / 86400;
 
@@ -231,9 +235,9 @@ def rad_solar_zenith_angle(GR, SOLZEN):
     return(SOLZEN)
 
 
-def calc_current_solar_constant(GR):
+def calc_current_solar_constant(current_time):
     n_days_in_year = 365 # TODO: leap years
-    D_J = GR.GMT.timetuple().tm_yday
+    D_J = current_time.timetuple().tm_yday
     theta_J = 2 * np.pi * D_J / n_days_in_year
     earth_sun_dist = 1.00011 + 0.034221 * np.cos(theta_J) \
                     + 0.00128 * np.sin(theta_J) \
