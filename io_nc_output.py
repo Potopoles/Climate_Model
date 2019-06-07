@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190604
+Last modified:      20190605
 License:            MIT
 
 Write fields to nc file.
@@ -79,7 +79,7 @@ def output_to_NC(GR, F):
     ###########################################################################
 
     field_names = ['UWIND', 'VWIND', 'WIND', 'POTT', 'TAIR',
-                   'PHI', 'PAIR', 'RHO', 'QV', 'QC']
+                   'PHI', 'PAIR', 'RHO', 'QV', 'QC', 'COLP']
     for field_name in field_names:
         if output_fields[field_name]:
             dimx, dimy, dimz = F.host[field_name].shape
@@ -152,11 +152,17 @@ def output_to_NC(GR, F):
     if output_fields['VWIND'] > 1:
         VWINDprof_out = ncf.createVariable('VWINDprof', 'f4',
                                             ('time', 'level', 'lats',) )
+    if output_fields['WWIND'] > 1:
+        WWINDprof_out = ncf.createVariable('WWINDprof', 'f4',
+                                            ('time', 'levels', 'lat',) )
     if output_fields['VORT'] > 1:
         VORTprof_out = ncf.createVariable('VORTprof', 'f4',
                                             ('time', 'level', 'lat',) )
     if output_fields['POTT'] > 1:
         POTTprof_out = ncf.createVariable('POTTprof', 'f4',
+                                            ('time', 'level', 'lat',) )
+    if output_fields['TAIR'] > 1:
+        TAIRprof_out = ncf.createVariable('TAIRprof', 'f4',
                                             ('time', 'level', 'lat',) )
     if output_fields['QV'] > 1:
         QVprof_out = ncf.createVariable('QVprof', 'f4',
@@ -177,12 +183,19 @@ def output_to_NC(GR, F):
         if output_fields['POTT'] > 1:
             POTTprof_out[-1,GR.nz-k-1,:] = np.mean(
                         F.host['POTT'][GR.ii,GR.jj,k],axis=0)
+        if output_fields['TAIR'] > 1:
+            TAIRprof_out[-1,GR.nz-k-1,:] = np.mean(
+                        F.host['TAIR'][GR.ii,GR.jj,k],axis=0)
         if output_fields['QV'] > 1:
             QVprof_out[-1,GR.nz-k-1,:] = np.mean(
                         F.host['QV'][GR.ii,GR.jj,k],axis=0)
         if output_fields['QC'] > 1:
             QCprof_out[-1,GR.nz-k-1,:] = np.mean(
                         F.host['QC'][GR.ii,GR.jj,k],axis=0)
+    for k in range(0,GR.nzs):
+        if output_fields['WWIND'] > 1:
+            WWINDprof_out[-1,GR.nzs-k-1,:] = np.mean(
+                        F.host['WWIND'][GR.ii,GR.jj,k],axis=0)
 
 
 
@@ -201,8 +214,8 @@ def output_to_NC(GR, F):
         LWFLXDO_out = ncf.createVariable('LWFLXDO', 'f4', ('time', 'levels', 'lat', 'lon',) )
         LWFLXNET_out = ncf.createVariable('LWFLXNET', 'f4', ('time', 'levels', 'lat', 'lon',) )
         dPOTTdt_RAD_out=ncf.createVariable('dPOTTdt_RAD', 'f4', ('time', 'level', 'lat', 'lon',) )
-        SWFLXDIV_out = ncf.createVariable('SWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
-        LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
+        #SWFLXDIV_out = ncf.createVariable('SWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
+        #LWFLXDIV_out = ncf.createVariable('LWFLXDIV', 'f4', ('time', 'level', 'lat', 'lon',) )
 
     # SURF VARIABLES
     if i_surface_scheme:
@@ -257,8 +270,8 @@ def output_to_NC(GR, F):
         if i_radiation > 0:
             dPOTTdt_RAD_out[-1,k,:,:] = F.host['dPOTTdt_RAD'][
                                             GR.ii,GR.jj,k].T * 3600
-            SWFLXDIV_out[-1,k,:,:] = F.host['SWFLXDIV'][:,:,k].T 
-            LWFLXDIV_out[-1,k,:,:] = F.host['LWFLXDIV'][:,:,k].T 
+            #SWFLXDIV_out[-1,k,:,:] = F.host['SWFLXDIV'][:,:,k].T 
+            #LWFLXDIV_out[-1,k,:,:] = F.host['LWFLXDIV'][:,:,k].T 
 
         # MICROPHYSICS VARIABLES
         if i_microphysics:

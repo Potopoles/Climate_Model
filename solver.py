@@ -156,6 +156,7 @@ while GR.ts < GR.nts:
         write_restart(GR, F)
         GR.timer.stop('IO')
 
+
     GR.timer.stop('total')
 # TIME LOOP STOP
 ####################################################################

@@ -133,6 +133,8 @@ def print_ts_info(GR, F):
             print('################')
         except ZeroDivisionError:
             pass
+        except OverflowError:
+            pass
 
 
 

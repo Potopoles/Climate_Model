@@ -104,36 +104,39 @@ def run_all_gpu( COLP,
                 A_jm1,              A_jp1,
                 A_im1_jm1,          A_im1_jp1,
                 A_ip1_jm1,          A_ip1_jp1,
-                dt, j):
+                dt, i, j):
     """
     """
 
     # POTT
-    POTT = euler_forward_pw(POTT_OLD, dPOTTdt, COLP, COLP_OLD, dt)
+    if i < nx+nb and j < ny+nb:
+        POTT = euler_forward_pw(POTT_OLD, dPOTTdt, COLP, COLP_OLD, dt)
 
     ## UWIND
-    COLPA_is     = interp_COLPA_is(COLP, COLP_im1, COLP_jm1, COLP_jp1,
-                               COLP_im1_jp1,   COLP_im1_jm1,
-                               A,    A_im1,    A_jm1,    A_jp1,
-                               A_im1_jp1,      A_im1_jm1, j)
-    COLPA_OLD_is = interp_COLPA_is(COLP_OLD, COLP_OLD_im1,
-                               COLP_OLD_jm1, COLP_OLD_jp1,
-                               COLP_OLD_im1_jp1,   COLP_OLD_im1_jm1,
-                               A,    A_im1,    A_jm1,    A_jp1,
-                               A_im1_jp1,      A_im1_jm1, j)
-    UWIND = euler_forward_pw(UWIND_OLD, dUFLXdt, COLPA_is, COLPA_OLD_is, dt)
+    if j < ny+nb:
+        COLPA_is     = interp_COLPA_is(COLP, COLP_im1, COLP_jm1, COLP_jp1,
+                                   COLP_im1_jp1,   COLP_im1_jm1,
+                                   A,    A_im1,    A_jm1,    A_jp1,
+                                   A_im1_jp1,      A_im1_jm1, j)
+        COLPA_OLD_is = interp_COLPA_is(COLP_OLD, COLP_OLD_im1,
+                                   COLP_OLD_jm1, COLP_OLD_jp1,
+                                   COLP_OLD_im1_jp1,   COLP_OLD_im1_jm1,
+                                   A,    A_im1,    A_jm1,    A_jp1,
+                                   A_im1_jp1,      A_im1_jm1, j)
+        UWIND = euler_forward_pw(UWIND_OLD, dUFLXdt, COLPA_is, COLPA_OLD_is, dt)
     
     # VWIND
-    COLPA_js     = interp_COLPA_js(COLP, COLP_jm1, COLP_im1, COLP_ip1,
-                                   COLP_ip1_jm1,   COLP_im1_jm1,
-                                   A,    A_jm1,    A_im1,    A_ip1,
-                                   A_ip1_jm1,      A_im1_jm1)
-    COLPA_OLD_js = interp_COLPA_js(COLP_OLD, COLP_OLD_jm1,
-                                   COLP_OLD_im1,   COLP_OLD_ip1,
-                                   COLP_OLD_ip1_jm1,   COLP_OLD_im1_jm1,
-                                   A,    A_jm1,    A_im1,    A_ip1,
-                                   A_ip1_jm1,      A_im1_jm1)
-    VWIND = euler_forward_pw(VWIND_OLD, dVFLXdt, COLPA_js, COLPA_OLD_js, dt)
+    if i < nx+nb:
+        COLPA_js     = interp_COLPA_js(COLP, COLP_jm1, COLP_im1, COLP_ip1,
+                                       COLP_ip1_jm1,   COLP_im1_jm1,
+                                       A,    A_jm1,    A_im1,    A_ip1,
+                                       A_ip1_jm1,      A_im1_jm1)
+        COLPA_OLD_js = interp_COLPA_js(COLP_OLD, COLP_OLD_jm1,
+                                       COLP_OLD_im1,   COLP_OLD_ip1,
+                                       COLP_OLD_ip1_jm1,   COLP_OLD_im1_jm1,
+                                       A,    A_jm1,    A_im1,    A_ip1,
+                                       A_ip1_jm1,      A_im1_jm1)
+        VWIND = euler_forward_pw(VWIND_OLD, dVFLXdt, COLPA_js, COLPA_OLD_js, dt)
 
     return(POTT, UWIND, VWIND)
 
@@ -171,7 +174,7 @@ def make_timestep_gpu(COLP, COLP_OLD,
                 A        [i  ,j-1,0  ], A        [i  ,j+1,0  ],
                 A        [i-1,j-1,0  ], A        [i-1,j+1,0  ],
                 A        [i+1,j-1,0  ], A        [i+1,j+1,0  ],   
-                dt, j)
+                dt, i, j)
 
 if gpu_enable:
     make_timestep_gpu = cuda.jit(cuda_kernel_decorator(make_timestep_gpu,

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190604
+Last modified:      20190607
 License:            MIT
 
 Functions to implement lateral boundary conditions for both GPU and CPU.
@@ -49,8 +49,8 @@ def exchange_BC_gpu(FIELD):
 
     i, j, k = cuda.grid(3)
 
-    if k < fnz:
-        # zonal boundaries
+    if i < fnx and j < fny and k < fnz:
+        ## zonal boundaries
         if fnx == nxs+2*nb: # staggered in x
             if i == 0:
                 FIELD[i,j,k] = FIELD[nxs-1,j,k] 

@@ -16,10 +16,10 @@ import scipy
 from io_constants import con_h, con_c, con_kb
 from namelist import (sigma_abs_gas_LW_in, sigma_sca_gas_LW_in,
                       emissivity_surface, planck_n_lw_bins)
-from io_read_namelist import wp
+from io_read_namelist import wp, wp_str
 
 #TODO
-run_cython = 0
+run_cython = 1
 if run_cython:
     from bin.rad_longwave_cython import (calc_planck_intensity_c,
                                          calc_surface_emission_c, 
@@ -79,13 +79,19 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf,
     #GR.timer.stop('02')
 
     #GR.timer.start('03')
-    #if run_cython == 0:
-    B_surf = emissivity_surface * np.pi * \
-        calc_planck_intensity(tsurf, planck_lambdas_center,
-                            planck_dlambdas)
-    #elif run_cython == 1:
-    #    B_surf = calc_surface_emission_c(tsurf, \
-    #                planck_lambdas_center, planck_dlambdas)
+    if wp_str == 'float64':
+        if run_cython == 0:
+            B_surf = emissivity_surface * np.pi * \
+                calc_planck_intensity(tsurf, planck_lambdas_center,
+                                    planck_dlambdas)
+        # does not  work with float32
+        elif run_cython == 1:
+            B_surf = calc_surface_emission_c(tsurf, \
+                        planck_lambdas_center, planck_dlambdas)
+    else:
+        B_surf = emissivity_surface * np.pi * \
+            calc_planck_intensity(tsurf, planck_lambdas_center,
+                                planck_dlambdas)
     #GR.timer.stop('03')
 
     #GR.timer.start('04')

@@ -12,6 +12,9 @@ Computation of potential virtual temperature (POTT) tendency
 Jacobson 2005
 Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 213
+
+HISTORY
+- 20190604: CH  First implementation.
 ###############################################################################
 """
 import time
@@ -119,6 +122,7 @@ def launch_cuda_kernel(A, dsigma, POTT_dif_coef,
             COLP_NEW[i  ,j  ,0], dPOTTdt_RAD[i  ,j  ,k],
             A[i  ,j  ,0],
             dsigma[0  ,0  ,k], POTT_dif_coef[0  ,0  ,k], k)
+
 
 
 if gpu_enable:

@@ -136,7 +136,6 @@ class TendencyFactory:
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
                     POTTVB, WWIND, COLP_NEW, dPOTTdt_RAD)
 
-
     def momentum(self, GRF,
                     dUFLXdt, dVFLXdt,
                     UWIND, VWIND, WWIND,
@@ -148,7 +147,6 @@ class TendencyFactory:
                     WWIND_UWIND, WWIND_VWIND):
         """
         """
-
         if self.target == GPU:
             # PREPARE ADVECTIVE FLUXES
             if i_UVFLX_hor_adv or i_UVFLX_vert_adv:

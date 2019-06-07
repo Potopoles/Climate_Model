@@ -133,15 +133,16 @@ planck_n_lw_bins = 5
 # IO SETTINGS
 ###############################################################################
 # TIME STEP OUTPUT
-nth_ts_print_diag = 20
+nth_ts_print_diag = 50
 # NC OUTPUT
 i_out_nth_hour = 0.25
-output_path = '../output_run'
+output_path = '../output'
 output_fields = {
     # 2D FIELDS
     ###########################################################################
     # pressure fields
     'PSURF'         : 1,
+    'COLP'          : 1,
 
     # 3D FIELDS
     ###########################################################################
@@ -152,12 +153,12 @@ output_fields = {
     'UWIND'         : 2,                    #vp
     'VWIND'         : 2,                    #vp
     'WIND'          : 2,                    #vp
-    'WWIND'         : 1,
+    'WWIND'         : 2,                    #vp
     'VORT'          : 1,
     # velocity fields
     # temperature fields
     'POTT'          : 2,                    #vp
-    'TAIR'          : 1,
+    'TAIR'          : 2,                    #vp
     # primary diagnostic fields
     'PHI'           : 1,
     # secondary diagnostic fields
@@ -177,7 +178,7 @@ output_fields = {
 
 # RESTART FILES
 i_load_from_restart = 0
-i_save_to_restart   = 1
+i_save_to_restart   = 0
 i_restart_nth_day   = 5.00
 
 ###############################################################################
@@ -189,10 +190,12 @@ CFL = 0.7
 
 # working precision
 working_precision = 'float32'
-#working_precision = 'float64'
+working_precision = 'float64'
 
 # 1: CPU, 2: GPU
-i_comp_mode = 1
+i_comp_mode = 2
+output_path = '../output_ref'
+output_path = '../output_test'
 
 # in case of computation on GPU only:
 i_sync_context = 1
@@ -209,12 +212,12 @@ i_simulation_mode = 1
 # TESTSUITE EQUALITY
 if i_simulation_mode == 1:
     nz = 8
-    lat0_deg = -81
-    lat1_deg = 81
-    dlat_deg = 3
-    dlon_deg = 3
-    output_path = '../output_ref'
-    output_path = '../output_test'
+    lat0_deg = -80
+    lat1_deg = 80
+    dlat_deg = 5
+    dlon_deg = 5
+    #output_path = '../output_ref'
+    #output_path = '../output_test'
     i_sim_n_days = 0.36*1
     i_out_nth_hour = 4*1
     i_surface_scheme = 1
@@ -222,17 +225,18 @@ if i_simulation_mode == 1:
     rad_nth_hour = 3.9
     i_microphysics = 0
     i_turbulence = 0
+    i_save_to_restart   = 0
 
 # LONGTIME RUN
 elif i_simulation_mode == 2:
-    nz = 16
-    lat0_deg = -81
-    lat1_deg = 81
-    dlat_deg = 3.0
-    dlon_deg = 3.0
+    nz = 32
+    lat0_deg = -85
+    lat1_deg = 85
+    dlat_deg = 5.0
+    dlon_deg = 5.0
     output_path = '../output'
-    i_sim_n_days = 1*365.00
-    i_out_nth_hour = 5*24
+    i_sim_n_days = 15*365.00
+    i_out_nth_hour = 10*24
     i_surface_scheme = 1
     i_radiation = 1
     rad_nth_hour = 3.9

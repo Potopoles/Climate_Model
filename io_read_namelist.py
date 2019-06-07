@@ -18,7 +18,8 @@ from namelist import (working_precision,
                     i_comp_mode, nb, lon0_deg, lon1_deg,
                     pair_top, i_time_stepping, nz_soil,
                     i_radiation, i_surface_scheme,
-                    i_POTT_radiation, i_POTT_microphys)
+                    i_POTT_radiation, i_POTT_microphys,
+                    i_COLP_main_switch, i_UVFLX_main_switch)
 ###############################################################################
 
 ###############################################################################
@@ -63,6 +64,10 @@ if i_POTT_radiation and not i_radiation:
     i_POTT_radiation = 0
 if i_POTT_microphys and not i_microphys:
     i_POTT_microphys = 0
+
+#if i_UVFLX_main_switch and not i_COLP_main_switch:
+#    raise ValueError('i_UVFLX_main_switch can only be 1 if i_COLP_main_switch'+
+#                    ' == 1.')
 
 ###############################################################################
 # PHYSICAL PROPERTIES
