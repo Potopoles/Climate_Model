@@ -14,10 +14,9 @@ Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 214ff
 ###############################################################################
 """
-import time
 import numpy as np
 from math import sin, cos
-from numba import cuda, njit, prange, vectorize
+from numba import cuda, njit, prange
 
 from namelist import (i_UVFLX_main_switch,
                     i_UVFLX_hor_adv, i_UVFLX_vert_adv,

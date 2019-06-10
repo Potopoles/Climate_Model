@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190526
-Last modified:      20190531
+Last modified:      20190608
 License:            MIT
 
 Computation column pressure (COLP) tendency and vertical wind (WWIND),
@@ -15,6 +15,10 @@ Computations aaccording to:
 Jacobson 2005
 Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 208ff
+
+HISTORY
+- 20190531: CH: First implementation.
+- 20190608: CH: Removed vertical reduction restriction of nz = 2**x
 ###############################################################################
 """
 import numpy as np
@@ -100,15 +104,28 @@ def launch_cuda_main_kernel(UFLX, VFLX, FLXDIV,
             vert_sum[tz] = FLXDIV[i,j,k]
             cuda.syncthreads()
 
+            ## sum-reduce vert_sum vertically
+            ## (slighly faster method but restrict nz to 2**x)
+            #t = shared_nz // 2
+            #while t > 0:
+            #    if tz < t:
+            #        vert_sum[tz] = vert_sum[tz] + vert_sum[tz+t]
+            #    t //= 2
+            #    cuda.syncthreads()
+            #if tz == 0:
+            #    dCOLPdt[i,j,0] = - vert_sum[0]
+
             # sum-reduce vert_sum vertically
-            t = shared_nz // 2
-            while t > 0:
-                if tz < t:
-                    vert_sum[tz] = vert_sum[tz] + vert_sum[tz+t]
-                t //= 2
+            # (slower method but nz can be chosen flexibly)
+            kt = 0
+            while kt < nz:
+                if kt == k-1:
+                    vert_sum[k] = vert_sum[k] + vert_sum[k-1]
+                kt = kt + 1
+                if kt == nz-1:
+                    dCOLPdt[i,j,0] = - vert_sum[kt]
                 cuda.syncthreads()
-            if tz == 0:
-                dCOLPdt[i,j,0] = - vert_sum[0]
+
         else:
             dCOLPdt[i,j,0] = wp(0.)
 

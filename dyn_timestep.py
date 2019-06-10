@@ -4,10 +4,14 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190529
-Last modified:      20190604
+Last modified:      20190609
 License:            MIT
 
 Functions for prognostic step for both CPU and GPU.
+
+HISTORY
+- 20190529  : Created (CH) 
+20190609    : Added moisture variables QV and QC (CH)
 ###############################################################################
 """
 import time
@@ -86,7 +90,7 @@ def interp_COLPA_is_py(COLP, COLP_im1, COLP_jm1, COLP_jp1,
 ###############################################################################
 ### SPECIALIZE FOR GPU
 ###############################################################################
-def run_all_gpu( COLP,           
+def run_all_gpu(COLP,           
                 COLP_im1,           COLP_ip1,       
                 COLP_jm1,           COLP_jp1,
                 COLP_im1_jm1,       COLP_im1_jp1,
@@ -96,9 +100,11 @@ def run_all_gpu( COLP,
                 COLP_OLD_jm1,       COLP_OLD_jp1,
                 COLP_OLD_im1_jm1,   COLP_OLD_im1_jp1,
                 COLP_OLD_ip1_jm1,   COLP_OLD_ip1_jp1,
-                POTT_OLD, dPOTTdt,
                 UWIND_OLD, dUFLXdt,
                 VWIND_OLD, dVFLXdt,
+                POTT_OLD, dPOTTdt,
+                QV_OLD, dQVdt,
+                QC_OLD, dQCdt,
                 A,           
                 A_im1,              A_ip1,       
                 A_jm1,              A_jp1,
@@ -107,10 +113,6 @@ def run_all_gpu( COLP,
                 dt, i, j):
     """
     """
-
-    # POTT
-    if i < nx+nb and j < ny+nb:
-        POTT = euler_forward_pw(POTT_OLD, dPOTTdt, COLP, COLP_OLD, dt)
 
     ## UWIND
     if j < ny+nb:
@@ -125,7 +127,7 @@ def run_all_gpu( COLP,
                                    A_im1_jp1,      A_im1_jm1, j)
         UWIND = euler_forward_pw(UWIND_OLD, dUFLXdt, COLPA_is, COLPA_OLD_is, dt)
     
-    # VWIND
+    ## VWIND
     if i < nx+nb:
         COLPA_js     = interp_COLPA_js(COLP, COLP_jm1, COLP_im1, COLP_ip1,
                                        COLP_ip1_jm1,   COLP_im1_jm1,
@@ -137,8 +139,21 @@ def run_all_gpu( COLP,
                                        A,    A_jm1,    A_im1,    A_ip1,
                                        A_ip1_jm1,      A_im1_jm1)
         VWIND = euler_forward_pw(VWIND_OLD, dVFLXdt, COLPA_js, COLPA_OLD_js, dt)
+    if i < nx+nb and j < ny+nb:
+        ## POTT
+        POTT = euler_forward_pw(POTT_OLD, dPOTTdt, COLP, COLP_OLD, dt)
+        ## QV
+        QV = euler_forward_pw(QV_OLD, dQVdt, COLP, COLP_OLD, dt)
+        # clip negative values
+        if QV < wp(0.):
+            QV = wp(0.)
+        ## QC
+        QC = euler_forward_pw(QC_OLD, dQCdt, COLP, COLP_OLD, dt)
+        # clip negative values
+        if QC < wp(0.):
+            QC = wp(0.)
 
-    return(POTT, UWIND, VWIND)
+    return(POTT, UWIND, VWIND, QV, QC)
 
 euler_forward_pw = njit(euler_forward_pw_py, device=True, inline=True)
 interp_COLPA_js = njit(interp_COLPA_js_py, device=True, inline=True)
@@ -146,14 +161,17 @@ interp_COLPA_is = njit(interp_COLPA_is_py, device=True, inline=True)
 run_all_gpu = njit(run_all_gpu, device=True, inline=True)
 
 def make_timestep_gpu(COLP, COLP_OLD,
-                      POTT, POTT_OLD, dPOTTdt,
                       UWIND, UWIND_OLD, dUFLXdt,
                       VWIND, VWIND_OLD, dVFLXdt,
+                      POTT, POTT_OLD, dPOTTdt,
+                      QV, QV_OLD, dQVdt,
+                      QC, QC_OLD, dQCdt,
                       A, dt):
 
     i, j, k = cuda.grid(3)
     if i >= nb and i < nxs+nb and j >= nb and j < nys+nb:
-        POTT[i,j,k], UWIND[i,j,k], VWIND[i,j,k] = run_all_gpu(
+        (POTT[i,j,k], UWIND[i,j,k], VWIND[i,j,k],
+        QV[i,j,k], QC[i,j,k]) = run_all_gpu(
                 COLP     [i  ,j  ,0  ], 
                 COLP     [i-1,j  ,0  ], COLP     [i+1,j  ,0  ],       
                 COLP     [i  ,j-1,0  ], COLP     [i  ,j+1,0  ],
@@ -165,9 +183,11 @@ def make_timestep_gpu(COLP, COLP_OLD,
                 COLP_OLD [i-1,j-1,0  ], COLP_OLD [i-1,j+1,0  ],
                 COLP_OLD [i+1,j-1,0  ], COLP_OLD [i+1,j+1,0  ],   
 
-                POTT_OLD [i  ,j  ,k  ], dPOTTdt  [i  ,j  ,k  ],
                 UWIND_OLD[i  ,j  ,k  ], dUFLXdt  [i  ,j  ,k  ],
                 VWIND_OLD[i  ,j  ,k  ], dVFLXdt  [i  ,j  ,k  ],
+                POTT_OLD [i  ,j  ,k  ], dPOTTdt  [i  ,j  ,k  ],
+                QV_OLD   [i  ,j  ,k  ], dQVdt    [i  ,j  ,k  ],
+                QC_OLD   [i  ,j  ,k  ], dQCdt    [i  ,j  ,k  ],
 
                 A        [i  ,j  ,0  ], 
                 A        [i-1,j  ,0  ], A        [i+1,j  ,0  ],       
@@ -190,9 +210,11 @@ interp_COLPA_js     = njit(interp_COLPA_js_py)
 interp_COLPA_is     = njit(interp_COLPA_is_py)
 
 def make_timestep_cpu(COLP, COLP_OLD,
-                      POTT, POTT_OLD, dPOTTdt,
                       UWIND, UWIND_OLD, dUFLXdt,
                       VWIND, VWIND_OLD, dVFLXdt,
+                      POTT, POTT_OLD, dPOTTdt,
+                      QV, QV_OLD, dQVdt,
+                      QC, QC_OLD, dQCdt,
                       A, dt):
 
     for i in prange(nb,nxs+nb):
@@ -251,19 +273,27 @@ def make_timestep_cpu(COLP, COLP_OLD,
                                            A_ip1_jm1,      A_im1_jm1)
 
             for k in range(wp_int(0),nz):
-                POTT_OLD_       = POTT_OLD  [i  ,j  ,k  ]
-                dPOTTdt_        = dPOTTdt   [i  ,j  ,k  ]
                 UWIND_OLD_      = UWIND_OLD [i  ,j  ,k  ]
                 dUFLXdt_        = dUFLXdt   [i  ,j  ,k  ]
                 VWIND_OLD_      = VWIND_OLD [i  ,j  ,k  ]
                 dVFLXdt_        = dVFLXdt   [i  ,j  ,k  ]
+                POTT_OLD_       = POTT_OLD  [i  ,j  ,k  ]
+                dPOTTdt_        = dPOTTdt   [i  ,j  ,k  ]
+                QV_OLD_         = QV_OLD    [i  ,j  ,k  ]
+                dQVdt_          = dQVdt     [i  ,j  ,k  ]
+                QC_OLD_         = QC_OLD    [i  ,j  ,k  ]
+                dQCdt_          = dQCdt     [i  ,j  ,k  ]
 
-                POTT[i,j,k]  = euler_forward_pw(POTT_OLD_, dPOTTdt_,
-                                        COLP_, COLP_OLD_, dt)
                 UWIND[i,j,k] = euler_forward_pw(UWIND_OLD_, dUFLXdt_,
                                         COLPA_is, COLPA_OLD_is, dt)
                 VWIND[i,j,k] = euler_forward_pw(VWIND_OLD_, dVFLXdt_,
                                         COLPA_js, COLPA_OLD_js, dt)
+                POTT[i,j,k]  = euler_forward_pw(POTT_OLD_, dPOTTdt_,
+                                        COLP_, COLP_OLD_, dt)
+                QV[i,j,k]    = euler_forward_pw(QV_OLD_, dQVdt_,
+                                          COLP_, COLP_OLD_, dt)
+                QC[i,j,k]    = euler_forward_pw(QC_OLD_, dQCdt_,
+                                        COLP_, COLP_OLD_, dt)
 make_timestep_cpu = njit(make_timestep_cpu)
 
 

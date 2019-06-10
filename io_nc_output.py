@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190605
+Last modified:      20190610
 License:            MIT
 
 Write fields to nc file.
@@ -79,17 +79,20 @@ def output_to_NC(GR, F):
     ###########################################################################
 
     field_names = ['UWIND', 'VWIND', 'WIND', 'POTT', 'TAIR',
-                   'PHI', 'PAIR', 'RHO', 'QV', 'QC', 'COLP']
+                   'PHI', 'PAIR', 'RHO', 'COLP', 'QV', 'QC', 'dQVdt',
+                   'dQVdt_TURB', 'KHEAT', 'SSHFLX', 'SQVFLX']
     for field_name in field_names:
         if output_fields[field_name]:
+            no_border = False
             dimx, dimy, dimz = F.host[field_name].shape
-            if dimx == nx  + 2*nb:
+            if (dimx == nx  + 2*nb) or (dimx == nx):
                 lon_str = 'lon'
-            elif dimx == nxs + 2*nb:
+                if dimx == nx: no_border = True
+            elif (dimx == nxs + 2*nb) or (dimx == nxs):
                 lon_str = 'lons'
-            if dimy == ny  + 2*nb:
+            if (dimy == ny  + 2*nb) or (dimy == ny):
                 lat_str = 'lat'
-            elif dimy == nys + 2*nb:
+            elif (dimy == nys + 2*nb) or (dimy == nys):
                 lat_str = 'lats'
             if dimz == nz:
                 level_str = 'level'
@@ -101,14 +104,20 @@ def output_to_NC(GR, F):
             if level_str is not None:
                 dimensions = ('time', level_str, lat_str, lon_str,)
             else:
-                dimensions = ('time', lon_str, lat_str,)
+                dimensions = ('time', lat_str, lon_str,)
+            
+            #print(field_name)
+            #print(dimensions)
 
             i = np.arange(nb,dimx-1) 
             j = np.arange(nb,dimy-1) 
             ii,jj = np.ix_(i, j)
 
             VAR_out = ncf.createVariable(field_name, 'f4', dimensions )
-            VAR_out[-1,::] = F.host[field_name][ii,jj,:].T
+            if no_border:
+                VAR_out[-1,::] = F.host[field_name][:,:,:].T
+            else:
+                VAR_out[-1,::] = F.host[field_name][ii,jj,:].T
 
     ###########################################################################
     # PREPROCESSED FIELDS

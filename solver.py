@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190604
+Last modified:      20190609
 License:            MIT
 
 Simple global climate model, hydrostatic and on a lat-lon grid.
@@ -31,8 +31,9 @@ from datetime import timedelta
 
 from namelist import (i_time_stepping,
                     i_load_from_restart, i_save_to_restart,
+                    i_surface_scheme, i_turbulence,
                     i_radiation, i_comp_mode,
-                    i_microphysics, i_surface_scheme)
+                    i_microphysics)
 from io_read_namelist import (gpu_enable, CPU, GPU)
 from io_nc_output import constant_fields_to_NC, output_to_NC
 from io_restart import write_restart
@@ -94,15 +95,6 @@ while GR.ts < GR.nts:
 
 
     ####################################################################
-    # RADIATION
-    ####################################################################
-    if i_radiation:
-        GR.timer.start('rad')
-        F.RAD.launch_radiation_calc(GR, F)
-        GR.timer.stop('rad')
-
-
-    ####################################################################
     # EARTH SURFACE
     ####################################################################
     if i_surface_scheme:
@@ -110,6 +102,25 @@ while GR.ts < GR.nts:
         F.SURF.advance_timestep(GR, **F.get(F.SURF.fields_timestep,
                                 target=F.SURF.target))
         GR.timer.stop('srfc')
+
+
+    ####################################################################
+    # TURBULENCE
+    ####################################################################
+    if i_turbulence:
+        GR.timer.start('turb')
+        F.TURB.compute_turbulence(GR, **F.get(F.TURB.fields_main,
+                                target=F.TURB.target))
+        GR.timer.stop('turb')
+
+
+    ####################################################################
+    # RADIATION
+    ####################################################################
+    if i_radiation:
+        GR.timer.start('rad')
+        F.RAD.launch_radiation_calc(GR, F)
+        GR.timer.stop('rad')
 
 
     ####################################################################

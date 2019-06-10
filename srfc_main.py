@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190604
+Last modified:      20190609
 License:            MIT
 
 Main script of surface scheme.
@@ -39,11 +39,17 @@ moisture_ocean = wp(np.nan)
 moisture_soil = wp(10.0)
 evapity_thresh = wp(10.)
 
+# bulk transfer coefficient for momentum
+DRAGCM = wp(0.02)
+# bulk transfer coefficient for heat and moisture
+DRAGCH = wp(0.01)
+
 class Surface:
 
     fields_timestep = ['SOILTEMP', 'LWFLXNET', 'SWFLXNET', 'SOILCP',
                        'SOILRHO', 'SOILDEPTH', 'OCEANMASK',
-                       'SURFALBEDSW', 'SURFALBEDLW']
+                       'SURFALBEDSW', 'SURFALBEDLW', 'TAIR', 'QV',
+                       'WIND', 'PSURF', 'SSHFLX', 'SQVFLX']
 
 
     def __init__(self, GR, F, target):
@@ -76,9 +82,12 @@ class Surface:
         fields['SOILEVAPITY'][fields['OCEANMASK'] == 0]  = 0.
         fields['SOILEVAPITY'][fields['OCEANMASK'] == 1]  = 1.
 
-        self.calc_albedo(fields['SURFALBEDSW'], fields['SURFALBEDLW'],
-                         fields['SOILTEMP'], fields['SOILMOIST'],
-                         fields['OCEANMASK'])
+        fields['SURFALBEDSW'][fields['OCEANMASK'] == 1]  = 0.05
+        fields['SURFALBEDLW'][fields['OCEANMASK'] == 1]  = 0.00
+        fields['SURFALBEDSW'][fields['OCEANMASK'] == 0]  = 0.20
+        fields['SURFALBEDLW'][fields['OCEANMASK'] == 0]  = 0.00
+        fields['SURFALBEDSW'][fields['SOILTEMP'] <= wp(273.15)]  = 0.6
+        fields['SURFALBEDLW'][fields['SOILTEMP'] <= wp(273.15)]  = 0.0
 
         return(fields)
 
@@ -86,23 +95,24 @@ class Surface:
 
     def advance_timestep(self, GR, SOILTEMP, LWFLXNET, SWFLXNET,
                         SOILCP, SOILRHO, SOILDEPTH, OCEANMASK,
-                        SURFALBEDSW, SURFALBEDLW):
+                        SURFALBEDSW, SURFALBEDLW, TAIR, QV, WIND,
+                        PSURF,
+                        SSHFLX, SQVFLX):
 
         if self.target == GPU:
             advance_timestep_srfc_gpu[bpg, tpb_2D](SOILTEMP,
                                    LWFLXNET, SWFLXNET, SOILCP,
                                    SOILRHO, SOILDEPTH, OCEANMASK,
-                                   SURFALBEDSW, SURFALBEDLW, GR.dt)
-            #raise NotImplementedError()
+                                   SURFALBEDSW, SURFALBEDLW,
+                                   TAIR, QV, WIND, PSURF, 
+                                   SSHFLX, SQVFLX, DRAGCH, GR.dt)
+
 
         elif self.target == CPU:
             advance_timestep_srfc_cpu(SOILTEMP,
                                    LWFLXNET, SWFLXNET, SOILCP,
                                    SOILRHO, SOILDEPTH, OCEANMASK,
                                    SURFALBEDSW, SURFALBEDLW, GR.dt)
-            #calc_albedo(SURFALBEDSW, SURFALBEDLW, SOILTEMP,
-            #            SOILMOIST, OCEANMASK)
-
 
 
         #    # calc evaporation capacity
@@ -113,25 +123,6 @@ class Surface:
 
         #    calc_evaporation_capacity_gpu[GR.riddim_xy_in, GR.blockdim_xy, GR.stream]\
         #                        (GF.SOILEVAPITY, GF.SOILMOIST, GF.OCEANMASK, GF.SOILTEMP)
-
-
-
-    # TODO IS USED FOR INITIALIZATION ONLY. CHANGE TO NORMAL FUNCTION?
-    def calc_albedo(self, SURFALBEDSW, SURFALBEDLW, SOILTEMP,
-                    SOILMOIST, OCEANMASK):
-        ## ALBEDO
-        # forest
-        SURFALBEDSW[:] = wp(0.2)
-        SURFALBEDLW[:] = wp(0.0)
-        # ocean
-        SURFALBEDSW[OCEANMASK == 1] = wp(0.05)
-        SURFALBEDLW[OCEANMASK == 1] = wp(0.00)
-        # ice (land and sea)
-        #SURFALBEDSW[(SOILTEMP[:,:,0] <= 273.15) & (SOILMOIST[:,:,0] > 10)] = 0.6
-        #SURFALBEDLW[(SOILTEMP[:,:,0] <= 273.15) & (SOILMOIST[:,:,0] > 10)] = 0.2
-        SURFALBEDSW[(SOILTEMP[:,:,0] <= wp(273.15))] = wp(0.6)
-        SURFALBEDLW[(SOILTEMP[:,:,0] <= wp(273.15))] = wp(0.2)
-
 
 
 

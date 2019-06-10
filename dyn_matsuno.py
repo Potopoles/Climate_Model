@@ -10,7 +10,7 @@ License:            MIT
 Perform a matsuno time integration.
 ###############################################################################
 """
-from namelist import i_comp_mode
+from namelist import i_comp_mode, i_moist_main_switch
 from io_read_namelist import CPU, GPU, gpu_enable
 from main_grid import tpb, bpg
 from dyn_tendencies import compute_tendencies
@@ -36,15 +36,17 @@ def step_matsuno(GR, F):
         F.host['UWIND_OLD'][:] = F.host['UWIND'][:]
         F.host['VWIND_OLD'][:] = F.host['VWIND'][:]
         F.host['POTT_OLD'][:]  = F.host['POTT'][:]
-        #F.host['QV_OLD'][:]    = F.host['QV'][:]
-        #F.host['QC_OLD'][:]    = F.host['QC'][:]
+        if i_moist_main_switch:
+            F.host['QV_OLD'][:]    = F.host['QV'][:]
+            F.host['QC_OLD'][:]    = F.host['QC'][:]
     elif i_comp_mode == 2:
         set_equal[bpg, tpb](F.device['COLP_OLD'],     F.device['COLP'])
         set_equal[bpg, tpb](F.device['UWIND_OLD'],    F.device['UWIND'])
         set_equal[bpg, tpb](F.device['VWIND_OLD'],    F.device['VWIND'])
         set_equal[bpg, tpb](F.device['POTT_OLD'],     F.device['POTT'])
-        #set_equal[bpg, tpb](F.device['QV_OLD'],       F.device['QV'])
-        #set_equal[bpg, tpb](F.device['QC_OLD'],       F.device['QC'])
+        if i_moist_main_switch:
+            set_equal[bpg, tpb](F.device['QV_OLD'],       F.device['QV'])
+            set_equal[bpg, tpb](F.device['QC_OLD'],       F.device['QC'])
     GR.timer.stop('step')
     ##############################
     ##############################

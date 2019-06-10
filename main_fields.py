@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190604
+Last modified:      20190609
 License:            MIT
 
 Setup and store model fields. Have each field in memory (for CPU)
@@ -14,13 +14,14 @@ and if GPU enabled also on GPU.
 import numpy as np
 from numba import cuda
 
-from namelist import (i_surface_scheme, nz_soil,
+from namelist import (i_surface_scheme, nz_soil, i_turbulence,
                       i_radiation, i_load_from_restart)
 from io_read_namelist import wp, wp_int, CPU, GPU
 from io_initial_conditions import initialize_fields
 from io_restart import load_restart_fields
-from rad_main import Radiation
 from srfc_main import Surface
+from turb_main import Turbulence
+from rad_main import Radiation
 ###############################################################################
 
 class ModelFields:
@@ -61,8 +62,11 @@ class ModelFields:
                             'COLP', 'PSURF', 'PVTF', 'PVTFVB',
                             'POTT', 'TAIR', 'TAIRVB', 'PAIR', 
                             'UWIND', 'VWIND', 'WIND', 'RHO',
-                            'PHI', 'PHIVB']
+                            'PHI', 'PHIVB', 'QV', 'QC']
             self.set(initialize_fields(GR, **self.get(fields_to_init)))
+            ## TODO
+            #self.host['QV'][:,:,:] = np.arange(0,GR.nz)/GR.nz
+            #self.host['SQVFLX'][:,:,0] = 0.
 
             ###################################################################
             ## INITIALIZE PROCESSES
@@ -76,6 +80,15 @@ class ModelFields:
                     self.SURF = Surface(GR, self, target=CPU)
             else:
                 self.SURF = None
+
+            ## TURBULENCE 
+            if i_turbulence:
+                if gpu_enable:
+                    self.TURB = Turbulence(GR, target=GPU) 
+                else:
+                    self.TURB = Turbulence(GR, target=CPU) 
+            else:
+                self.TURB = None
 
             ## RADIATION
             if i_radiation:
@@ -94,13 +107,6 @@ class ModelFields:
             #else:
             #    MIC = None
 
-            ## TURBULENCE 
-            # TODO reimplement
-            #if i_turbulence:
-            #    raise NotImplementedError('Baustelle')
-            #    TURB = turbulence(GR, i_turbulence) 
-            #else:
-            #    TURB = None
 
             
             if self.gpu_enable:
@@ -176,8 +182,9 @@ def allocate_fields(GR):
         1.5 additional diagnostic fields
         1.6 constant fields
     2 SURFACE FIELDS
-    3 RADIATION FIELDS
-    4 MOISTURE FIELDS
+    3 TURBULENCE FIELDS
+    4 RADIATION FIELDS
+    5 MOISTURE FIELDS
     """
     f = {}
 
@@ -219,6 +226,9 @@ def allocate_fields(GR):
                                 np.nan, dtype=wp)
     # air pressure [Pa]
     f['PAIR']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                                np.nan, dtype=wp)
+    # air pressure at vertical borders [Pa]
+    f['PAIRVB']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
                                 np.nan, dtype=wp)
     # surface pressure [Pa]
     f['PSURF']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, 1      ), 
@@ -319,6 +329,7 @@ def allocate_fields(GR):
     f['PVTFVB']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
                         np.nan, dtype=wp)
 
+
     #######################################################################
     # 1.5 additional diagnostic fields
     #######################################################################
@@ -331,6 +342,9 @@ def allocate_fields(GR):
                         np.nan, dtype=wp)
     # air density [kg m-2]
     f['RHO']         = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                        np.nan, dtype=wp)
+    # air density at vertical borders [kg m-2]
+    f['RHOVB']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
                         np.nan, dtype=wp)
 
     #######################################################################
@@ -372,6 +386,9 @@ def allocate_fields(GR):
         # evaporation likliness of soil [-]
         f['SOILEVAPITY'] = np.full( ( GR.nx, GR.ny, 1      ), 
                                     np.nan, dtype=wp)
+        # surface roughness length [m]
+        f['SURFZ0']      = np.full( ( GR.nx, GR.ny, 1      ),
+                                    np.nan, dtype=wp)
         # surface albedo for shortwave radiation [-]
         f['SURFALBEDSW'] = np.full( ( GR.nx, GR.ny, 1      ), 
                                     np.nan, dtype=wp)
@@ -384,77 +401,119 @@ def allocate_fields(GR):
         # accumulated rain during simulation at surface [kg m-2]
         f['ACCRAIN']     = np.full( ( GR.nx, GR.ny, 1      ), 
                                     np.nan, dtype=wp)
+        # surface sensible heat flux (pointing towards atmosphere) [W m-2]
+        f['SSHFLX']      = np.full(
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                              np.nan, dtype=wp) 
+        # surface moisture flux (pointing towards atmosphere) [kg m-2 s-1]
+        f['SQVFLX']      = np.full(
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                              np.nan, dtype=wp) 
 
 
+    #######################################################################
+    #######################################################################
+    ### 3 TURBULENCE FIELDS
+    #######################################################################
+    #######################################################################
+    # potential temperature change due to turbulent fluxes [K s-1]
+    f['dPOTTdt_TURB']     = np.full(
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
+                              np.nan, dtype=wp)
+    # QV change due to turbulence [kg kg-1 s-1]
+    f['dQVdt_TURB']       = np.full(
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
+                              np.nan, dtype=wp)
+    # QC change due to turbulence [kg kg-1 s-1]
+    f['dQCdt_TURB']       = np.full(
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
+                              np.nan, dtype=wp)
+    if i_turbulence: 
+        # turbulenc exchange coefficient for heat and moisture 
+        f['KHEAT']        = np.full(
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ), 
+                              np.nan, dtype=wp) 
+        # turbulent exchange coefficient for momentum
+        f['KMOMENT']      = np.full(
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ), 
+                              np.nan, dtype=wp) 
 
     #######################################################################
     #######################################################################
-    ### 3 RADIATION FIELDS
+    ### 4 RADIATION FIELDS
     #######################################################################
     #######################################################################
-    # potential temperature change due to radiation [K s-1]
-    f['dPOTTdt_RAD']     = np.full(
-                                ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
-                                    np.nan, dtype=wp)
-    # net longwave flux (direction?) [W m-2]
-    f['LWFLXNET']        = np.full( ( GR.nx, GR.ny, GR.nzs ),
-                                    np.nan, dtype=wp)
-    # net shortwave flux (direction?) [W m-2]
+    # net shortwave flux pointing into surface [W m-2]
     f['SWFLXNET']        = np.full( ( GR.nx, GR.ny, GR.nzs ),
                                     np.nan, dtype=wp)
+    # net longwave flux pointing into surface [W m-2]
+    f['LWFLXNET']        = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                    np.nan, dtype=wp)
+    # potential temperature change due to radiation [K s-1]
+    f['dPOTTdt_RAD']     = np.full(
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
+                              np.nan, dtype=wp)
+    if i_radiation:
+        # solar zenith angle
+        f['SOLZEN']          = np.full( ( GR.nx, GR.ny, 1      ),
+                                        np.nan, dtype=wp)
+        # cos solar zenith angle
+        f['MYSUN']           = np.full( ( GR.nx, GR.ny, 1      ),
+                                        np.nan, dtype=wp)
+        # incoming shortwave at TOA
+        f['SWINTOA']         = np.full( ( GR.nx, GR.ny, 1      ),
+                                        np.nan, dtype=wp)
+        # TODO: Add comments
+        f['LWFLXUP']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['LWFLXDO']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['SWDIFFLXDO']      = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['SWDIRFLXDO']      = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['SWFLXUP']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['SWFLXDO']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+                                        np.nan, dtype=wp)
+        f['LWFLXDIV']        = np.full( ( GR.nx, GR.ny, GR.nz  ),
+                                        np.nan, dtype=wp)
+        f['SWFLXDIV']        = np.full( ( GR.nx, GR.ny, GR.nz  ),
+                                        np.nan, dtype=wp)
+        f['TOTFLXDIV']       = np.full( ( GR.nx, GR.ny, GR.nz  ),
+                                        np.nan, dtype=wp)
 
-    # solar zenith angle
-    f['SOLZEN']          = np.full( ( GR.nx, GR.ny, 1      ),
-                                    np.nan, dtype=wp)
-    
-    # cos solar zenith angle
-    f['MYSUN']           = np.full( ( GR.nx, GR.ny, 1      ),
-                                    np.nan, dtype=wp)
-
-    # incoming shortwave at TOA
-    f['SWINTOA']         = np.full( ( GR.nx, GR.ny, 1      ),
-                                    np.nan, dtype=wp)
-
-    f['LWFLXUP']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
-                                    np.nan, dtype=wp)
-    f['LWFLXDO']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
-                                    np.nan, dtype=wp)
-    f['SWDIFFLXDO']      = np.full( ( GR.nx, GR.ny, GR.nzs ),
-                                    np.nan, dtype=wp)
-    f['SWDIRFLXDO']      = np.full( ( GR.nx, GR.ny, GR.nzs ),
-                                    np.nan, dtype=wp)
-    f['SWFLXUP']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
-                                    np.nan, dtype=wp)
-    f['SWFLXDO']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
-                                    np.nan, dtype=wp)
-    f['LWFLXDIV']        = np.full( ( GR.nx, GR.ny, GR.nz  ),
-                                    np.nan, dtype=wp)
-    f['SWFLXDIV']        = np.full( ( GR.nx, GR.ny, GR.nz  ),
-                                    np.nan, dtype=wp)
-    f['TOTFLXDIV']       = np.full( ( GR.nx, GR.ny, GR.nz  ), np.nan, dtype=wp)
 
     #######################################################################
     #######################################################################
-    ### 4 MOISTURE FIELDS
+    ### 5 MOISTURE FIELDS
     #######################################################################
     #######################################################################
-    # TODO: Add comments
-    f['QV_OLD']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    # specific water vapor content [kg kg-1]
     f['QV']          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                         np.nan, dtype=wp)
+    # specific water vapor content [kg kg-1] last time level
+    f['QV_OLD']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                        np.nan, dtype=wp)
+    # change of specific water vapor content with time [kg kg-1 s-1]
     f['dQVdt']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                         np.nan, dtype=wp)
-    f['QC_OLD']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    # specific cloud water content [kg kg-1]
     f['QC']          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                         np.nan, dtype=wp)
+    # specific cloud water content [kg kg-1] last time level
+    f['QC_OLD']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                        np.nan, dtype=wp)
+    # change of specific cloud water content with time [kg kg-1 s-1]
     f['dQCdt']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                         np.nan, dtype=wp)
+    # change of QV due to microphysics [kg kg-1 s-1]
     f['dQVdt_MIC']   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
                         np.nan, dtype=wp)
+    # change of QC due to microphysics [kg kg-1 s-1]
     f['dQCdt_MIC']   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
                         np.nan, dtype=wp)
+    # potential temperature change due to microphysics [K s-1]
     f['dPOTTdt_MIC'] = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
                         np.nan, dtype=wp)
 

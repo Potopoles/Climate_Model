@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190601
+Last modified:      20190609
 License:            MIT
 
 Set up computational and geographical grid for simulation.
@@ -27,7 +27,8 @@ from namelist import (nz, nb,
                       i_out_nth_hour, i_sim_n_days,
                       GMT_initialization)
 from io_read_namelist import (wp_int, wp, gpu_enable, CPU, GPU,
-                            POTT_dif_coef, UVFLX_dif_coef)
+                            POTT_dif_coef, UVFLX_dif_coef,
+                            moist_dif_coef)
 from io_constants import con_rE, con_omega
 from io_restart import load_restart_grid
 from io_initial_conditions import set_up_sigma_levels
@@ -56,11 +57,7 @@ nb = wp_int(nb)
 if gpu_enable:
     if nz > 32:
         raise NotImplementedError('More than 32 vertical levels '+
-                'currently not yet implemented for GPU')
-    possible_nz = [2,4,8,16,32,64]
-    if nz not in possible_nz:
-        raise NotImplementedError('Vertical reduction for GPU ' +
-                                    'needs nz of 2**x')
+                'not yet implemented for GPU.')
 
 # THREADS PER BLOCK
 # normal case
@@ -281,13 +278,16 @@ class Grid:
             self.timer = Timer()
 
             # NUMERICAL DIFUSION
-            self.POTT_dif_coef  = np.zeros((1,1,nz), dtype=wp)
             self.UVFLX_dif_coef = np.zeros((1,1,nz), dtype=wp)
+            self.POTT_dif_coef  = np.zeros((1,1,nz), dtype=wp)
+            self.moist_dif_coef = np.zeros((1,1,nz), dtype=wp)
+            vert_reduce = .0
+            self.UVFLX_dif_coef[0,0,self.k] = (UVFLX_dif_coef * 
+                                    np.exp(-vert_reduce*(nz-self.k-1)/nz))
             vert_reduce = 5.0
             self.POTT_dif_coef[0,0,self.k] = (POTT_dif_coef * 
                                     np.exp(-vert_reduce*(nz-self.k-1)/nz))
-            vert_reduce = .0
-            self.UVFLX_dif_coef[0,0,self.k] = (UVFLX_dif_coef * 
+            self.moist_dif_coef[0,0,self.k] = (moist_dif_coef * 
                                     np.exp(-vert_reduce*(nz-self.k-1)/nz))
 
         # STUFF THAT SHOULD HAPPEN BOTH FOR NEW GRID OR LOADED GRID
@@ -303,7 +303,8 @@ class Grid:
                             'sigma_vb', 'dsigma',
                             'dxjs', 'dyis',
                             'lat_rad', 'lat_is_rad', 'dlat_rad', 'dlon_rad',
-                            'POTT_dif_coef', 'UVFLX_dif_coef']
+                            'POTT_dif_coef', 'UVFLX_dif_coef',
+                            'moist_dif_coef']
         for field_name in grid_field_names:
             exec('self.GRF[CPU][field_name] = self.'+field_name)
             if gpu_enable:

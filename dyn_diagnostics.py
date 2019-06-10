@@ -109,12 +109,14 @@ if gpu_enable:
 
 
 def diag_secondary_gpu(POTTVB, TAIRVB, PVTFVB, 
-                        COLP, PAIR, PHI, POTT, 
-                        TAIR, RHO, PVTF,
+                        COLP, PAIR, PAIRVB, PHI, POTT, 
+                        TAIR, RHO, RHOVB, PVTF,
                         UWIND, VWIND, WIND):
     i, j, k = cuda.grid(3)
     if i < nx+2*nb and j < ny+2*nb and k < nzs:
         TAIRVB[i,j,k] = POTTVB[i,j,k] * PVTFVB[i,j,k]
+        PAIRVB[i,j,k] = wp(100000.)*(PVTFVB[i,j,k])**(wp(1.)/con_kappa)
+        RHOVB [i,j,k] = PAIRVB[i,j,k] / (con_Rd * TAIRVB[i,j,k])
 
     if i < nx+2*nb and j < ny+2*nb and k < nz:
         TAIR[i,j,k] = POTT[i,j,k] * PVTF[i,j,k]

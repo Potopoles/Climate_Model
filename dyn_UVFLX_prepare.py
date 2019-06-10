@@ -15,7 +15,6 @@ Fundamentals of Atmospheric Modeling, Second Edition
 Chapter 7.4, page 214ff
 ###############################################################################
 """
-import time
 import numpy as np
 from math import sin, cos
 from numba import cuda, njit, prange

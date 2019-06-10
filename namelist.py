@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190604
+Last modified:      20190609
 License:            MIT
 
 Namelist for user input.
@@ -44,13 +44,15 @@ gaussian_dlat = np.pi/10
 uwind_0 = 0
 vwind_0 = 0
 UWIND_gaussian_pert = 10
-UWIND_random_pert = 0
+UWIND_random_pert   = 0
 VWIND_gaussian_pert = 10
-VWIND_random_pert = 0
-COLP_gaussian_pert = -00000
-COLP_random_pert = 000
-POTT_gaussian_pert = 00
-POTT_random_pert = 0.0
+VWIND_random_pert   = 0
+COLP_gaussian_pert  = -00000
+COLP_random_pert    = 000
+POTT_gaussian_pert  = 00
+POTT_random_pert    = 0.0
+QV_gaussian_pert    = 0.000
+QV_random_pert      = 0.0
 
 ###############################################################################
 ###############################################################################
@@ -64,14 +66,6 @@ POTT_random_pert = 0.0
 # prognostics computation of column pressure
 i_COLP_main_switch      = 1
 
-# prognostics computation of potential temperature
-i_POTT_main_switch      = 1
-i_POTT_hor_adv          = 1
-i_POTT_vert_adv         = 1
-i_POTT_num_dif          = 1
-i_POTT_radiation        = 1
-i_POTT_microphys        = 0
-
 # prognostics computation of momentum
 i_UVFLX_main_switch     = 1
 i_UVFLX_hor_adv         = 1
@@ -79,6 +73,24 @@ i_UVFLX_vert_adv        = 1
 i_UVFLX_coriolis        = 1
 i_UVFLX_num_dif         = 1
 i_UVFLX_pre_grad        = 1
+
+# prognostics computation of potential temperature
+i_POTT_main_switch      = 1
+i_POTT_hor_adv          = 1
+i_POTT_vert_adv         = 1
+i_POTT_vert_turb        = 0
+i_POTT_num_dif          = 1
+i_POTT_radiation        = 1
+i_POTT_microphys        = 0
+
+# prognostics computation of moisture fields
+i_moist_main_switch     = 1
+i_moist_hor_adv         = 0
+i_moist_vert_adv        = 0
+i_moist_vert_turb       = 1
+i_moist_num_dif         = 0
+i_moist_microphys       = 0
+
 
 ###############################################################################
 # SURFACE
@@ -168,10 +180,15 @@ output_fields = {
     'SURFTEMP'      : 1,
     'SURFALBEDSW'   : 1,
     'SURFALBEDLW'   : 0,
+    'SSHFLX'        : 1,
+    'SQVFLX'        : 1,
     # radiation fields
     # microphysics fields
-    'QV'            : 0,                    #vp
-    'QC'            : 0,                    #vp
+    'QV'            : 2,                    #vp
+    'QC'            : 2,                    #vp
+    'dQVdt'         : 1,
+    'dQVdt_TURB'    : 1,
+    'KHEAT'         : 1,
     'WVP'           : 0,
     'CWP'           : 0,
 }
@@ -221,10 +238,10 @@ if i_simulation_mode == 1:
     i_sim_n_days = 0.36*1
     i_out_nth_hour = 4*1
     i_surface_scheme = 1
-    i_radiation = 1
+    i_turbulence = 1
+    i_radiation = 0
     rad_nth_hour = 3.9
     i_microphysics = 0
-    i_turbulence = 0
     i_save_to_restart   = 0
 
 # LONGTIME RUN
@@ -235,9 +252,10 @@ elif i_simulation_mode == 2:
     dlat_deg = 5.0
     dlon_deg = 5.0
     output_path = '../output'
-    i_sim_n_days = 15*365.00
-    i_out_nth_hour = 10*24
+    i_sim_n_days = 15#*365.00
+    i_out_nth_hour = 12#*24
     i_surface_scheme = 1
+    i_turbulence = 0
     i_radiation = 1
     rad_nth_hour = 3.9
     i_microphysics = 0
@@ -254,8 +272,8 @@ UVFLX_dif_coef = 0
 POTT_dif_coef = 1E-6 
 # COLP: not tested 
 COLP_dif_coef = 0 
-# QV: not tested 
-QV_hor_dif_tau   = 0
+# moisture: not tested 
+moist_dif_coef   = 1E-6
 
 # automatically chose nice diffusion parameter depending on grid
 # resolution

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190531
+Last modified:      20190609
 License:            MIT
 
 Collection of generally applicable finite difference tendency
@@ -15,10 +15,40 @@ Taken from Jacobson 2005:
 Fundamentals of Atmospheric Modeling, Second Edition Chapter 7
 ###############################################################################
 """
+from math import log
+
 from io_read_namelist import wp, wp_int
-from io_constants import con_cp
+from io_constants import con_cp, con_g
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 ###############################################################################
+
+
+def comp_VARVB_log_py(VAR, VAR_km1, VAR_kp1):
+    """
+    Compute variable value at vertical borders using 
+    logarithmic interpolation.
+    (see Jacobson page 213.)
+    """
+    min_val = wp(0.0000001)
+    VAR     = max(VAR, min_val)
+    VAR_km1 = max(VAR_km1, min_val)
+    VAR_kp1 = max(VAR_kp1, min_val)
+
+    if VAR_km1 == VAR:
+        VARVB = VAR
+    else:
+        VARVB       = ( ( log(VAR_km1) - log(VAR    ) ) /
+                        ( wp(1.) / VAR     - wp(1.) / VAR_km1 )
+                      )
+
+    if VAR_kp1 == VAR:
+        VARVB_kp1 = VAR
+    else:
+        VARVB_kp1   = ( ( log(VAR    ) - log(VAR_kp1) ) /
+                        ( wp(1.) / VAR_kp1 - wp(1.) / VAR     )
+                      )
+
+    return(VARVB, VARVB_kp1)
 
 
 def euler_forward_py(VAR, dVARdt, dt):
@@ -60,6 +90,7 @@ def vert_adv_py(VARVB, VARVB_kp1, WWIND, WWIND_kp1, COLP_NEW,
             COLP_NEW * (
                 + WWIND     * VARVB 
                 - WWIND_kp1 * VARVB_kp1) / dsigma)
+
 
 
 
@@ -336,6 +367,7 @@ def UVFLX_hor_adv_py(
         - ETFLX_dm1_pp1 * (DWIND         + DWIND_dm1_pp1)/wp(2.)
         )
     )
+
 
 
 

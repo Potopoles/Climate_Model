@@ -22,7 +22,8 @@ from namelist import (i_load_from_restart, i_use_topo,
                     COLP_gaussian_pert, COLP_random_pert,
                     UWIND_gaussian_pert, UWIND_random_pert,
                     VWIND_gaussian_pert, VWIND_random_pert,
-                    POTT_gaussian_pert, POTT_random_pert)
+                    POTT_gaussian_pert, POTT_random_pert,
+                    QV_gaussian_pert, QV_random_pert)
 from io_read_namelist import wp, pair_top
 from io_constants import con_kappa, con_g, con_cp, con_Rd
 ###############################################################################
@@ -31,7 +32,7 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
                         COLP, PSURF, PVTF, PVTFVB,
                         POTT, TAIR, TAIRVB, PAIR,
                         UWIND, VWIND, WIND, RHO,
-                        PHI, PHIVB):
+                        PHI, PHIVB, QV, QC):
 
     #######################################################################
     # SET INITIAL FIELD VALUES
@@ -53,6 +54,8 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
                             GR, COLP, HSURF, PSURF, PVTF,
                             PVTFVB, POTT, TAIR, PAIR)
 
+    QV[GR.ii,GR.jj,:] = 0.
+    QC[GR.ii,GR.jj,:] = 0.
 
     # INITIAL CONDITIONS
     COLP[:,:,0] = gaussian2D(GR, COLP[:,:,0], COLP_gaussian_pert,
@@ -74,11 +77,17 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
                      np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
         POTT[:,:,k] = random2D(GR, POTT[:,:,k], POTT_random_pert)
 
+        QV  [:,:,k] = gaussian2D(GR, QV[:,:,k], QV_gaussian_pert,
+                     np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+        QV  [:,:,k] = random2D(GR, QV[:,:,k], QV_random_pert)
+
     # BOUNDARY EXCHANGE OF INITIAL CONDITIONS
     COLP    = GR.exchange_BC(COLP)
     UWIND   = GR.exchange_BC(UWIND)
     VWIND   = GR.exchange_BC(VWIND)
     POTT    = GR.exchange_BC(POTT)
+    QV      = GR.exchange_BC(QV)
+    QC      = GR.exchange_BC(QC)
 
     ## PRIMARY DIAGNOSTIC FIELDS
     diagnose_fields_init(GR, PHI, PHIVB, PVTF, PVTFVB,
@@ -99,7 +108,7 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
     out['UWIND']        = UWIND
     out['VWIND']        = VWIND
     out['WWIND']        = WWIND
-    out['WIND']        = WIND
+    out['WIND']         = WIND
 
     out['PVTF']         = PVTF
     out['PVTFVB']       = PVTFVB
@@ -111,6 +120,9 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
     out['PHI']          = PHI
     out['PHIVB']        = PHIVB
     out['RHO']          = RHO
+
+    out['QV']           = QV
+    out['QC']           = QC
 
     return(out)
 

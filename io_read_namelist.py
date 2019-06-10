@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190602
+Last modified:      20190609
 License:            MIT
 
 Load namelist and process variables if necessary such that
@@ -15,10 +15,12 @@ import numba
 import numpy as np
 from namelist import (working_precision,
                     UVFLX_dif_coef, POTT_dif_coef, COLP_dif_coef,
+                    moist_dif_coef,
                     i_comp_mode, nb, lon0_deg, lon1_deg,
                     pair_top, i_time_stepping, nz_soil,
                     i_radiation, i_surface_scheme,
                     i_POTT_radiation, i_POTT_microphys,
+                    i_moist_microphys,
                     i_COLP_main_switch, i_UVFLX_main_switch)
 ###############################################################################
 
@@ -64,6 +66,8 @@ if i_POTT_radiation and not i_radiation:
     i_POTT_radiation = 0
 if i_POTT_microphys and not i_microphys:
     i_POTT_microphys = 0
+if i_moist_microphys and not i_microphys:
+    i_moist_microphys = 0
 
 #if i_UVFLX_main_switch and not i_COLP_main_switch:
 #    raise ValueError('i_UVFLX_main_switch can only be 1 if i_COLP_main_switch'+
@@ -77,6 +81,7 @@ UVFLX_dif_coef = wp(UVFLX_dif_coef)
 POTT_dif_coef = wp(POTT_dif_coef)
 if COLP_dif_coef > 0:
     raise NotImplementedError('no pressure difusion in gpu implemented')
+moist_dif_coef = wp(moist_dif_coef)
 
 # model top pressure 
 pair_top = wp(pair_top)
