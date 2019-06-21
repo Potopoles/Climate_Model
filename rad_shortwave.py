@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190602
+Last modified:      20190618
 License:            MIT
 
 Organize computation of shortwave radiation.
@@ -226,8 +226,7 @@ def rad_solar_zenith_angle(GR, current_time, SOLZEN):
     hour_angle = 2*np.pi * sec_past_local_noon / 86400;
 
 
-    #SOLZEN[:,:] = np.cos(hour_angle)
-    SOLZEN[:,:,0] = np.arccos( \
+    SOLZEN[GR.ii,GR.jj,0] = np.arccos( \
                     + np.sin(GR.lat_rad[GR.ii,GR.jj,0]) * np.sin(sol_declin) \
                     + np.cos(GR.lat_rad[GR.ii,GR.jj,0]) * \
                                 np.cos(sol_declin) * np.cos(hour_angle) )

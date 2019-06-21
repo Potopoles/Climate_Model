@@ -27,6 +27,7 @@ def exchange_BC_cpu(FIELD):
     if fnx == nxs+2*nb: # staggered in x
         FIELD[0,:,:] = FIELD[nxs-1,:,:] 
         FIELD[nxs,:,:] = FIELD[1,:,:] 
+        FIELD[nxs+1,:,:] = FIELD[2,:,:] 
     else:     # unstaggered in x
         FIELD[0,:,:] = FIELD[nx,:,:] 
         FIELD[nx+1,:,:] = FIELD[1,:,:] 
@@ -56,6 +57,8 @@ def exchange_BC_gpu(FIELD):
                 FIELD[i,j,k] = FIELD[nxs-1,j,k] 
             elif i == nxs:
                 FIELD[i,j,k] = FIELD[1,j,k] 
+            elif i == nxs+1:
+                FIELD[i,j,k] = FIELD[2,j,k] 
 
         else:     # unstaggered in x
             if i == 0:

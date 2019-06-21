@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190609
+Last modified:      20190621
 License:            MIT
 
 Main script of surface scheme.
@@ -20,6 +20,8 @@ from main_grid import tpb_2D, bpg
 from srfc_timestep import advance_timestep_srfc_cpu
 if gpu_enable:
     from srfc_timestep import advance_timestep_srfc_gpu
+from srfc_timestep import advance_timestep_srfc_cpu
+from misc_utilities import function_input_fields
 ###############################################################################
 
 ###############################################################################
@@ -40,29 +42,26 @@ moisture_soil = wp(10.0)
 evapity_thresh = wp(10.)
 
 # bulk transfer coefficient for momentum
-DRAGCM = wp(0.02)
+DRAGCM = wp(0.01)
 # bulk transfer coefficient for heat and moisture
-DRAGCH = wp(0.01)
+DRAGCH = wp(0.005)
 
 class Surface:
 
-    fields_timestep = ['SOILTEMP', 'LWFLXNET', 'SWFLXNET', 'SOILCP',
-                       'SOILRHO', 'SOILDEPTH', 'OCEANMASK',
-                       'SURFALBEDSW', 'SURFALBEDLW', 'TAIR', 'QV',
-                       'WIND', 'PSURF', 'SSHFLX', 'SQVFLX']
-
-
     def __init__(self, GR, F, target):
 
-        F.set(self.initial_conditions(GR, **F.get(F.field_groups[F.SRFC_FIELDS])))
+        F.set(self.initial_conditions(GR, 
+            **F.get(F.field_groups[F.SRFC_FIELDS], target=CPU)),
+             target=CPU)
 
         self.target = target
+        self.fields_timestep = function_input_fields(self.advance_timestep)
         
 
 
     def initial_conditions(self, GR, **fields):
-        fields['OCEANMASK']  [fields['HSURF'][GR.ii,GR.jj,0]  > 100]  = 0
-        fields['OCEANMASK']  [fields['HSURF'][GR.ii,GR.jj,0] <= 100] = 1
+        fields['OCEANMASK']  [fields['HSURF']  > 100]  = 0
+        fields['OCEANMASK']  [fields['HSURF'] <= 100] = 1
         
         fields['SOILDEPTH']  [fields['OCEANMASK'] == 0] = depth_soil
         fields['SOILDEPTH']  [fields['OCEANMASK'] == 1] = depth_ocean
@@ -73,8 +72,7 @@ class Surface:
         fields['SOILRHO']    [fields['OCEANMASK'] == 0] = rho_soil
         fields['SOILRHO']    [fields['OCEANMASK'] == 1] = rho_water
 
-        fields['SOILTEMP']   [:,:,0]                    = (295 - 
-                                    np.sin(GR.lat_rad[GR.ii,GR.jj,0])**2*40)
+        fields['SOILTEMP']   [:,:,0] = (295 - np.sin(GR.lat_rad[:,:,0])**2*40)
 
         fields['SOILMOIST']  [fields['OCEANMASK'] == 0] = moisture_soil
         fields['SOILMOIST']  [fields['OCEANMASK'] == 1] = moisture_ocean
@@ -86,33 +84,41 @@ class Surface:
         fields['SURFALBEDLW'][fields['OCEANMASK'] == 1]  = 0.00
         fields['SURFALBEDSW'][fields['OCEANMASK'] == 0]  = 0.20
         fields['SURFALBEDLW'][fields['OCEANMASK'] == 0]  = 0.00
-        fields['SURFALBEDSW'][fields['SOILTEMP'] <= wp(273.15)]  = 0.6
-        fields['SURFALBEDLW'][fields['SOILTEMP'] <= wp(273.15)]  = 0.0
+        fields['SURFALBEDSW'][
+                        fields['SOILTEMP'][:,:,0] <= wp(273.15)]  = 0.6
+        fields['SURFALBEDLW'][
+                        fields['SOILTEMP'][:,:,0] <= wp(273.15)]  = 0.0
 
         return(fields)
 
 
 
-    def advance_timestep(self, GR, SOILTEMP, LWFLXNET, SWFLXNET,
+    def advance_timestep(self, GR, GRF, SOILTEMP, LWFLXNET, SWFLXNET,
                         SOILCP, SOILRHO, SOILDEPTH, OCEANMASK,
                         SURFALBEDSW, SURFALBEDLW, TAIR, QV, WIND,
-                        PSURF,
-                        SSHFLX, SQVFLX):
+                        PSURF, COLP, WINDX, WINDY,
+                        SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX):
 
         if self.target == GPU:
             advance_timestep_srfc_gpu[bpg, tpb_2D](SOILTEMP,
                                    LWFLXNET, SWFLXNET, SOILCP,
                                    SOILRHO, SOILDEPTH, OCEANMASK,
                                    SURFALBEDSW, SURFALBEDLW,
-                                   TAIR, QV, WIND, PSURF, 
-                                   SSHFLX, SQVFLX, DRAGCH, GR.dt)
+                                   TAIR, QV, WIND, PSURF, COLP,
+                                   SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX,
+                                   WINDX, WINDY, DRAGCM, DRAGCH,
+                                   GRF['A'], GR.dt)
 
 
         elif self.target == CPU:
             advance_timestep_srfc_cpu(SOILTEMP,
                                    LWFLXNET, SWFLXNET, SOILCP,
                                    SOILRHO, SOILDEPTH, OCEANMASK,
-                                   SURFALBEDSW, SURFALBEDLW, GR.dt)
+                                   SURFALBEDSW, SURFALBEDLW,
+                                   TAIR, QV, WIND, PSURF, COLP,
+                                   SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX,
+                                   WINDX, WINDY, DRAGCM, DRAGCH,
+                                   GRF['A'], GR.dt)
 
 
         #    # calc evaporation capacity

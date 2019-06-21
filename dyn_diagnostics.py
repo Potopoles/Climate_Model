@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190528
-Last modified:      20190604
+Last modified:      20190616
 License:            MIT
 
 Jacobson 2005
@@ -111,7 +111,7 @@ if gpu_enable:
 def diag_secondary_gpu(POTTVB, TAIRVB, PVTFVB, 
                         COLP, PAIR, PAIRVB, PHI, POTT, 
                         TAIR, RHO, RHOVB, PVTF,
-                        UWIND, VWIND, WIND):
+                        UWIND, VWIND, WINDX, WINDY, WIND):
     i, j, k = cuda.grid(3)
     if i < nx+2*nb and j < ny+2*nb and k < nzs:
         TAIRVB[i,j,k] = POTTVB[i,j,k] * PVTFVB[i,j,k]
@@ -119,10 +119,12 @@ def diag_secondary_gpu(POTTVB, TAIRVB, PVTFVB,
         RHOVB [i,j,k] = PAIRVB[i,j,k] / (con_Rd * TAIRVB[i,j,k])
 
     if i < nx+2*nb and j < ny+2*nb and k < nz:
-        TAIR[i,j,k] = POTT[i,j,k] * PVTF[i,j,k]
-        PAIR[i,j,k] = wp(100000.)*(PVTF[i,j,k])**(wp(1.)/con_kappa)
-        RHO [i,j,k] = PAIR[i,j,k] / (con_Rd * TAIR[i,j,k])
-        WIND[i,j,k] = (
+        TAIR[i,j,k]  = POTT[i,j,k] * PVTF[i,j,k]
+        PAIR[i,j,k]  = wp(100000.)*(PVTF[i,j,k])**(wp(1.)/con_kappa)
+        RHO [i,j,k]  = PAIR[i,j,k] / (con_Rd * TAIR[i,j,k])
+        WINDX[i,j,k] = (UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k])/wp(2.)
+        WINDY[i,j,k] = (VWIND[i  ,j  ,k] + VWIND[i  ,j+1,k])/wp(2.) 
+        WIND[i,j,k]  = (
                 ((UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k])/wp(2.))**wp(2.) +
                 ((VWIND[i  ,j  ,k] + VWIND[i  ,j+1,k])/wp(2.))**wp(2.) 
                       ) ** (wp(1.)/wp(2.))
@@ -195,20 +197,26 @@ diag_POTTVB_cpu = njit(parallel=True)(diag_POTTVB_cpu)
 
 
 def diag_secondary_cpu(POTTVB, TAIRVB, PVTFVB, 
-                        COLP, PAIR, PHI, POTT, 
-                        TAIR, RHO, PVTF,
-                        UWIND, VWIND, WIND):
+                        COLP, PAIR, PAIRVB, PHI, POTT, 
+                        TAIR, RHO, RHOVB, PVTF,
+                        UWIND, VWIND, WINDX, WINDY, WIND):
     for i in prange(0,nx+2*nb):
         for j in range(0,ny+2*nb):
             for k in range(wp_int(0),nzs):
+                PAIRVB[i,j,k] = wp(100000.)*(
+                                PVTFVB[i,j,k])**(wp(1.)/con_kappa)
                 TAIRVB[i,j,k] = POTTVB[i,j,k] * PVTFVB[i,j,k]
+                RHOVB [i,j,k] = PAIRVB[i,j,k] / (con_Rd * TAIRVB[i,j,k])
 
             for k in range(wp_int(0),nz):
-                TAIR[i,j,k] = POTT[i,j,k] * PVTF[i,j,k]
-                PAIR[i,j,k] = wp(100000.)*(PVTF[i,j,k])**(wp(1.)/con_kappa)
-                RHO [i,j,k] = PAIR[i,j,k] / (con_Rd * TAIR[i,j,k])
-                WIND[i,j,k] = (
+                TAIR [i,j,k] = POTT[i,j,k] * PVTF[i,j,k]
+                PAIR [i,j,k] = wp(100000.)*(PVTF[i,j,k])**(wp(1.)/con_kappa)
+                RHO  [i,j,k] = PAIR[i,j,k] / (con_Rd * TAIR[i,j,k])
+                WINDX[i,j,k] = (UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k])/wp(2.)
+                WINDY[i,j,k] = (VWIND[i  ,j  ,k] + VWIND[i  ,j+1,k])/wp(2.) 
+                WIND [i,j,k] = (
                     ((UWIND[i  ,j  ,k] + UWIND[i+1,j  ,k])/wp(2.))**wp(2.) +
                     ((VWIND[i  ,j  ,k] + VWIND[i  ,j+1,k])/wp(2.))**wp(2.) 
                               ) ** (wp(1.)/wp(2.))
+
 diag_secondary_cpu = njit(parallel=True)(diag_secondary_cpu) 

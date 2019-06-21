@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190607
-Last modified:      20190610
+Last modified:      20190616
 License:            MIT
 
 Main script to organize turbulent transport.
@@ -17,6 +17,8 @@ from io_read_namelist import wp, GPU, CPU, gpu_enable
 from main_grid import tpb, bpg
 if gpu_enable:
     from turb_compute import compute_turbulence_gpu
+from turb_compute import compute_turbulence_cpu
+from misc_utilities import function_input_fields
 ###############################################################################
 
 ###############################################################################
@@ -28,32 +30,25 @@ if gpu_enable:
 
 class Turbulence:
 
-    fields_main = ['PHI', 'PHIVB', 'HSURF', 'RHO', 'RHOVB', 'COLP',
-                   'QV', 'dQVdt_TURB', 'KHEAT', 'SQVFLX']
-
-
     def __init__(self, GR, target):
 
         self.target = target
+        self.fields_main = function_input_fields(self.compute_turbulence)
 
 
-    def compute_turbulence(self, GR, PHI, PHIVB, HSURF,
-                           RHO, RHOVB, COLP,
-                           QV, dQVdt_TURB, KHEAT, SQVFLX):
+    def compute_turbulence(self, GR, KMOM, KHEAT, PHIVB, HSURF, PHI, QV,
+                            WINDX, WINDY, POTTVB, POTT):
         if self.target == GPU:
             compute_turbulence_gpu[bpg, tpb](
-                            PHI, PHIVB, HSURF, RHO, RHOVB, COLP,
-                            QV, dQVdt_TURB, KHEAT, SQVFLX)
-
+                            KMOM, KHEAT, PHIVB, HSURF, PHI, QV,
+                            WINDX, WINDY, POTTVB, POTT)
 
         elif self.target == CPU:
-            pass
-            #advance_timestep_srfc_cpu(SOILTEMP,
-            #                       LWFLXNET, SWFLXNET, SOILCP,
-            #                       SOILRHO, SOILDEPTH, OCEANMASK,
-            #                       SURFALBEDSW, SURFALBEDLW, GR.dt)
+            compute_turbulence_cpu(
+                            KMOM, KHEAT, PHIVB, HSURF, PHI, QV,
+                            WINDX, WINDY, POTTVB, POTT)
+    
         
-
 
 
 

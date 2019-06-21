@@ -4,16 +4,19 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190530
-Last modified:      20190531
+Last modified:      20190616
 License:            MIT
 
 Functions and classes used for support:
 - Timer class to measure execution times.
+- Function to create list with function input fields from function signature
 ###############################################################################
 """
 import time
 import numpy as np
 from numba import cuda
+from inspect import signature
+
 from namelist import i_sync_context, i_comp_mode
 
 class Timer:
@@ -54,3 +57,17 @@ class Timer:
             print(key + '\t' + 
                 str(np.round(100*value/total,n_decimal_perc)) +
                 '\t%\t' + str(np.round(value,n_decimal_sec)) + ' \tsec')
+
+
+
+def function_input_fields(function):
+    """
+    From function reads input arguments and extracts model fields.
+    Returns list with string of model fields.
+    """
+    input_fields = list(signature(function).parameters)
+    ignore = ['self', 'GR', 'GRF']
+    for ign in ignore:
+        if ign in input_fields:
+            input_fields.remove(ign)
+    return(input_fields)

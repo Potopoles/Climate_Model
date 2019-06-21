@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190609
+Last modified:      20190616
 License:            MIT
 
 Namelist for user input.
@@ -18,7 +18,7 @@ from datetime import datetime
 # GRID PARAMS
 ###############################################################################
 # datetime of simulation start
-GMT_initialization = datetime(2018,1,1,0,0,0)
+GMT_initialization = datetime(2019,1,1,0,0,0)
 
 # number of lateral boundary points
 nb = 1
@@ -52,7 +52,7 @@ COLP_random_pert    = 000
 POTT_gaussian_pert  = 00
 POTT_random_pert    = 0.0
 QV_gaussian_pert    = 0.000
-QV_random_pert      = 0.0
+QV_random_pert      = 0.0001
 
 ###############################################################################
 ###############################################################################
@@ -70,6 +70,7 @@ i_COLP_main_switch      = 1
 i_UVFLX_main_switch     = 1
 i_UVFLX_hor_adv         = 1
 i_UVFLX_vert_adv        = 1
+i_UVFLX_vert_turb       = 1
 i_UVFLX_coriolis        = 1
 i_UVFLX_num_dif         = 1
 i_UVFLX_pre_grad        = 1
@@ -80,15 +81,15 @@ i_POTT_hor_adv          = 1
 i_POTT_vert_adv         = 1
 i_POTT_vert_turb        = 0
 i_POTT_num_dif          = 1
-i_POTT_radiation        = 1
+i_POTT_radiation        = 0
 i_POTT_microphys        = 0
 
 # prognostics computation of moisture fields
 i_moist_main_switch     = 1
 i_moist_hor_adv         = 0
-i_moist_vert_adv        = 0
+i_moist_vert_adv        = 1
 i_moist_vert_turb       = 1
-i_moist_num_dif         = 0
+i_moist_num_dif         = 1
 i_moist_microphys       = 0
 
 
@@ -97,7 +98,9 @@ i_moist_microphys       = 0
 ###############################################################################
 i_use_topo = 1
 n_topo_smooth = 20
-i_surface_scheme = 0
+i_surface_scheme = 1
+i_surface_fluxes = 1
+i_surface_SOILTEMP_tendency = 1
 nz_soil = 1
 
 ###############################################################################
@@ -169,7 +172,7 @@ output_fields = {
     'VORT'          : 1,
     # velocity fields
     # temperature fields
-    'POTT'          : 2,                    #vp
+    'POTT'          : 0,                    #vp
     'TAIR'          : 2,                    #vp
     # primary diagnostic fields
     'PHI'           : 1,
@@ -180,15 +183,21 @@ output_fields = {
     'SURFTEMP'      : 1,
     'SURFALBEDSW'   : 1,
     'SURFALBEDLW'   : 0,
-    'SSHFLX'        : 1,
+    'SSHFLX'        : 0,
     'SQVFLX'        : 1,
+    'SMOMXFLX'      : 1,
+    'SMOMYFLX'      : 1,
     # radiation fields
     # microphysics fields
     'QV'            : 2,                    #vp
-    'QC'            : 2,                    #vp
+    'QC'            : 0,                    #vp
     'dQVdt'         : 1,
     'dQVdt_TURB'    : 1,
-    'KHEAT'         : 1,
+    'dUFLXdt_TURB'  : 1,
+    'KMOM_dUWINDdz' : 1,
+    'KMOM_dVWINDdz' : 1,
+    'KHEAT'         : 0,
+    'KMOM'          : 1,
     'WVP'           : 0,
     'CWP'           : 0,
 }
@@ -210,9 +219,9 @@ working_precision = 'float32'
 working_precision = 'float64'
 
 # 1: CPU, 2: GPU
-i_comp_mode = 2
+i_comp_mode = 1
 output_path = '../output_ref'
-output_path = '../output_test'
+#output_path = '../output_test'
 
 # in case of computation on GPU only:
 i_sync_context = 1
@@ -235,11 +244,11 @@ if i_simulation_mode == 1:
     dlon_deg = 5
     #output_path = '../output_ref'
     #output_path = '../output_test'
-    i_sim_n_days = 0.36*1
-    i_out_nth_hour = 4*1
+    i_sim_n_days = 0.36*2
+    i_out_nth_hour = 4*2
     i_surface_scheme = 1
     i_turbulence = 1
-    i_radiation = 0
+    i_radiation = 1
     rad_nth_hour = 3.9
     i_microphysics = 0
     i_save_to_restart   = 0
@@ -252,14 +261,13 @@ elif i_simulation_mode == 2:
     dlat_deg = 5.0
     dlon_deg = 5.0
     output_path = '../output'
-    i_sim_n_days = 15#*365.00
-    i_out_nth_hour = 12#*24
+    i_sim_n_days = 1.0*10#*365.00
+    i_out_nth_hour = 1*24
     i_surface_scheme = 1
-    i_turbulence = 0
+    i_turbulence = 1
     i_radiation = 1
     rad_nth_hour = 3.9
     i_microphysics = 0
-    i_turbulence = 0
 
 
 ###############################################################################
@@ -273,7 +281,7 @@ POTT_dif_coef = 1E-6
 # COLP: not tested 
 COLP_dif_coef = 0 
 # moisture: not tested 
-moist_dif_coef   = 1E-6
+moist_dif_coef   = 2E-6
 
 # automatically chose nice diffusion parameter depending on grid
 # resolution

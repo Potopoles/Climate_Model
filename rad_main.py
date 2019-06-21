@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190602
+Last modified:      20190618
 License:            MIT
 
 Main script of radiation scheme.
@@ -128,32 +128,32 @@ class Radiation:
         current_GMT = copy.copy(GR.GMT)
 
         ALTVB = PHIVB / con_g
-        dz = ALTVB[:,:,:-1][GR.ii,GR.jj] -  ALTVB[:,:,1:][GR.ii,GR.jj]
+        dz = ALTVB[:,:,:-1] -  ALTVB[:,:,1:]
 
         SOLZEN = rad_solar_zenith_angle(GR, current_GMT, SOLZEN)
         MYSUN = np.cos(SOLZEN)
-        MYSUN[MYSUN < 0] = 0
+        MYSUN[GR.ii,GR.jj,0][MYSUN[GR.ii,GR.jj,0] < 0] = 0
         self.solar_constant = calc_current_solar_constant(current_GMT) 
         SWINTOA = self.solar_constant * np.cos(SOLZEN)
         #GR.timer.stop('prep')
 
         GR.timer.start('lw')
-        for i in range(0,GR.nx):
-            i_ref = i+GR.nb
-            for j in range(0,GR.ny):
-                j_ref = j+GR.nb
+        for i in range(GR.nb,GR.nx+GR.nb):
+            #i_ref = i+GR.nb
+            for j in range(GR.nb,GR.ny+GR.nb):
+                #j_ref = j+GR.nb
 
                 # LONGWAVE
                 # toon et al 1989 method
                 #down_diffuse, up_diffuse = \
                 #                    org_longwave(GR, dz[i,j],
-                #                                TAIRVB[i_ref,j_ref,:], RHO[i_ref,j_ref], \
+                #                                TAIRVB[i,j,:], RHO[i,j], \
                 #                                SOIL.TSOIL[i,j,0], SOIL.ALBEDOLW[i,j])
                 # self-manufactured method
                 down_diffuse, up_diffuse = \
                             org_longwave(GR, GR.nz, GR.nzs, dz[i,j],
-                                        TAIR[i_ref,j_ref,:],    RHO[i_ref,j_ref],
-                                        SOILTEMP[i,j,0],        SURFALBEDLW[i,j,0],
+                                        TAIR[i,j,:],    RHO[i,j],
+                                        SOILTEMP[i,j,0], SURFALBEDLW[i,j,0],
                                         QC[i,j,:],
                                         self.planck_lambdas_center,
                                         self.planck_dlambdas)
@@ -165,10 +165,10 @@ class Radiation:
         GR.timer.stop('lw')
 
         GR.timer.start('sw')
-        for i in range(0,GR.nx):
-            i_ref = i+GR.nb
-            for j in range(0,GR.ny):
-                j_ref = j+GR.nb
+        for i in range(GR.nb,GR.nx+GR.nb):
+            #i_ref = i+GR.nb
+            for j in range(GR.nb,GR.ny+GR.nb):
+                #j_ref = j+GR.nb
 
                 # SHORTWAVE
                 if MYSUN[i,j] > 0:
@@ -177,7 +177,7 @@ class Radiation:
                     down_diffuse, up_diffuse, down_direct = \
                                     org_shortwave(GR.nz, GR.nzs, dz[i,j],
                                                 self.solar_constant,
-                                                RHO[i_ref,j_ref],
+                                                RHO[i,j],
                                                 SWINTOA[i,j,0],
                                                 MYSUN[i,j,0],
                                                 SURFALBEDSW[i,j,0],
@@ -205,8 +205,7 @@ class Radiation:
                                / dz[:,:,k]
             TOTFLXDIV[:,:,k] = SWFLXDIV[:,:,k] + LWFLXDIV[:,:,k]
             
-            dPOTTdt_RAD[GR.ii,GR.jj,k] = 1/(con_cp * RHO[:,:,k][GR.ii,GR.jj]) * \
-                                                TOTFLXDIV[:,:,k]
+            dPOTTdt_RAD[:,:,k] = 1/(con_cp * RHO[:,:,k]) * TOTFLXDIV[:,:,k]
         #GR.timer.stop('finish')
 
 
@@ -216,114 +215,115 @@ class Radiation:
 
 
 
-    def simple_radiation_par(self, GR, CF):
-        ALTVB = CF.PHIVB / con_g
-        dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
+    #def simple_radiation_par(self, GR, CF):
+    #    raise NotImplementedError()
+    #    ALTVB = CF.PHIVB / con_g
+    #    dz = ALTVB[:,:,:-1][GR.iijj] -  ALTVB[:,:,1:][GR.iijj]
 
-        self.SOLZEN = rad_solar_zenith_angle(GR, self.SOLZEN)
-        self.MYSUN = np.cos(self.SOLZEN)
-        self.MYSUN[self.MYSUN < 0] = 0
-        self.solar_constant = calc_current_solar_constant(GR) 
-        self.SWINTOA = self.solar_constant * np.cos(self.SOLZEN)
-
-
-        ij_all = np.full( (GR.nx*GR.ny, 2), np.int)
-        ij_ref_all = np.full( (GR.nx*GR.ny, 2), np.int)
-
-        #ii = np.arange(3,6).astype(np.int)
-        ii = np.tile(np.arange(0,GR.nx).astype(np.int),GR.ny)
-        jj = np.repeat(np.arange(0,GR.ny).astype(np.int),GR.nx)
-        ii_ref = np.tile(np.arange(0,GR.nx).astype(np.int),GR.ny)+1
-        jj_ref = np.repeat(np.arange(0,GR.ny).astype(np.int),GR.nx)+1
-
-        #t1 = time.time()
-        p = mp.Pool(processes=self.njobs_rad)
-        
-        #print(type(TAIR))
-        #print(type(RHO))
-        #print(type(PHIVB))
-        #quit()
-
-        input = [(GR.nz, GR.nzs, GR.kk, CF.TAIR[ii_ref[c],jj_ref[c],:],
-                CF.RHO[ii_ref[c],jj_ref[c],:], CF.PHIVB[ii[c],jj[c],:],
-                CF.SOILTEMP[ii[c],jj[c],0], CF.SURFALBEDLW[ii[c],jj[c]],
-                CF.SURFALBEDSW[ii[c],jj[c]], CF.QC[ii[c],jj[c],:],
-                self.SWINTOA[ii[c],jj[c]], self.MYSUN[ii[c],jj[c]],
-                dz[ii[c],jj[c],:], self.solar_constant, self.planck_lambdas_center,
-                self.planck_dlambdas) for c in range(0,len(ii))]
-
-        result = p.starmap(calc_par, input)
-        p.close()
-        p.join()
-        #t2 = time.time()
-        #print(len(result))
-        #print(result[len(ii)-1][0])
-        #print(t2 - t1)
-        #quit()
-
-        for c in range(0,len(ii)):
-            i = ii[c]
-            j = jj[c]
-            self.LWFLXDO[i,j,:]     = result[c][0]
-            self.LWFLXUP[i,j,:]     = result[c][1]
-            self.SWDIFFLXDO[i,j,:]  = result[c][2]
-            self.SWDIRFLXDO[i,j,:]  = result[c][3]
-            self.SWFLXUP[i,j,:]     = result[c][4]
-            self.SWFLXDO[i,j,:]     = result[c][5]
-            CF.LWFLXNET[i,j,:]      = result[c][6]
-            CF.SWFLXNET[i,j,:]      = result[c][7]
-            self.LWFLXDIV[i,j,:]    = result[c][8]
-            self.SWFLXDIV[i,j,:]    = result[c][9]
-            self.TOTFLXDIV[i,j,:]   = result[c][10]
-            CF.dPOTTdt_RAD[i,j,:]   = result[c][11]
-        
+    #    self.SOLZEN = rad_solar_zenith_angle(GR, self.SOLZEN)
+    #    self.MYSUN = np.cos(self.SOLZEN)
+    #    self.MYSUN[self.MYSUN < 0] = 0
+    #    self.solar_constant = calc_current_solar_constant(GR) 
+    #    self.SWINTOA = self.solar_constant * np.cos(self.SOLZEN)
 
 
+    #    ij_all = np.full( (GR.nx*GR.ny, 2), np.int)
+    #    ij_ref_all = np.full( (GR.nx*GR.ny, 2), np.int)
+
+    #    #ii = np.arange(3,6).astype(np.int)
+    #    ii = np.tile(np.arange(0,GR.nx).astype(np.int),GR.ny)
+    #    jj = np.repeat(np.arange(0,GR.ny).astype(np.int),GR.nx)
+    #    ii_ref = np.tile(np.arange(0,GR.nx).astype(np.int),GR.ny)+1
+    #    jj_ref = np.repeat(np.arange(0,GR.ny).astype(np.int),GR.nx)+1
+
+    #    #t1 = time.time()
+    #    p = mp.Pool(processes=self.njobs_rad)
+    #    
+    #    #print(type(TAIR))
+    #    #print(type(RHO))
+    #    #print(type(PHIVB))
+    #    #quit()
+
+    #    input = [(GR.nz, GR.nzs, GR.kk, CF.TAIR[ii_ref[c],jj_ref[c],:],
+    #            CF.RHO[ii_ref[c],jj_ref[c],:], CF.PHIVB[ii[c],jj[c],:],
+    #            CF.SOILTEMP[ii[c],jj[c],0], CF.SURFALBEDLW[ii[c],jj[c]],
+    #            CF.SURFALBEDSW[ii[c],jj[c]], CF.QC[ii[c],jj[c],:],
+    #            self.SWINTOA[ii[c],jj[c]], self.MYSUN[ii[c],jj[c]],
+    #            dz[ii[c],jj[c],:], self.solar_constant, self.planck_lambdas_center,
+    #            self.planck_dlambdas) for c in range(0,len(ii))]
+
+    #    result = p.starmap(calc_par, input)
+    #    p.close()
+    #    p.join()
+    #    #t2 = time.time()
+    #    #print(len(result))
+    #    #print(result[len(ii)-1][0])
+    #    #print(t2 - t1)
+    #    #quit()
+
+    #    for c in range(0,len(ii)):
+    #        i = ii[c]
+    #        j = jj[c]
+    #        self.LWFLXDO[i,j,:]     = result[c][0]
+    #        self.LWFLXUP[i,j,:]     = result[c][1]
+    #        self.SWDIFFLXDO[i,j,:]  = result[c][2]
+    #        self.SWDIRFLXDO[i,j,:]  = result[c][3]
+    #        self.SWFLXUP[i,j,:]     = result[c][4]
+    #        self.SWFLXDO[i,j,:]     = result[c][5]
+    #        CF.LWFLXNET[i,j,:]      = result[c][6]
+    #        CF.SWFLXNET[i,j,:]      = result[c][7]
+    #        self.LWFLXDIV[i,j,:]    = result[c][8]
+    #        self.SWFLXDIV[i,j,:]    = result[c][9]
+    #        self.TOTFLXDIV[i,j,:]   = result[c][10]
+    #        CF.dPOTTdt_RAD[i,j,:]   = result[c][11]
+    #    
 
 
-def calc_par(nz, nzs, kk, TAIR, RHO, PHIVB, TSOIL, ALBEDOLW, ALBEDOSW, QC,
-            SWINTOA, MYSUN, dz, solar_constant, planck_lambdas_center,
-            planck_dlambdas):
 
 
-        down_diffuse, up_diffuse = \
-                            org_longwave(nz, nzs, dz, TAIR, RHO, TSOIL, ALBEDOLW, QC,
-                                         planck_lambdas_center, planck_dlambdas)
-
-
-        LWFLXDO = - down_diffuse
-        LWFLXUP =   up_diffuse
-
-        # SHORTWAVE
-        if MYSUN > 0:
-
-            # toon et al 1989 method
-            down_diffuse, up_diffuse, down_direct = \
-                                org_shortwave(nz, nzs, dz, solar_constant, RHO, SWINTOA,
-                                            MYSUN, ALBEDOSW, QC)
-
-            SWDIFFLXDO = - down_diffuse
-            SWDIRFLXDO = - down_direct
-            SWFLXUP    = up_diffuse
-            SWFLXDO    = - down_diffuse - down_direct
-        else:
-            SWDIFFLXDO = np.zeros(nzs)
-            SWDIRFLXDO = np.zeros(nzs) 
-            SWFLXUP    = np.zeros(nzs) 
-            SWFLXDO    = np.zeros(nzs) 
-
-        LWFLXNET = LWFLXDO - LWFLXUP 
-        SWFLXNET = SWFLXDO - SWFLXUP 
-
-        #print(LWFLXNET)
-        LWFLXDIV = ( LWFLXNET[kk] - LWFLXNET[kk+1] ) / dz[kk]
-        SWFLXDIV = ( SWFLXNET[kk] - SWFLXNET[kk+1] ) / dz[kk]
-        TOTFLXDIV = SWFLXDIV + LWFLXDIV
-        dPOTTdt_RAD = 1/(con_cp * RHO) * TOTFLXDIV
-
-
-        result = (LWFLXDO, LWFLXUP, SWDIFFLXDO, SWDIRFLXDO, SWFLXUP, SWFLXDO,
-                LWFLXNET, SWFLXNET,
-                LWFLXDIV, SWFLXDIV, TOTFLXDIV, dPOTTdt_RAD)
-        return(result)
-
+#def calc_par(nz, nzs, kk, TAIR, RHO, PHIVB, TSOIL, ALBEDOLW, ALBEDOSW, QC,
+#            SWINTOA, MYSUN, dz, solar_constant, planck_lambdas_center,
+#            planck_dlambdas):
+#
+#
+#        down_diffuse, up_diffuse = \
+#                            org_longwave(nz, nzs, dz, TAIR, RHO, TSOIL, ALBEDOLW, QC,
+#                                         planck_lambdas_center, planck_dlambdas)
+#
+#
+#        LWFLXDO = - down_diffuse
+#        LWFLXUP =   up_diffuse
+#
+#        # SHORTWAVE
+#        if MYSUN > 0:
+#
+#            # toon et al 1989 method
+#            down_diffuse, up_diffuse, down_direct = \
+#                                org_shortwave(nz, nzs, dz, solar_constant, RHO, SWINTOA,
+#                                            MYSUN, ALBEDOSW, QC)
+#
+#            SWDIFFLXDO = - down_diffuse
+#            SWDIRFLXDO = - down_direct
+#            SWFLXUP    = up_diffuse
+#            SWFLXDO    = - down_diffuse - down_direct
+#        else:
+#            SWDIFFLXDO = np.zeros(nzs)
+#            SWDIRFLXDO = np.zeros(nzs) 
+#            SWFLXUP    = np.zeros(nzs) 
+#            SWFLXDO    = np.zeros(nzs) 
+#
+#        LWFLXNET = LWFLXDO - LWFLXUP 
+#        SWFLXNET = SWFLXDO - SWFLXUP 
+#
+#        #print(LWFLXNET)
+#        LWFLXDIV = ( LWFLXNET[kk] - LWFLXNET[kk+1] ) / dz[kk]
+#        SWFLXDIV = ( SWFLXNET[kk] - SWFLXNET[kk+1] ) / dz[kk]
+#        TOTFLXDIV = SWFLXDIV + LWFLXDIV
+#        dPOTTdt_RAD = 1/(con_cp * RHO) * TOTFLXDIV
+#
+#
+#        result = (LWFLXDO, LWFLXUP, SWDIFFLXDO, SWDIRFLXDO, SWFLXUP, SWFLXDO,
+#                LWFLXNET, SWFLXNET,
+#                LWFLXDIV, SWFLXDIV, TOTFLXDIV, dPOTTdt_RAD)
+#        return(result)
+#

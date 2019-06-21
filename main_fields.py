@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190609
+Last modified:      20190616
 License:            MIT
 
 Setup and store model fields. Have each field in memory (for CPU)
@@ -123,7 +123,7 @@ class ModelFields:
                                          'PHIVB', 'RHO', 'QV', 'QC'],
             self.SRFC_FIELDS:           ['HSURF', 'OCEANMASK', 'SOILDEPTH',
                                          'SOILCP', 'SOILRHO',
-                                         'SOILTEMP', 'dSOILTEMPdt', 'SOILMOIST',
+                                         'SOILTEMP', 'SOILMOIST',
                                          'SOILEVAPITY',
                                          'SURFALBEDSW', 'SURFALBEDLW',
                                          'RAINRATE', 'ACCRAIN'],
@@ -290,6 +290,12 @@ def allocate_fields(GR):
     # horizontal wind speed [m/s]
     f['WIND']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                         np.nan, dtype=wp)
+    # horizontal wind speed x component (but unstaggered) [m/s]
+    f['WINDX']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                        np.nan, dtype=wp)
+    # horizontal wind speed y component (but unstaggered) [m/s]
+    f['WINDY']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
+                        np.nan, dtype=wp)
     # vertical wind speed [sigma/s]
     f['WWIND']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
                         np.nan, dtype=wp)
@@ -298,6 +304,12 @@ def allocate_fields(GR):
                         np.nan, dtype=wp)
     # product of VWIND and WWIND (auxiliary field)
     f['WWIND_VWIND'] = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs ), 
+                        np.nan, dtype=wp)
+    # product of dUWINDdz and KMOM (auxiliary field)
+    f['KMOM_dUWINDdz']  = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
+                        np.nan, dtype=wp)
+    # product of dVWINDdz and KMOM (auxiliary field)
+    f['KMOM_dVWINDdz']  = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs ), 
                         np.nan, dtype=wp)
 
     #######################################################################
@@ -361,54 +373,77 @@ def allocate_fields(GR):
     ### 2 SURFACE FIELDS 
     #######################################################################
     #######################################################################
-    if i_surface_scheme: 
-        # 1 if grid point is ocean [-]
-        f['OCEANMASK']   = np.full( ( GR.nx, GR.ny, 1      ),
-                                    0, dtype=wp_int)
-        # depth of soil [m]
-        f['SOILDEPTH']   = np.full( ( GR.nx, GR.ny, 1      ),
-                                    np.nan, dtype=wp)
-        # heat capcity of soil [J kg-1 K-1]
-        f['SOILCP']      = np.full( ( GR.nx, GR.ny, 1      ), 
-                                    np.nan, dtype=wp)
-        # density of soil [kg m-3]
-        f['SOILRHO']     = np.full( ( GR.nx, GR.ny, 1      ), 
-                                    np.nan, dtype=wp)
-        # soil temperature [K]
-        f['SOILTEMP']    = np.full( ( GR.nx, GR.ny, nz_soil), 
-                                    np.nan, dtype=wp)
-        # change of soil temperature with time [K s-1]
-        f['dSOILTEMPdt'] = np.full( ( GR.nx, GR.ny, nz_soil), 
-                                    np.nan, dtype=wp)
-        # moisture content of soil [kg m-2]
-        f['SOILMOIST']   = np.full( ( GR.nx, GR.ny, 1      ), 
-                                    np.nan, dtype=wp)
-        # evaporation likliness of soil [-]
-        f['SOILEVAPITY'] = np.full( ( GR.nx, GR.ny, 1      ), 
-                                    np.nan, dtype=wp)
-        # surface roughness length [m]
-        f['SURFZ0']      = np.full( ( GR.nx, GR.ny, 1      ),
-                                    np.nan, dtype=wp)
-        # surface albedo for shortwave radiation [-]
-        f['SURFALBEDSW'] = np.full( ( GR.nx, GR.ny, 1      ), 
-                                    np.nan, dtype=wp)
-        # surface albedo for longwave radiation [-]
-        f['SURFALBEDLW'] = np.full( ( GR.nx, GR.ny, 1      ), 
-                                    np.nan, dtype=wp)
-        # rain rate at surface [kg m-2 s-1]
-        f['RAINRATE']    = np.full( ( GR.nx, GR.ny, 1      ), 
-                                    np.nan, dtype=wp)
-        # accumulated rain during simulation at surface [kg m-2]
-        f['ACCRAIN']     = np.full( ( GR.nx, GR.ny, 1      ), 
-                                    np.nan, dtype=wp)
-        # surface sensible heat flux (pointing towards atmosphere) [W m-2]
-        f['SSHFLX']      = np.full(
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                              np.nan, dtype=wp) 
-        # surface moisture flux (pointing towards atmosphere) [kg m-2 s-1]
-        f['SQVFLX']      = np.full(
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                              np.nan, dtype=wp) 
+    #if i_surface_scheme: 
+    # 1 if grid point is ocean [-]
+    f['OCEANMASK']   = np.zeros(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          dtype=wp_int) 
+    # depth of soil [m]
+    f['SOILDEPTH']   = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # heat capcity of soil [J kg-1 K-1]
+    f['SOILCP']      = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # density of soil [kg m-3]
+    f['SOILRHO']     = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # soil temperature [K]
+    f['SOILTEMP']    = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, nz_soil  ), 
+                          np.nan, dtype=wp) 
+    ## change of soil temperature with time [K s-1]
+    #f['dSOILTEMPdt'] = np.full(
+    #                    ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, nz_soil  ), 
+    #                      np.nan, dtype=wp) 
+    # moisture content of soil [kg m-2]
+    f['SOILMOIST']   = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # evaporation likliness of soil [-]
+    f['SOILEVAPITY'] = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # surface roughness length [m]
+    f['SURFZ0']      = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # surface albedo for shortwave radiation [-]
+    f['SURFALBEDSW'] = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # surface albedo for longwave radiation [-]
+    f['SURFALBEDLW'] = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # rain rate at surface [kg m-2 s-1]
+    f['RAINRATE']    = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # accumulated rain during simulation at surface [kg m-2]
+    f['ACCRAIN']     = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # surface momentum flux in x direction
+    # (pointing towards atmosphere) [???]
+    f['SMOMXFLX']    = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # surface momentum flux in y direction
+    # (pointing towards atmosphere) [???]
+    f['SMOMYFLX']    = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # surface sensible heat flux (pointing towards atmosphere) [W m-2]
+    f['SSHFLX']      = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
+    # surface moisture flux (pointing towards atmosphere) [kg m-2 s-1]
+    f['SQVFLX']      = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
+                          np.nan, dtype=wp) 
 
 
     #######################################################################
@@ -416,6 +451,14 @@ def allocate_fields(GR):
     ### 3 TURBULENCE FIELDS
     #######################################################################
     #######################################################################
+    # UFLX change due to turbulent fluxes [??]
+    f['dUFLXdt_TURB']     = np.full(
+                            ( GR.nxs+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
+                              np.nan, dtype=wp)
+    # VFLX change due to turbulent fluxes [??]
+    f['dVFLXdt_TURB']     = np.full(
+                            ( GR.nx+2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
+                              np.nan, dtype=wp)
     # potential temperature change due to turbulent fluxes [K s-1]
     f['dPOTTdt_TURB']     = np.full(
                             ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
@@ -428,15 +471,14 @@ def allocate_fields(GR):
     f['dQCdt_TURB']       = np.full(
                             ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
                               np.nan, dtype=wp)
-    if i_turbulence: 
-        # turbulenc exchange coefficient for heat and moisture 
-        f['KHEAT']        = np.full(
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ), 
-                              np.nan, dtype=wp) 
-        # turbulent exchange coefficient for momentum
-        f['KMOMENT']      = np.full(
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ), 
-                              np.nan, dtype=wp) 
+    # turbulenc exchange coefficient for heat and moisture 
+    f['KHEAT']        = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ), 
+                          np.nan, dtype=wp) 
+    # turbulent exchange coefficient for momentum
+    f['KMOM']         = np.full(
+                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ), 
+                          np.nan, dtype=wp) 
 
     #######################################################################
     #######################################################################
@@ -444,10 +486,12 @@ def allocate_fields(GR):
     #######################################################################
     #######################################################################
     # net shortwave flux pointing into surface [W m-2]
-    f['SWFLXNET']        = np.full( ( GR.nx, GR.ny, GR.nzs ),
+    f['SWFLXNET']        = np.full(
+                                ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
                                     np.nan, dtype=wp)
     # net longwave flux pointing into surface [W m-2]
-    f['LWFLXNET']        = np.full( ( GR.nx, GR.ny, GR.nzs ),
+    f['LWFLXNET']        = np.full(
+                                ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
                                     np.nan, dtype=wp)
     # potential temperature change due to radiation [K s-1]
     f['dPOTTdt_RAD']     = np.full(
@@ -455,32 +499,44 @@ def allocate_fields(GR):
                               np.nan, dtype=wp)
     if i_radiation:
         # solar zenith angle
-        f['SOLZEN']          = np.full( ( GR.nx, GR.ny, 1      ),
+        f['SOLZEN']          = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1      ),
                                         np.nan, dtype=wp)
         # cos solar zenith angle
-        f['MYSUN']           = np.full( ( GR.nx, GR.ny, 1      ),
+        f['MYSUN']           = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1      ),
                                         np.nan, dtype=wp)
         # incoming shortwave at TOA
-        f['SWINTOA']         = np.full( ( GR.nx, GR.ny, 1      ),
+        f['SWINTOA']         = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1      ),
                                         np.nan, dtype=wp)
         # TODO: Add comments
-        f['LWFLXUP']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+        f['LWFLXUP']         = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
                                         np.nan, dtype=wp)
-        f['LWFLXDO']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+        f['LWFLXDO']         = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
                                         np.nan, dtype=wp)
-        f['SWDIFFLXDO']      = np.full( ( GR.nx, GR.ny, GR.nzs ),
+        f['SWDIFFLXDO']      = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
                                         np.nan, dtype=wp)
-        f['SWDIRFLXDO']      = np.full( ( GR.nx, GR.ny, GR.nzs ),
+        f['SWDIRFLXDO']      = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
                                         np.nan, dtype=wp)
-        f['SWFLXUP']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+        f['SWFLXUP']         = np.full(
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
                                         np.nan, dtype=wp)
-        f['SWFLXDO']         = np.full( ( GR.nx, GR.ny, GR.nzs ),
+        f['SWFLXDO']         = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
                                         np.nan, dtype=wp)
-        f['LWFLXDIV']        = np.full( ( GR.nx, GR.ny, GR.nz  ),
+        f['LWFLXDIV']        = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ),
                                         np.nan, dtype=wp)
-        f['SWFLXDIV']        = np.full( ( GR.nx, GR.ny, GR.nz  ),
+        f['SWFLXDIV']        = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ),
                                         np.nan, dtype=wp)
-        f['TOTFLXDIV']       = np.full( ( GR.nx, GR.ny, GR.nz  ),
+        f['TOTFLXDIV']       = np.full( 
+                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ),
                                         np.nan, dtype=wp)
 
 
@@ -508,13 +564,13 @@ def allocate_fields(GR):
     f['dQCdt']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                         np.nan, dtype=wp)
     # change of QV due to microphysics [kg kg-1 s-1]
-    f['dQVdt_MIC']   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
+    f['dQVdt_MIC']   = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                         np.nan, dtype=wp)
     # change of QC due to microphysics [kg kg-1 s-1]
-    f['dQCdt_MIC']   = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
+    f['dQCdt_MIC']   = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                         np.nan, dtype=wp)
     # potential temperature change due to microphysics [K s-1]
-    f['dPOTTdt_MIC'] = np.full( ( GR.nx         , GR.ny         , GR.nz  ), 
+    f['dPOTTdt_MIC'] = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
                         np.nan, dtype=wp)
 
     return(f)

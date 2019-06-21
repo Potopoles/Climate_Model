@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190511
-Last modified:      20190604
+Last modified:      20190616
 License:            MIT
 
 Computation of horizontal momentum flux in latitude
@@ -20,15 +20,16 @@ from numba import cuda, njit, prange
 
 from namelist import (i_UVFLX_main_switch,
                     i_UVFLX_hor_adv, i_UVFLX_vert_adv,
-                    i_UVFLX_coriolis,
+                    i_UVFLX_vert_turb, i_UVFLX_coriolis,
                     i_UVFLX_num_dif, i_UVFLX_pre_grad)
 from io_read_namelist import (wp, wp_int, gpu_enable)
-from io_constants import con_rE
+from io_constants import con_rE, con_g
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 if gpu_enable:
     from misc_gpu_functions import cuda_kernel_decorator
 
-from dyn_functions import (num_dif_py, pre_grad_py, UVFLX_hor_adv_py)
+from dyn_functions import (num_dif_py, pre_grad_py, UVFLX_hor_adv_py,
+                           interp_VAR_ds_py)
 ###############################################################################
 
 
@@ -83,13 +84,28 @@ def add_up_tendencies_py(
             PVTFVB, PVTFVB_jm1,
             PVTFVB_jm1_kp1, PVTFVB_kp1,
             WWIND_VWIND, WWIND_VWIND_kp1,
+
+            PHIVB,                PHIVB_jm1,
+            PHIVB_im1,            PHIVB_ip1,
+            PHIVB_im1_jm1,        PHIVB_ip1_jm1,
+            PHIVB_kp1,            PHIVB_kp1_jm1,
+            PHIVB_kp1_im1,        PHIVB_kp1_ip1,
+            PHIVB_kp1_im1_jm1,    PHIVB_kp1_ip1_jm1,
+            RHO,                  RHO_jm1,
+            RHO_im1,              RHO_ip1,
+            RHO_im1_jm1,          RHO_ip1_jm1,
+            SMOMYFLX,             SMOMYFLX_jm1,
+            SMOMYFLX_im1,         SMOMYFLX_ip1,
+            SMOMYFLX_im1_jm1,     SMOMYFLX_ip1_jm1,
+            KMOM_dVWINDdz,        KMOM_dVWINDdz_kp1,
+
             COLP, COLP_jm1,
             corf, corf_jm1,
             lat_rad, lat_rad_jm1,
             dlon_rad, dlat_rad,
             dxjs,
             dsigma, sigma_vb, sigma_vb_kp1,
-            UVFLX_dif_coef):
+            UVFLX_dif_coef, k, i):
     """
     Compute and add up all tendency contributions of VFLUX.
     """
@@ -115,6 +131,49 @@ def add_up_tendencies_py(
         if i_UVFLX_vert_adv:
             dVFLXdt = dVFLXdt + (
                 (WWIND_VWIND - WWIND_VWIND_kp1 ) / dsigma)
+        # VERTICAL TURBULENT TRANSPORT
+        if i_UVFLX_vert_turb:
+
+            ALTVB_js = interp_VAR_ds(
+                        PHIVB,                PHIVB_jm1,
+                        PHIVB_im1,            PHIVB_ip1,
+                        PHIVB_im1_jm1,        PHIVB_ip1_jm1,
+                        False, i, nx) / con_g
+            ALTVB_kp1_js = interp_VAR_ds(
+                        PHIVB_kp1,            PHIVB_kp1_jm1,
+                        PHIVB_kp1_im1,        PHIVB_kp1_ip1,
+                        PHIVB_kp1_im1_jm1,    PHIVB_kp1_ip1_jm1,
+                        False, i, nx) / con_g
+            RHO_js = interp_VAR_ds(
+                        RHO,              RHO_jm1,
+                        RHO_im1,          RHO_ip1,
+                        RHO_im1_jm1,      RHO_ip1_jm1,
+                        False, i, nx) 
+            SMOMYFLX_js = interp_VAR_ds(
+                        SMOMYFLX,         SMOMYFLX_jm1,
+                        SMOMYFLX_im1,     SMOMYFLX_ip1,
+                        SMOMYFLX_im1_jm1, SMOMYFLX_ip1_jm1,
+                        False, i, nx) 
+
+            if k == wp_int(0):
+                dVFLXdt_TURB = ( ( wp(0.) - KMOM_dVWINDdz_kp1 ) /
+                                 ( ( ALTVB_js - ALTVB_kp1_js ) * RHO_js ) )
+                #dVFLXdt_TURB = wp(0.)
+            elif k == wp_int(nz-1):
+                dVFLXdt_TURB = ( ( KMOM_dVWINDdz + SMOMYFLX_js ) /
+                                 ( ( ALTVB_js - ALTVB_kp1_js ) * RHO_js ) )
+                #dVFLXdt_TURB = wp(0.)
+            else:
+                dVFLXdt_TURB = ( ( KMOM_dVWINDdz - KMOM_dVWINDdz_kp1 ) /
+                                 ( ( ALTVB_js - ALTVB_kp1_js ) * RHO_js ) )
+                #dVFLXdt_TURB = wp(0.)
+
+            # TODO
+            #dVFLXdt_TURB *= wp(0.03)
+            #dVFLXdt_TURB *= wp(0.50)
+            #dVFLXdt_TURB = wp(0.)
+            dVFLXdt = dVFLXdt + dVFLXdt_TURB
+
         # CORIOLIS AND SPHERICAL GRID CONVERSION
         if i_UVFLX_coriolis:
             dVFLXdt = dVFLXdt + coriolis_and_spherical_VWIND(
@@ -152,6 +211,7 @@ def add_up_tendencies_py(
 ### SPECIALIZE FOR GPU
 ###############################################################################
 UVFLX_hor_adv = njit(UVFLX_hor_adv_py, device=True, inline=True)
+interp_VAR_ds = njit(interp_VAR_ds_py, device=True, inline=True)
 coriolis_and_spherical_VWIND = njit(coriolis_and_spherical_VWIND_py,
                         device=True, inline=True)
 pre_grad = njit(pre_grad_py, device=True, inline=True)
@@ -162,8 +222,12 @@ add_up_tendencies = njit(add_up_tendencies_py, device=True,
 def launch_cuda_main_kernel(dVFLXdt, VFLX,
                     UWIND, VWIND,
                     RFLX_3D, SFLX_3D, TFLX_3D, QFLX_3D,
-                    PHI, COLP, POTT,
+                    PHI, PHIVB, COLP, POTT,
                     PVTF, PVTFVB, WWIND_VWIND,
+
+                    KMOM_dVWINDdz, RHO,
+                    dVFLXdt_TURB, SMOMYFLX,
+
                     corf, lat_rad,
                     dlon_rad, dlat_rad,
                     dxjs,
@@ -214,6 +278,21 @@ def launch_cuda_main_kernel(dVFLXdt, VFLX,
             PVTFVB      [i  ,j  ,k  ], PVTFVB      [i  ,j-1,k  ],
             PVTFVB      [i  ,j-1,k+1], PVTFVB      [i  ,j  ,k+1],
             WWIND_VWIND [i  ,j  ,k  ], WWIND_VWIND [i  ,j  ,k+1],
+
+            PHIVB       [i  ,j  ,k  ], PHIVB       [i  ,j-1,k  ],
+            PHIVB       [i-1,j  ,k  ], PHIVB       [i+1,j  ,k  ],
+            PHIVB       [i-1,j-1,k  ], PHIVB       [i+1,j-1,k  ],
+            PHIVB       [i  ,j  ,k+1], PHIVB       [i  ,j-1,k+1],
+            PHIVB       [i-1,j  ,k+1], PHIVB       [i+1,j  ,k+1],
+            PHIVB       [i-1,j-1,k+1], PHIVB       [i+1,j-1,k+1],
+            RHO         [i  ,j  ,k  ], RHO         [i  ,j-1,k  ],
+            RHO         [i-1,j  ,k  ], RHO         [i+1,j  ,k  ],
+            RHO         [i-1,j-1,k  ], RHO         [i+1,j-1,k  ],
+            SMOMYFLX    [i  ,j  ,0  ], SMOMYFLX    [i  ,j-1,0  ],
+            SMOMYFLX    [i-1,j  ,0  ], SMOMYFLX    [i+1,j  ,0  ],
+            SMOMYFLX    [i-1,j-1,0  ], SMOMYFLX    [i+1,j-1,0  ],
+            KMOM_dVWINDdz[i  ,j  ,k  ],KMOM_dVWINDdz[i  ,j  ,k+1],
+
             # 2D
             COLP        [i  ,j  ,0  ], COLP        [i  ,j-1,0  ],
             # GR horizontal
@@ -224,7 +303,7 @@ def launch_cuda_main_kernel(dVFLXdt, VFLX,
             # GR vertical
             dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
             sigma_vb    [0  ,0  ,k+1],
-            UVFLX_dif_coef[0,0,k])
+            UVFLX_dif_coef[0,0,k], k, i)
 
 
 if gpu_enable:
@@ -237,6 +316,7 @@ if gpu_enable:
 ### SPECIALIZE FOR CPU
 ####################################################################
 UVFLX_hor_adv = njit(UVFLX_hor_adv_py)
+interp_VAR_ds = njit(interp_VAR_ds_py)
 coriolis_and_spherical_VWIND = njit(coriolis_and_spherical_VWIND_py)
 pre_grad = njit(pre_grad_py)
 num_dif = njit(num_dif_py)
@@ -245,8 +325,12 @@ add_up_tendencies = njit(add_up_tendencies_py)
 def launch_numba_cpu_main(dVFLXdt, VFLX,
                     UWIND, VWIND,
                     RFLX_3D, SFLX_3D, TFLX_3D, QFLX_3D,
-                    PHI, COLP, POTT,
+                    PHI, PHIVB, COLP, POTT,
                     PVTF, PVTFVB, WWIND_VWIND,
+
+                    KMOM_dVWINDdz, RHO,
+                    dVFLXdt_TURB, SMOMYFLX,
+
                     corf, lat_rad,
                     dlon_rad, dlat_rad,
                     dxjs,
@@ -296,6 +380,21 @@ def launch_numba_cpu_main(dVFLXdt, VFLX,
             PVTFVB      [i  ,j  ,k  ], PVTFVB      [i  ,j-1,k  ],
             PVTFVB      [i  ,j-1,k+1], PVTFVB      [i  ,j  ,k+1],
             WWIND_VWIND [i  ,j  ,k  ], WWIND_VWIND [i  ,j  ,k+1],
+
+            PHIVB       [i  ,j  ,k  ], PHIVB       [i  ,j-1,k  ],
+            PHIVB       [i-1,j  ,k  ], PHIVB       [i+1,j  ,k  ],
+            PHIVB       [i-1,j-1,k  ], PHIVB       [i+1,j-1,k  ],
+            PHIVB       [i  ,j  ,k+1], PHIVB       [i  ,j-1,k+1],
+            PHIVB       [i-1,j  ,k+1], PHIVB       [i+1,j  ,k+1],
+            PHIVB       [i-1,j-1,k+1], PHIVB       [i+1,j-1,k+1],
+            RHO         [i  ,j  ,k  ], RHO         [i  ,j-1,k  ],
+            RHO         [i-1,j  ,k  ], RHO         [i+1,j  ,k  ],
+            RHO         [i-1,j-1,k  ], RHO         [i+1,j-1,k  ],
+            SMOMYFLX    [i  ,j  ,0  ], SMOMYFLX    [i  ,j-1,0  ],
+            SMOMYFLX    [i-1,j  ,0  ], SMOMYFLX    [i+1,j  ,0  ],
+            SMOMYFLX    [i-1,j-1,0  ], SMOMYFLX    [i+1,j-1,0  ],
+            KMOM_dVWINDdz[i  ,j  ,k  ],KMOM_dVWINDdz[i  ,j  ,k+1],
+
             # 2D
             COLP        [i  ,j  ,0  ], COLP        [i  ,j-1,0  ],
             # GR horizontal
@@ -306,6 +405,6 @@ def launch_numba_cpu_main(dVFLXdt, VFLX,
             # GR vertical
             dsigma      [0  ,0  ,k  ], sigma_vb    [0  ,0  ,k  ],
             sigma_vb    [0  ,0  ,k+1],
-            UVFLX_dif_coef[0,0,k])
+            UVFLX_dif_coef[0,0,k], k, i)
 
 VFLX_tendency_cpu = njit(parallel=True)(launch_numba_cpu_main)

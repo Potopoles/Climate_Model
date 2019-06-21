@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190604
+Last modified:      20190621
 License:            MIT
 
 Functions to initialize the model fields and set up an average
@@ -33,6 +33,8 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
                         POTT, TAIR, TAIRVB, PAIR,
                         UWIND, VWIND, WIND, RHO,
                         PHI, PHIVB, QV, QC):
+
+    np.random.seed(seed=3)
 
     #######################################################################
     # SET INITIAL FIELD VALUES
@@ -187,6 +189,7 @@ def load_topo(GR, HSURF):
     interp = interp2d(lon_inp, lat_inp, hsurf_inp)
     HSURF[GR.ii,GR.jj,0] = interp(GR.lon_deg[GR.ii,GR.nb+1,0].squeeze(),
                                   GR.lat_deg[GR.nb+1,GR.jj,0].squeeze()).T
+    HSURF = GR.exchange_BC(HSURF)
     HSURF[HSURF < 0] = 0
     HSURF = GR.exchange_BC(HSURF)
 

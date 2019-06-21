@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190609
+Last modified:      20190614
 License:            MIT
 
 Collection of generally applicable finite difference tendency
@@ -23,16 +23,60 @@ from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 ###############################################################################
 
 
-def comp_VARVB_log_py(VAR, VAR_km1, VAR_kp1):
+def turb_flux_tendency_py(PHI, PHI_kp1, PHI_km1, PHIVB, PHIVB_kp1, 
+                VAR, VAR_kp1, VAR_km1, KVAR, KVAR_kp1,
+                RHO, RHOVB, RHOVB_kp1, COLP, surf_flux_VAR, k):
+
     """
-    Compute variable value at vertical borders using 
+    Vertical turbulent transport. 
+    """
+    ALT         = PHI       / con_g
+    ALT_kp1     = PHI_kp1   / con_g
+    ALT_km1     = PHI_km1   / con_g
+    ALTVB       = PHIVB     / con_g
+    ALTVB_kp1   = PHIVB_kp1 / con_g
+
+    if k == wp_int(0):
+        #dVARdt_TURB = wp(0.)
+        dVARdt_TURB = COLP * (
+                (
+                + wp(0.)
+                - ( ( VAR     - VAR_kp1 ) / ( ALT     - ALT_kp1 )
+                    * RHOVB_kp1 * KVAR_kp1 )
+                ) / ( ( ALTVB - ALTVB_kp1 ) * RHO )
+        )
+    elif k == nz-1:
+        #dVARdt_TURB = wp(0.)
+        dVARdt_TURB = COLP * (
+                (
+                + ( ( VAR_km1 - VAR     ) / ( ALT_km1 - ALT     )
+                    * RHOVB     * KVAR     )
+                + surf_flux_VAR
+                ) / ( ( ALTVB - ALTVB_kp1 ) * RHO )
+        )
+    else:
+        #dVARdt_TURB = wp(0.)
+        dVARdt_TURB = COLP * (
+                (
+                + ( ( VAR_km1 - VAR     ) / ( ALT_km1 - ALT     )
+                    * RHOVB     * KVAR     )
+                - ( ( VAR     - VAR_kp1 ) / ( ALT     - ALT_kp1 )
+                    * RHOVB_kp1 * KVAR_kp1 )
+                ) / ( ( ALTVB - ALTVB_kp1 ) * RHO )
+        )
+    return(dVARdt_TURB)
+
+
+def comp_VARVB_log_py(VAR, VAR_km1):
+    """
+    Compute variable value at vertical border using 
     logarithmic interpolation.
     (see Jacobson page 213.)
     """
     min_val = wp(0.0000001)
     VAR     = max(VAR, min_val)
     VAR_km1 = max(VAR_km1, min_val)
-    VAR_kp1 = max(VAR_kp1, min_val)
+    #VAR_kp1 = max(VAR_kp1, min_val)
 
     if VAR_km1 == VAR:
         VARVB = VAR
@@ -41,14 +85,14 @@ def comp_VARVB_log_py(VAR, VAR_km1, VAR_kp1):
                         ( wp(1.) / VAR     - wp(1.) / VAR_km1 )
                       )
 
-    if VAR_kp1 == VAR:
-        VARVB_kp1 = VAR
-    else:
-        VARVB_kp1   = ( ( log(VAR    ) - log(VAR_kp1) ) /
-                        ( wp(1.) / VAR_kp1 - wp(1.) / VAR     )
-                      )
+    #if VAR_kp1 == VAR:
+    #    VARVB_kp1 = VAR
+    #else:
+    #    VARVB_kp1   = ( ( log(VAR    ) - log(VAR_kp1) ) /
+    #                    ( wp(1.) / VAR_kp1 - wp(1.) / VAR     )
+    #                  )
 
-    return(VARVB, VARVB_kp1)
+    return(VARVB)
 
 
 def euler_forward_py(VAR, dVARdt, dt):
@@ -184,7 +228,7 @@ def interp_WWIND_UVWIND_py(
     vector.
     p inds are perpendicular to direction of hor. wind vector.
     if rigid_wall: Special BC for rigid wall parallel to flow
-    direction according to hint of Mark Jacobson during mail
+    direction according to hint from Mark Jacobson during mail
     conversation. np is number of grid cells and p_ind current
     index in direction perpeindular to flow.
     """
@@ -224,6 +268,161 @@ def interp_WWIND_UVWIND_py(
         WWIND_DWIND = COLPAWWIND_ds_ks * DWIND_ks
 
     return(WWIND_DWIND)
+
+
+
+
+
+def interp_KMOM_dUVWINDdz_py(
+            DWIND,              DWIND_km1,
+            KMOM,               KMOM_dm1,
+            KMOM_pm1,           KMOM_pp1,
+            KMOM_pm1_dm1,       KMOM_pp1_dm1,
+            RHOVB,              RHOVB_dm1,
+            RHOVB_pm1,          RHOVB_pp1,
+            RHOVB_pm1_dm1,      RHOVB_pp1_dm1,
+            PHI,                PHI_dm1,
+            PHI_pm1,            PHI_pp1,
+            PHI_pm1_dm1,        PHI_pp1_dm1,
+            PHI_km1,            PHI_km1_dm1,
+            PHI_km1_pm1,        PHI_km1_pp1,
+            PHI_km1_pm1_dm1,    PHI_km1_pp1_dm1,
+            COLP_NEW,           COLP_NEW_dm1,
+            COLP_NEW_pm1,       COLP_NEW_pp1,
+            COLP_NEW_pm1_dm1,   COLP_NEW_pp1_dm1, 
+            A,                  A_dm1,
+            A_pm1,              A_pp1,
+            A_pm1_dm1,          A_pp1_dm1, 
+            dsigma,             dsigma_km1,
+            rigid_wall, p_ind, np, k):
+    """
+    Interpolate KMOM * UVWIND (U or V, depending on direction) 
+    onto position of repective horizontal wind.
+    d inds (e.g. dm1 = d minus 1) are in direction of hor. wind
+    vector.
+    p inds are perpendicular to direction of hor. wind vector.
+    if rigid_wall: Special BC for rigid wall parallel to flow
+    direction according to hint from Mark Jacobson during mail
+    conversation. np is number of grid cells and p_ind current
+    index in direction perpeindular to flow.
+    """
+    if k == wp_int(0) or k == nzs-wp_int(1):
+        KMOM_DWIND = wp(0.)
+    else:
+        # left rigid wall 
+        if rigid_wall and (p_ind == nb):
+            COLPAKMOM_ds_ks = wp(0.25)*( 
+                RHOVB_pp1_dm1 * COLP_NEW_pp1_dm1 * A_pp1_dm1 * KMOM_pp1_dm1 +
+                RHOVB_pp1     * COLP_NEW_pp1     * A_pp1     * KMOM_pp1     +
+                RHOVB_dm1     * COLP_NEW_dm1     * A_dm1     * KMOM_dm1     +
+                RHOVB         * COLP_NEW         * A         * KMOM         )
+            ALT_ds_km1 = wp(0.25)*( 
+                PHI_km1_pp1_dm1 +
+                PHI_km1_pp1     +
+                PHI_km1_dm1     +
+                PHI_km1         ) / con_g
+            ALT_ds = wp(0.25)*( 
+                PHI_pp1_dm1 +
+                PHI_pp1     +
+                PHI_dm1     +
+                PHI         ) / con_g
+        # right rigid wall 
+        elif rigid_wall and (p_ind == np):
+            COLPAKMOM_ds_ks = wp(0.25)*( 
+                RHOVB_dm1     * COLP_NEW_dm1     * A_dm1     * KMOM_dm1     +
+                RHOVB         * COLP_NEW         * A         * KMOM         +
+                RHOVB_pm1_dm1 * COLP_NEW_pm1_dm1 * A_pm1_dm1 * KMOM_pm1_dm1 +
+                RHOVB_pm1     * COLP_NEW_pm1     * A_pm1     * KMOM_pm1     )
+            ALT_ds_km1 = wp(0.25)*( 
+                PHI_km1_dm1     +
+                PHI_km1         +
+                PHI_km1_pm1_dm1 +
+                PHI_km1_pm1     ) / con_g
+            ALT_ds = wp(0.25)*( 
+                PHI_dm1     +
+                PHI         +
+                PHI_pm1_dm1 +
+                PHI_pm1     ) / con_g
+        # inside domain (not at boundary of perpendicular dimension)
+        else:
+            COLPAKMOM_ds_ks = wp(0.125)*( 
+                RHOVB_pp1_dm1 * COLP_NEW_pp1_dm1 * A_pp1_dm1 * KMOM_pp1_dm1 +
+                RHOVB_pp1     * COLP_NEW_pp1     * A_pp1     * KMOM_pp1     +
+       wp(2.) * RHOVB_dm1     * COLP_NEW_dm1     * A_dm1     * KMOM_dm1     +
+       wp(2.) * RHOVB         * COLP_NEW         * A         * KMOM         +
+                RHOVB_pm1_dm1 * COLP_NEW_pm1_dm1 * A_pm1_dm1 * KMOM_pm1_dm1 +
+                RHOVB_pm1     * COLP_NEW_pm1     * A_pm1     * KMOM_pm1     )
+            ALT_ds_km1 = wp(0.125)*( 
+                            PHI_km1_pp1_dm1 +
+                            PHI_km1_pp1     +
+                   wp(2.) * PHI_km1_dm1     +
+                   wp(2.) * PHI_km1         +
+                            PHI_km1_pm1_dm1 +
+                            PHI_km1_pm1     ) / con_g
+            ALT_ds = wp(0.125)*( 
+                            PHI_pp1_dm1 +
+                            PHI_pp1     +
+                   wp(2.) * PHI_dm1     +
+                   wp(2.) * PHI         +
+                            PHI_pm1_dm1 +
+                            PHI_pm1     ) / con_g
+
+        # interpolate hor. wind on vertical interface
+        dDWINDdz_ks = (( DWIND_km1  - DWIND      ) /
+                       ( ALT_ds_km1 - ALT_ds     ) )
+
+        # combine
+        KMOM_dDWINDdz = COLPAKMOM_ds_ks * dDWINDdz_ks
+
+    return(KMOM_dDWINDdz)
+
+
+
+
+
+def interp_VAR_ds_py(
+            VAR,                VAR_dm1,
+            VAR_pm1,            VAR_pp1,
+            VAR_pm1_dm1,        VAR_pp1_dm1,
+            rigid_wall, p_ind, np):
+    """
+    Interpolate VAR  
+    onto position of repective horizontal wind.
+    d inds (e.g. dm1 = d minus 1) are in direction of hor. wind
+    vector.
+    p inds are perpendicular to direction of hor. wind vector.
+    if rigid_wall: Special BC for rigid wall parallel to flow
+    direction according to hint from Mark Jacobson during mail
+    conversation. np is number of grid cells and p_ind current
+    index in direction perpeindular to flow.
+    """
+    # left rigid wall 
+    if rigid_wall and (p_ind == nb):
+        VAR_ds = wp(0.25)*( 
+            VAR_pp1_dm1 +
+            VAR_pp1     +
+            VAR_dm1     +
+            VAR         ) / con_g
+    # right rigid wall 
+    elif rigid_wall and (p_ind == np):
+        VAR_ds = wp(0.25)*( 
+            VAR_dm1     +
+            VAR         +
+            VAR_pm1_dm1 +
+            VAR_pm1     ) / con_g
+    # inside domain (not at boundary of perpendicular dimension)
+    else:
+        VAR_ds = wp(0.125)*( 
+                        VAR_pp1_dm1 +
+                        VAR_pp1     +
+               wp(2.) * VAR_dm1     +
+               wp(2.) * VAR         +
+                        VAR_pm1_dm1 +
+                        VAR_pm1     ) / con_g
+    return(VAR_ds)
+
+
+
 
 
 

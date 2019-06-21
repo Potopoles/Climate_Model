@@ -65,6 +65,14 @@ F = ModelFields(GR, gpu_enable)
 ####################################################################
 constant_fields_to_NC(GR, F)
 
+## TODO
+GR.timer.start('diag')
+Diagnostics.primary_diag(GR.GRF[Diagnostics.target],
+        **F.get(
+                Diagnostics.fields_primary_diag,
+                target=Diagnostics.target))
+GR.timer.stop('diag')
+
 
 ####################################################################
 ####################################################################
@@ -94,12 +102,14 @@ while GR.ts < GR.nts:
     GR.timer.stop('diag')
 
 
+
     ####################################################################
     # EARTH SURFACE
     ####################################################################
     if i_surface_scheme:
         GR.timer.start('srfc')
-        F.SURF.advance_timestep(GR, **F.get(F.SURF.fields_timestep,
+        F.SURF.advance_timestep(GR, GR.GRF[F.SURF.target],
+                                **F.get(F.SURF.fields_timestep,
                                 target=F.SURF.target))
         GR.timer.stop('srfc')
 
@@ -107,11 +117,16 @@ while GR.ts < GR.nts:
     ####################################################################
     # TURBULENCE
     ####################################################################
+    #print(np.asarray(F.device['KHEAT']))
     if i_turbulence:
         GR.timer.start('turb')
         F.TURB.compute_turbulence(GR, **F.get(F.TURB.fields_main,
                                 target=F.TURB.target))
         GR.timer.stop('turb')
+
+    #F.copy_device_to_host(GR, F.ALL_FIELDS)
+    #print(np.sum(np.isnan(np.asarray(F.device['UWIND']))))
+    #quit()
 
 
     ####################################################################

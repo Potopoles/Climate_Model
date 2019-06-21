@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190609
-Last modified:      20190609
+Last modified:      20190618
 License:            MIT
 
 Computation of moisture variables (QV, QC) tendencies
@@ -28,7 +28,7 @@ from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 if gpu_enable:
     from misc_gpu_functions import cuda_kernel_decorator
 
-from dyn_functions import (hor_adv_py, vert_adv_py, 
+from dyn_functions import (hor_adv_py, vert_adv_py, turb_flux_tendency_py,
                            num_dif_pw_py, comp_VARVB_log_py)
 ###############################################################################
 
@@ -36,8 +36,8 @@ from dyn_functions import (hor_adv_py, vert_adv_py,
 ###############################################################################
 ### DEVICE UNSPECIFIC PYTHON FUNCTIONS
 ###############################################################################
-def turbulence_py(dQVdt_TURB, COLP):
-    return(dQVdt_TURB * COLP)
+#def turbulence_py(dQVdt_TURB, COLP):
+#    return(dQVdt_TURB * COLP)
 
 
 def microphysics_py():
@@ -54,7 +54,11 @@ def add_up_tendencies_py(
             COLP, COLP_im1, COLP_ip1, COLP_jm1, COLP_jp1,
             WWIND, WWIND_kp1,
             COLP_NEW, 
-            dQVdt_TURB, dQCdt_TURB,
+
+            PHI, PHI_kp1, PHI_km1, PHIVB, PHIVB_kp1, 
+            KHEAT, KHEAT_kp1, 
+            RHO, RHOVB, RHOVB_kp1, SQVFLX,
+
             A, dsigma, moist_dif_coef, k):
 
     dQVdt = wp(0.)
@@ -79,22 +83,26 @@ def add_up_tendencies_py(
                 A)
         # VERTICAL ADVECTION
         if i_moist_vert_adv:
-            QVVB, QVVB_kp1 = comp_VARVB_log(
-                QV, QV_km1, QV_kp1)
+            QVVB = comp_VARVB_log(QV, QV_km1)
+            QVVB_kp1 = comp_VARVB_log(QV_kp1, QV)
             dQVdt = dQVdt + vert_adv(
                 QVVB, QVVB_kp1,
                 WWIND, WWIND_kp1,
                 COLP_NEW, dsigma, k)
-            QCVB, QCVB_kp1 = comp_VARVB_log(
-                QC, QC_km1, QC_kp1)
+            QCVB = comp_VARVB_log(QC, QC_km1)
+            QCVB_kp1 = comp_VARVB_log(QC_kp1, QC)
             dQCdt = dQCdt + vert_adv(
                 QCVB, QCVB_kp1,
                 WWIND, WWIND_kp1,
                 COLP_NEW, dsigma, k)
         # VERTICAL TURBULENT TRANSPORT
         if i_moist_vert_turb:
-            dQVdt = dQVdt + turbulence(dQVdt_TURB, COLP)
-            #dQCdt = dQCdt + turbulence(dQCdt_TURB, COLP)
+            dQVdt_TURB = turb_flux_tendency(
+                    PHI, PHI_kp1, PHI_km1, PHIVB, PHIVB_kp1, 
+                    QV, QV_kp1, QV_km1, KHEAT, KHEAT_kp1, 
+                    RHO, RHOVB, RHOVB_kp1, COLP, SQVFLX, k)
+            dQVdt = dQVdt + dQVdt_TURB
+
         # NUMERICAL HORIZONTAL DIFUSION
         if i_moist_num_dif and (moist_dif_coef > wp(0.)):
             dQVdt = dQVdt + num_dif(
@@ -110,7 +118,7 @@ def add_up_tendencies_py(
                 COLP_jm1, COLP_jp1,
                 moist_dif_coef)
 
-    return(dQVdt, dQCdt)
+    return(dQVdt, dQVdt_TURB, dQCdt)
 
 
 
@@ -124,18 +132,18 @@ hor_adv         = njit(hor_adv_py, device=True, inline=True)
 num_dif         = njit(num_dif_pw_py, device=True, inline=True)
 comp_VARVB_log  = njit(comp_VARVB_log_py, device=True, inline=True)
 vert_adv        = njit(vert_adv_py, device=True, inline=True)
-turbulence      = njit(turbulence_py, device=True, inline=True)
+turb_flux_tendency = njit(turb_flux_tendency_py, device=True, inline=True)
 add_up_tendencies = njit(add_up_tendencies_py, device=True, inline=True)
 
 
 def launch_cuda_kernel(A, dsigma, moist_dif_coef,
-                       dQVdt, QV, dQCdt, QC, UFLX, VFLX, COLP,
+                       dQVdt, dQVdt_TURB, QV, dQCdt, QC, UFLX, VFLX, COLP,
                        WWIND, COLP_NEW,
-                       dQVdt_TURB, dQCdt_TURB):
+                       PHI, PHIVB, KHEAT, RHO, RHOVB, SQVFLX):
 
     i, j, k = cuda.grid(3)
     if i >= nb and i < nx+nb and j >= nb and j < ny+nb:
-        dQVdt[i  ,j  ,k], dQCdt[i  ,j  ,k] = \
+        dQVdt[i  ,j  ,k], dQVdt_TURB[i  ,j  ,k], dQCdt[i  ,j  ,k] = \
             add_up_tendencies(
             QV          [i  ,j  ,k  ],
             QV          [i-1,j  ,k  ], QV         [i+1,j  ,k  ],
@@ -152,7 +160,14 @@ def launch_cuda_kernel(A, dsigma, moist_dif_coef,
             COLP        [i  ,j-1,0  ], COLP       [i  ,j+1,0  ],
             WWIND       [i  ,j  ,k  ], WWIND      [i  ,j  ,k+1],
             COLP_NEW    [i  ,j  ,0  ],
-            dQVdt_TURB  [i  ,j  ,k  ], dQCdt_TURB [i  ,j  ,k  ],
+
+            PHI         [i  ,j  ,k  ], PHI        [i  ,j  ,k+1],
+            PHI         [i  ,j  ,k-1], PHIVB      [i  ,j  ,k  ],
+            PHIVB       [i  ,j  ,k+1], 
+            KHEAT       [i  ,j  ,k  ], KHEAT      [i  ,j  ,k+1],
+            RHO         [i  ,j  ,k  ], RHOVB      [i  ,j  ,k  ],
+            RHOVB       [i  ,j  ,k+1], SQVFLX     [i  ,j  ,0  ],
+
             A[i  ,j  ,0],
             dsigma[0  ,0  ,k], moist_dif_coef[0  ,0  ,k],
             k)
@@ -172,18 +187,18 @@ hor_adv         = njit(hor_adv_py)
 comp_VARVB_log  = njit(comp_VARVB_log_py)
 vert_adv        = njit(vert_adv_py)
 num_dif         = njit(num_dif_pw_py)
-turbulence      = njit(turbulence_py)
+turb_flux_tendency = njit(turb_flux_tendency_py)
 add_up_tendencies = njit(add_up_tendencies_py)
 
 def launch_numba_cpu(A, dsigma, moist_dif_coef,
-                    dQVdt, QV, dQCdt, QC, UFLX, VFLX, COLP,
+                    dQVdt, dQVdt_TURB, QV, dQCdt, QC, UFLX, VFLX, COLP,
                     WWIND, COLP_NEW,
-                    dQVdt_TURB, dQCdt_TURB):
+                    PHI, PHIVB, KHEAT, RHO, RHOVB, SQVFLX):
 
     for i in prange(nb,nx+nb):
         for j in range(nb,ny+nb):
             for k in range(wp_int(0),nz):
-                dQVdt[i  ,j  ,k], dQCdt[i  ,j  ,k] = \
+                dQVdt[i  ,j  ,k], dQVdt_TURB[i  ,j  ,k], dQCdt[i  ,j  ,k] = \
                     add_up_tendencies(
                         QV          [i  ,j  ,k  ],
                         QV          [i-1,j  ,k  ], QV       [i+1,j  ,k  ],
@@ -200,10 +215,21 @@ def launch_numba_cpu(A, dsigma, moist_dif_coef,
                         COLP        [i  ,j-1,0  ], COLP     [i  ,j+1,0  ],
                         WWIND       [i  ,j  ,k  ], WWIND    [i  ,j  ,k+1],
                         COLP_NEW    [i  ,j  ,0  ],
-                        dQVdt_TURB  [i  ,j  ,k  ], dQCdt_TURB[i  ,j  ,k  ],
+
+                        PHI         [i  ,j  ,k  ], PHI      [i  ,j  ,k+1],
+                        PHI         [i  ,j  ,k-1], PHIVB    [i  ,j  ,k  ],
+                        PHIVB       [i  ,j  ,k+1], 
+                        KHEAT       [i  ,j  ,k  ], KHEAT    [i  ,j  ,k+1],
+                        RHO         [i  ,j  ,k  ], RHOVB    [i  ,j  ,k  ],
+                        RHOVB       [i  ,j  ,k+1], SQVFLX   [i  ,j  ,0  ],
+
                         A           [i  ,j  ,0  ],
                         dsigma      [0  ,0  ,k  ], moist_dif_coef[0  ,0  ,k],
                         k)
+
+
+
+
 
 
 moist_tendency_cpu = njit(parallel=True)(launch_numba_cpu)

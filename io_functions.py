@@ -92,7 +92,6 @@ def diagnose_print_diag_fields(GR, WIND, COLP, POTT):
 
 def print_ts_info(GR, F):
     
-
     if GR.ts % nth_ts_print_diag == 0:
         if i_comp_mode == 2:
             F.copy_device_to_host(GR, F.PRINT_DIAG_FIELDS)

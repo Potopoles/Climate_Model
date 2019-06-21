@@ -284,7 +284,7 @@ class Grid:
             vert_reduce = .0
             self.UVFLX_dif_coef[0,0,self.k] = (UVFLX_dif_coef * 
                                     np.exp(-vert_reduce*(nz-self.k-1)/nz))
-            vert_reduce = 5.0
+            vert_reduce = 3.0
             self.POTT_dif_coef[0,0,self.k] = (POTT_dif_coef * 
                                     np.exp(-vert_reduce*(nz-self.k-1)/nz))
             self.moist_dif_coef[0,0,self.k] = (moist_dif_coef * 
