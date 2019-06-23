@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190621
+Last modified:      20190623
 License:            MIT
 
 Functions to initialize the model fields and set up an average
@@ -67,12 +67,14 @@ def initialize_fields(GR, POTTVB, WWIND, HSURF,
     for k in range(0,GR.nz):
         UWIND[GR.iis,GR.jj,k] = uwind_0
         UWIND[:,:,k] = gaussian2D(GR, UWIND[:,:,k], UWIND_gaussian_pert, 
-                     np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+                     np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)*(
+                        1-(k+1)/GR.nz)**(1/2)
         UWIND[:,:,k] = random2D(GR, UWIND[:,:,k], UWIND_random_pert)
 
         VWIND[:,:,k][GR.ii,GR.jjs] = vwind_0
         VWIND[:,:,k] = gaussian2D(GR, VWIND[:,:,k], VWIND_gaussian_pert,
-                     np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)
+                     np.pi*3/4, 0, gaussian_dlon, gaussian_dlat)*(
+                        1-(k+1)/GR.nz)**(1/2)
         VWIND[:,:,k] = random2D(GR, VWIND[:,:,k], VWIND_random_pert)
 
         POTT[:,:,k] = gaussian2D(GR, POTT[:,:,k], POTT_gaussian_pert,
@@ -229,11 +231,11 @@ def gaussian2D(GR, FIELD, pert, lon0_rad, lat0_rad, lonSig_rad, latSig_rad):
         lat = GR.lat_rad[GR.ii, GR.jj, 0]
         lon = GR.lon_rad[GR.ii, GR.jj, 0]
 
-    perturb = pert*np.exp(
+    perturb = pert * np.exp(
             - np.power(lon - lon0_rad, 2)/
                         (2*lonSig_rad**2)
             - np.power(lat - lat0_rad, 2)/
-                        (2*latSig_rad**2) )
+                        (2*latSig_rad**2) ) 
 
     FIELD[selinds] = FIELD[selinds] + perturb.squeeze()
 

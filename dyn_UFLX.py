@@ -158,7 +158,6 @@ def add_up_tendencies_py(
             if k == wp_int(0):
                 dUFLXdt_TURB = ( ( wp(0.) - KMOM_dUWINDdz_kp1 ) /
                                  ( ( ALTVB_is - ALTVB_kp1_is ) * RHO_is ) )
-                #dUFLXdt_TURB = wp(0.)
             elif k == wp_int(nz-1):
                 dUFLXdt_TURB = ( ( KMOM_dUWINDdz + SMOMXFLX_is ) /
                                  ( ( ALTVB_is - ALTVB_kp1_is ) * RHO_is ) )
@@ -166,7 +165,6 @@ def add_up_tendencies_py(
             else:
                 dUFLXdt_TURB = ( ( KMOM_dUWINDdz - KMOM_dUWINDdz_kp1 ) /
                                  ( ( ALTVB_is - ALTVB_kp1_is ) * RHO_is ) )
-                #dUFLXdt_TURB = wp(0.)
 
             #dUFLXdt_TURB = wp(0.)
             dUFLXdt = dUFLXdt + dUFLXdt_TURB

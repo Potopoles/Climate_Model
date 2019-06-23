@@ -80,7 +80,8 @@ def output_to_NC(GR, F):
 
     field_names = ['UWIND', 'VWIND', 'WIND', 'POTT', 'TAIR',
                    'PHI', 'PAIR', 'RHO', 'COLP', 'QV', 'QC', 'dQVdt',
-                   'dQVdt_TURB', 'dUFLXdt_TURB', 'KMOM', 'KHEAT',
+                   'dQVdt_TURB', 'dUFLXdt_TURB', 'dVFLXdt_TURB',
+                   'KMOM', 'KHEAT',
                    'SMOMXFLX', 'SMOMYFLX', 'SSHFLX', 'SQVFLX',
                    'KMOM_dUWINDdz', 'KMOM_dVWINDdz']
     for field_name in field_names:

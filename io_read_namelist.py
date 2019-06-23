@@ -17,7 +17,7 @@ from namelist import (working_precision,
                     UVFLX_dif_coef, POTT_dif_coef, COLP_dif_coef,
                     moist_dif_coef,
                     i_comp_mode, nb, lon0_deg, lon1_deg,
-                    pair_top, i_time_stepping, nz_soil,
+                    pair_top, i_time_stepping, nzsoil,
                     i_radiation, i_surface_scheme,
                     i_POTT_radiation, i_POTT_microphys,
                     i_moist_microphys,
@@ -32,8 +32,8 @@ if nb > 1:
 if lon0_deg != 0 or lon1_deg != 360:
     raise NotImplementedError('In x direction only periodic boundaries '+
                             'implemented.')
-if nz_soil > 1:
-    raise NotImplementedError('nz_soil > 1 not yet implemented')
+if nzsoil > 1:
+    raise NotImplementedError('nzsoil > 1 not yet implemented')
 
 ###############################################################################
 # COMPUTATION

@@ -156,8 +156,7 @@ class TendencyFactory:
 
             exchange_BC_gpu[bpg, tpb](KMOM_dUWINDdz)
             exchange_BC_gpu[bpg, tpb](KMOM_dVWINDdz)
-            # TODO: Can remove this after surface is run on full domain
-            # including nb grid points
+            # TODO: how to remove this?
             exchange_BC_gpu[bpg, tpb](SMOMXFLX)
             exchange_BC_gpu[bpg, tpb](SMOMYFLX)
 
@@ -177,9 +176,6 @@ class TendencyFactory:
                         GRF['dsigma'], GRF['sigma_vb'],
                         GRF['UVFLX_dif_coef'])
 
-            #show = np.isnan(np.asarray(dUFLXdt))
-            #print(np.sum(show))
-
             # VFLX
             VFLX_tendency_gpu[bpg, tpb](
                         dVFLXdt, VFLX, UWIND, VWIND,
@@ -195,10 +191,6 @@ class TendencyFactory:
                         GRF['dxjs'], 
                         GRF['dsigma'],      GRF['sigma_vb'],
                         GRF['UVFLX_dif_coef'])
-
-            #show = np.isnan(np.asarray(dVFLXdt))
-            #print(np.sum(show))
-
 
         elif self.target == CPU:
 
@@ -220,29 +212,9 @@ class TendencyFactory:
 
             exchange_BC_cpu(KMOM_dUWINDdz)
             exchange_BC_cpu(KMOM_dVWINDdz)
-            # TODO: Can remove this after surface is run on full domain
-            # including nb grid points
+            # TODO: how to remove this?
             exchange_BC_cpu(SMOMXFLX)
             exchange_BC_cpu(SMOMYFLX)
-
-            #import matplotlib.pyplot as plt
-            #k = 10
-            ##var = KMOM_dUWINDdz
-            #var = KMOM_dVWINDdz
-            ##var = RHO
-            #plt.contourf(np.asarray(var)[:,:,k].T)
-            #print(np.asarray(var)[:,:,k])
-            #print(np.sum(np.isnan(np.asarray(var))))
-            #plt.colorbar()
-            #plt.show()
-            #quit()
-
-            #show = np.isnan(np.asarray(KMOM_dUWINDdz))
-            #print(np.sum(show))
-            #quit()
-
-            #show = np.isnan(np.asarray(dUFLXdt))
-            #print(np.sum(show))
 
             # UFLX
             UFLX_tendency_cpu(
@@ -260,9 +232,6 @@ class TendencyFactory:
                         GRF['dsigma'], GRF['sigma_vb'],
                         GRF['UVFLX_dif_coef'])
 
-            #show = np.isnan(np.asarray(dUFLXdt))
-            #print(np.sum(show))
-
             # VFLX
             VFLX_tendency_cpu(
                         dVFLXdt, VFLX, UWIND, VWIND,
@@ -279,8 +248,6 @@ class TendencyFactory:
                         GRF['dsigma'],      GRF['sigma_vb'],
                         GRF['UVFLX_dif_coef'])
 
-            #show = np.isnan(np.asarray(dVFLXdt))
-            #print(np.sum(show))
 
 
     def temperature(self, GRF,

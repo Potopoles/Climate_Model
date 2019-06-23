@@ -77,8 +77,8 @@ class Surface:
         fields['SOILMOIST']  [fields['OCEANMASK'] == 0] = moisture_soil
         fields['SOILMOIST']  [fields['OCEANMASK'] == 1] = moisture_ocean
 
-        fields['SOILEVAPITY'][fields['OCEANMASK'] == 0]  = 0.
-        fields['SOILEVAPITY'][fields['OCEANMASK'] == 1]  = 1.
+        #fields['SOILEVAPITY'][fields['OCEANMASK'] == 0]  = 0.
+        #fields['SOILEVAPITY'][fields['OCEANMASK'] == 1]  = 1.
 
         fields['SURFALBEDSW'][fields['OCEANMASK'] == 1]  = 0.05
         fields['SURFALBEDLW'][fields['OCEANMASK'] == 1]  = 0.00

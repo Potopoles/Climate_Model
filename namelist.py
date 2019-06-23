@@ -52,7 +52,7 @@ COLP_random_pert    = 000
 POTT_gaussian_pert  = 00
 POTT_random_pert    = 0.0
 QV_gaussian_pert    = 0.000
-QV_random_pert      = 0.0001
+QV_random_pert      = 0.000
 
 ###############################################################################
 ###############################################################################
@@ -101,7 +101,7 @@ n_topo_smooth = 20
 i_surface_scheme = 1
 i_surface_fluxes = 1
 i_surface_SOILTEMP_tendency = 1
-nz_soil = 1
+nzsoil = 1
 
 ###############################################################################
 # PHYSICS
@@ -192,8 +192,9 @@ output_fields = {
     'QV'            : 2,                    #vp
     'QC'            : 0,                    #vp
     'dQVdt'         : 1,
-    'dQVdt_TURB'    : 1,
+    'dQVdt_TURB'    : 0,
     'dUFLXdt_TURB'  : 1,
+    'dVFLXdt_TURB'  : 1,
     'KMOM_dUWINDdz' : 1,
     'KMOM_dVWINDdz' : 1,
     'KHEAT'         : 0,
@@ -219,9 +220,9 @@ working_precision = 'float32'
 working_precision = 'float64'
 
 # 1: CPU, 2: GPU
-i_comp_mode = 1
+i_comp_mode = 2
 output_path = '../output_ref'
-#output_path = '../output_test'
+output_path = '../output_test'
 
 # in case of computation on GPU only:
 i_sync_context = 1

@@ -158,7 +158,6 @@ def add_up_tendencies_py(
             if k == wp_int(0):
                 dVFLXdt_TURB = ( ( wp(0.) - KMOM_dVWINDdz_kp1 ) /
                                  ( ( ALTVB_js - ALTVB_kp1_js ) * RHO_js ) )
-                #dVFLXdt_TURB = wp(0.)
             elif k == wp_int(nz-1):
                 dVFLXdt_TURB = ( ( KMOM_dVWINDdz + SMOMYFLX_js ) /
                                  ( ( ALTVB_js - ALTVB_kp1_js ) * RHO_js ) )
@@ -166,11 +165,7 @@ def add_up_tendencies_py(
             else:
                 dVFLXdt_TURB = ( ( KMOM_dVWINDdz - KMOM_dVWINDdz_kp1 ) /
                                  ( ( ALTVB_js - ALTVB_kp1_js ) * RHO_js ) )
-                #dVFLXdt_TURB = wp(0.)
 
-            # TODO
-            #dVFLXdt_TURB *= wp(0.03)
-            #dVFLXdt_TURB *= wp(0.50)
             #dVFLXdt_TURB = wp(0.)
             dVFLXdt = dVFLXdt + dVFLXdt_TURB
 
@@ -200,7 +195,8 @@ def add_up_tendencies_py(
                 VFLX_jm1, VFLX_jp1,
                 UVFLX_dif_coef)
 
-    return(dVFLXdt)
+    return(dVFLXdt, dVFLXdt_TURB)
+    #return(dVFLXdt,)
 
 
 
@@ -255,7 +251,8 @@ def launch_cuda_main_kernel(dVFLXdt, VFLX,
         SFLX_ip1        =  SFLX_3D[i+1,j  ,k  ]
 
     if i >= nb and i < nx+nb and j >= nb and j < nys+nb:
-        dVFLXdt[i  ,j  ,k  ] = \
+        #dVFLXdt[i  ,j  ,k  ] = \
+        dVFLXdt[i  ,j  ,k], dVFLXdt_TURB[i  ,j  ,k] = \
             add_up_tendencies(
             # 3D
             VFLX        [i  ,j  ,k  ],
@@ -358,7 +355,8 @@ def launch_numba_cpu_main(dVFLXdt, VFLX,
                     TFLX_ip1_jm1    =  TFLX_3D[i+1,j-1,k  ]
                     SFLX_ip1        =  SFLX_3D[i+1,j  ,k  ]
 
-                dVFLXdt[i  ,j  ,k] = add_up_tendencies(
+                #dVFLXdt[i  ,j  ,k] = add_up_tendencies(
+                dVFLXdt[i  ,j  ,k], dVFLXdt_TURB[i  ,j  ,k] = add_up_tendencies(
             # 3D
             VFLX        [i  ,j  ,k  ],
             VFLX        [i-1,j  ,k  ], VFLX        [i+1,j  ,k  ],

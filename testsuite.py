@@ -17,7 +17,7 @@ import xarray as xr
 
 # USER INPUT
 ####################################################################
-tolerance = 1E-6
+tolerance = 1E-5
 
 ref_path = '../output_ref'
 test_path = '../output_test'
@@ -29,7 +29,7 @@ test_fields.extend(['SURFTEMP', 'SQVFLX', 'SMOMXFLX', 'SMOMYFLX',
                     'SURFALBEDSW'])
 test_fields.extend(['SWFLXNET', 'LWFLXNET'])
 test_fields.extend(['QV'])
-test_fields.extend(['dUFLXdt_TURB'])
+test_fields.extend(['dVFLXdt_TURB'])
 ####################################################################
 
 

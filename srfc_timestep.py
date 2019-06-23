@@ -126,13 +126,14 @@ def run_full_timestep_py(SOILTEMP, LWFLXNET_srfc, SWFLXNET_srfc,
 ###############################################################################
 ### SPECIALIZE FOR GPU
 ###############################################################################
-tendency_SOILTEMP = njit(tendency_SOILTEMP_py, device=True, inline=True)
-timestep_SOILTEMP = njit(timestep_SOILTEMP_py, device=True, inline=True)
-calc_albedo       = njit(calc_albedo_py, device=True, inline=True)
-calc_specific_humidity = njit(calc_specific_humidity_py,
-                            device=True, inline=True)
-calc_srfc_fluxes  = njit(calc_srfc_fluxes_py, device=True, inline=True)
-run_full_timestep = njit(run_full_timestep_py, device=True, inline=True)
+if gpu_enable:
+    tendency_SOILTEMP = njit(tendency_SOILTEMP_py, device=True, inline=True)
+    timestep_SOILTEMP = njit(timestep_SOILTEMP_py, device=True, inline=True)
+    calc_albedo       = njit(calc_albedo_py, device=True, inline=True)
+    calc_specific_humidity = njit(calc_specific_humidity_py,
+                                device=True, inline=True)
+    calc_srfc_fluxes  = njit(calc_srfc_fluxes_py, device=True, inline=True)
+    run_full_timestep = njit(run_full_timestep_py, device=True, inline=True)
 
 def launch_cuda_kernel(SOILTEMP, LWFLXNET, SWFLXNET, SOILCP,
                        SOILRHO, SOILDEPTH, OCEANMASK,
@@ -142,11 +143,10 @@ def launch_cuda_kernel(SOILTEMP, LWFLXNET, SWFLXNET, SOILCP,
                        WINDX, WINDY, DRAGCM, DRAGCH, A, dt):
 
     i, j = cuda.grid(2)
-    #if i > nb and i < nx+nb and j > nb and j < ny+nb:
     if i < nx+2*nb and j < ny+2*nb:
         ( SOILTEMP[i,j,0], SURFALBEDSW[i,j,0], SURFALBEDLW[i,j,0],
-          SMOMXFLX[i,j,0], SMOMYFLX[i,j,0], SSHFLX[i,j,0],
-          SQVFLX[i,j,0] ) = run_full_timestep(
+          SMOMXFLX[i,j,0], SMOMYFLX   [i,j,0], SSHFLX     [i,j,0],
+          SQVFLX  [i,j,0] ) = run_full_timestep(
                         SOILTEMP[i,j,0],
                         LWFLXNET[i,j,nzs-1],    SWFLXNET[i,j,nzs-1],
                         SOILCP[i,j,0],          SOILRHO[i,j,0],
@@ -157,6 +157,7 @@ def launch_cuda_kernel(SOILTEMP, LWFLXNET, SWFLXNET, SOILCP,
                         WINDX[i,j,nz-1],        WINDY[i,j,nz-1],
                         DRAGCM,                 DRAGCH,
                         A[i,j,0   ],            dt)
+
 
 if gpu_enable:
     advance_timestep_srfc_gpu = cuda.jit(cuda_kernel_decorator(

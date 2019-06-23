@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190616
+Last modified:      20190623
 License:            MIT
 
 Setup and store model fields. Have each field in memory (for CPU)
@@ -14,7 +14,7 @@ and if GPU enabled also on GPU.
 import numpy as np
 from numba import cuda
 
-from namelist import (i_surface_scheme, nz_soil, i_turbulence,
+from namelist import (i_surface_scheme, nzsoil, i_turbulence,
                       i_radiation, i_load_from_restart)
 from io_read_namelist import wp, wp_int, CPU, GPU
 from io_initial_conditions import initialize_fields
@@ -124,9 +124,7 @@ class ModelFields:
             self.SRFC_FIELDS:           ['HSURF', 'OCEANMASK', 'SOILDEPTH',
                                          'SOILCP', 'SOILRHO',
                                          'SOILTEMP', 'SOILMOIST',
-                                         'SOILEVAPITY',
-                                         'SURFALBEDSW', 'SURFALBEDLW',
-                                         'RAINRATE', 'ACCRAIN'],
+                                         'SURFALBEDSW', 'SURFALBEDLW'],
             self.RAD_TO_DEVICE:         ['SOLZEN', 'MYSUN', 'SWINTOA',
                                         'LWFLXDO', 'LWFLXUP', 'SWDIFFLXDO',
                                         'SWDIRFLXDO', 'SWFLXUP', 'SWFLXDO',
@@ -188,6 +186,7 @@ def allocate_fields(GR):
     """
     f = {}
 
+    fdict = {
     #######################################################################
     #######################################################################
     ### 1 DYNAMICAL CORE FIELDS
@@ -197,175 +196,109 @@ def allocate_fields(GR):
     #######################################################################
     # 1.1 pressure fields 
     #######################################################################
-    #fdict = {
-    ## column pressure [Pa]
-    #'COLP':        {'stgx':0,'stgy':0,'stgz':0,'3D':0,'bord':1,'dtype':wp},
-    ## column pressure [Pa] last time step
-    #'COLP_OLD':    {'stgx':0,'stgy':0,'stgz':0,'3D':0,'bord':1,'dtype':wp},
-    ## column pressure [Pa] next time step
-    #'COLP_NEW':    {'stgx':0,'stgy':0,'stgz':0,'3D':0,'bord':1,'dtype':wp},
-    ## derivative of column pressure with respect to time [Pa s-1]
-    #'dCOLPdt':     {'stgx':0,'stgy':0,'stgz':0,'3D':0,'bord':1,'dtype':wp},
-    ## surface pressure [Pa]
-    #'PSURF':       {'stgx':0,'stgy':0,'stgz':0,'3D':0,'bord':1,'dtype':wp},
-    ## air pressure [Pa]
-    #'PAIR':        {'stgx':0,'stgy':0,'stgz':0,'3D':1,'bord':1,'dtype':wp},
-    #}
-
     # column pressure [Pa]
-    f['COLP']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, 1      ), 
-                                np.nan, dtype=wp)
+    'COLP':         {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # column pressure [Pa] last time step
-    f['COLP_OLD']    = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, 1      ),
-                                np.nan, dtype=wp)
+    'COLP_OLD':     {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # column pressure [Pa] next time step
-    f['COLP_NEW']    = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, 1      ),
-                                np.nan, dtype=wp)
+    'COLP_NEW':     {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # derivative of column pressure with respect to time [Pa s-1]
-    f['dCOLPdt']     = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, 1      ), 
-                                np.nan, dtype=wp)
-    # air pressure [Pa]
-    f['PAIR']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                                np.nan, dtype=wp)
-    # air pressure at vertical borders [Pa]
-    f['PAIRVB']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                                np.nan, dtype=wp)
+    'dCOLPdt':      {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface pressure [Pa]
-    f['PSURF']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, 1      ), 
-                                np.nan, dtype=wp)
+    'PSURF':        {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    # air pressure [Pa]
+    'PAIR':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # air pressure [Pa] at vertical borders
+    'PAIRVB':       {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
 
     #######################################################################
     # 1.2 flux fields 
     #######################################################################
-
     # momentum flux in x direction 
-    f['UFLX']        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'UFLX':         {'stgx':1,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # change of momentum flux in x direction with time
-    f['dUFLXdt']     = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'dUFLXdt':      {'stgx':1,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # momentum flux in y direction 
-    f['VFLX']        = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'VFLX':         {'stgx':0,'stgy':1,'dimz':GR.nz ,'dtype':wp},
     # change of momentum flux in y direction with time
-    f['dVFLXdt']     = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'dVFLXdt':      {'stgx':0,'stgy':1,'dimz':GR.nz ,'dtype':wp},
     # divergence of horizontal momentum fluxes (UFLX and VFLX)
-    f['FLXDIV']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'FLXDIV':       {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # auxiliary momentum fluxes for UFLX/VFLX tendency computation
-    f['BFLX']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    f['CFLX']        = np.full( ( GR.nxs+2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    f['DFLX']        = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    f['EFLX']        = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    f['RFLX']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    f['QFLX']        = np.full( ( GR.nxs+2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    f['SFLX']        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    f['TFLX']        = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'BFLX':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    'CFLX':         {'stgx':1,'stgy':1,'dimz':GR.nz ,'dtype':wp},
+    'DFLX':         {'stgx':0,'stgy':1,'dimz':GR.nz ,'dtype':wp},
+    'EFLX':         {'stgx':0,'stgy':1,'dimz':GR.nz ,'dtype':wp},
+    'RFLX':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    'QFLX':         {'stgx':1,'stgy':1,'dimz':GR.nz ,'dtype':wp},
+    'SFLX':         {'stgx':1,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    'TFLX':         {'stgx':1,'stgy':0,'dimz':GR.nz ,'dtype':wp},
 
     #######################################################################
     # 1.3 velocity fields
     #######################################################################
-
     # wind speed in x direction [m/s]
-    f['UWIND']       = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'UWIND':        {'stgx':1,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # wind speed in x direction [m/s] last time step
-    f['UWIND_OLD']   = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'UWIND_OLD':    {'stgx':1,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # wind speed in y direction [m/s]
-    f['VWIND']       = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'VWIND':        {'stgx':0,'stgy':1,'dimz':GR.nz ,'dtype':wp},
     # wind speed in y direction [m/s] last time step
-    f['VWIND_OLD']   = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'VWIND_OLD':    {'stgx':0,'stgy':1,'dimz':GR.nz ,'dtype':wp},
     # horizontal wind speed [m/s]
-    f['WIND']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'WIND':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # horizontal wind speed x component (but unstaggered) [m/s]
-    f['WINDX']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'WINDX':        {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # horizontal wind speed y component (but unstaggered) [m/s]
-    f['WINDY']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'WINDY':        {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # vertical wind speed [sigma/s]
-    f['WWIND']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
+    'WWIND':        {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
     # product of UWIND and WWIND (auxiliary field)
-    f['WWIND_UWIND'] = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
+    'WWIND_UWIND':  {'stgx':1,'stgy':0,'dimz':GR.nzs,'dtype':wp},
     # product of VWIND and WWIND (auxiliary field)
-    f['WWIND_VWIND'] = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
+    'WWIND_VWIND':  {'stgx':0,'stgy':1,'dimz':GR.nzs,'dtype':wp},
     # product of dUWINDdz and KMOM (auxiliary field)
-    f['KMOM_dUWINDdz']  = np.full( ( GR.nxs+2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
+    'KMOM_dUWINDdz':{'stgx':1,'stgy':0,'dimz':GR.nzs,'dtype':wp},
     # product of dVWINDdz and KMOM (auxiliary field)
-    f['KMOM_dVWINDdz']  = np.full( ( GR.nx +2*GR.nb, GR.nys+2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
+    'KMOM_dVWINDdz':{'stgx':0,'stgy':1,'dimz':GR.nzs,'dtype':wp},
 
     #######################################################################
     # 1.4 temperature fields
     #######################################################################
-
     # virtual potential temperature [K] 
-    f['POTT']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'POTT':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # virtual potential temperature [K] last timestep
-    f['POTT_OLD']    = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'POTT_OLD':     {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # change of virtual potential temperature with time [K s-1]
-    f['dPOTTdt']     = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'dPOTTdt':      {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # virtual potential temperature at vertical borders
-    f['POTTVB']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
+    'POTTVB':       {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
     # air temperature [K]
-    f['TAIR']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'TAIR':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # air temperature [K] at vertical borders
-    f['TAIRVB']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
+    'TAIRVB':       {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
     # virtual potential temperature factor
-    f['PVTF']        = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'PVTF':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # virtual potential temperature factor at vertical borders
-    f['PVTFVB']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
-
+    'PVTFVB':       {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
 
     #######################################################################
     # 1.5 additional diagnostic fields
     #######################################################################
-
     # geopotential
-    f['PHI']         = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'PHI':          {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # geopotential at vertical borders
-    f['PHIVB']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
+    'PHIVB':        {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
     # air density [kg m-2]
-    f['RHO']         = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
+    'RHO':          {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # air density at vertical borders [kg m-2]
-    f['RHOVB']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nzs ), 
-                        np.nan, dtype=wp)
+    'RHOVB':        {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
 
     #######################################################################
     # 1.6 constant fields
     #######################################################################
-
     # surface elevation [m]
-    f['HSURF']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, 1      ), 
-                                np.nan, dtype=wp)
+    'HSURF':         {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
 
 
     #######################################################################
@@ -373,77 +306,52 @@ def allocate_fields(GR):
     ### 2 SURFACE FIELDS 
     #######################################################################
     #######################################################################
-    #if i_surface_scheme: 
+
     # 1 if grid point is ocean [-]
-    f['OCEANMASK']   = np.zeros(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          dtype=wp_int) 
+    'OCEANMASK':     {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp_int},
     # depth of soil [m]
-    f['SOILDEPTH']   = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SOILDEPTH':     {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # heat capcity of soil [J kg-1 K-1]
-    f['SOILCP']      = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SOILCP':        {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # density of soil [kg m-3]
-    f['SOILRHO']     = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SOILRHO':       {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # soil temperature [K]
-    f['SOILTEMP']    = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, nz_soil  ), 
-                          np.nan, dtype=wp) 
-    ## change of soil temperature with time [K s-1]
-    #f['dSOILTEMPdt'] = np.full(
-    #                    ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, nz_soil  ), 
-    #                      np.nan, dtype=wp) 
+    'SOILTEMP':      {'stgx':0,'stgy':0,'dimz':nzsoil,'dtype':wp},
     # moisture content of soil [kg m-2]
-    f['SOILMOIST']   = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
-    # evaporation likliness of soil [-]
-    f['SOILEVAPITY'] = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SOILMOIST':     {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    ## evaporation likliness of soil [-]
+    #'SOILEVAPITY':   {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface roughness length [m]
-    f['SURFZ0']      = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SURFZ0':        {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface albedo for shortwave radiation [-]
-    f['SURFALBEDSW'] = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SURFALBEDSW':   {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface albedo for longwave radiation [-]
-    f['SURFALBEDLW'] = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
-    # rain rate at surface [kg m-2 s-1]
-    f['RAINRATE']    = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
-    # accumulated rain during simulation at surface [kg m-2]
-    f['ACCRAIN']     = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SURFALBEDLW':   {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    ## rain rate at surface [kg m-2 s-1]
+    #'RAINRATE':      {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    ## accumulated rain during simulation at surface [kg m-2]
+    #'ACCRAIN':       {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface momentum flux in x direction
     # (pointing towards atmosphere) [???]
-    f['SMOMXFLX']    = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SMOMXFLX':      {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface momentum flux in y direction
     # (pointing towards atmosphere) [???]
-    f['SMOMYFLX']    = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SMOMYFLX':      {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface sensible heat flux (pointing towards atmosphere) [W m-2]
-    f['SSHFLX']      = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SSHFLX':        {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface moisture flux (pointing towards atmosphere) [kg m-2 s-1]
-    f['SQVFLX']      = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1  ), 
-                          np.nan, dtype=wp) 
+    'SQVFLX':        {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    }
+    for key,set in fdict.items():
+        dimx = GR.nx + 2*GR.nb
+        if set['stgx']:
+            dimx += 1
+        dimy = GR.ny + 2*GR.nb
+        if set['stgy']:
+            dimy += 1
+        dimz = set['dimz']
+        f[key] = np.full( ( dimx, dimy, dimz ), np.nan, dtype=set['dtype'] )
+
 
 
     #######################################################################
