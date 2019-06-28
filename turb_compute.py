@@ -43,8 +43,8 @@ min_wind_diff = wp(0.0001)
 # minimum value for KMOM
 min_KMOM = wp(0.000001)
 # maximum value for KMOM
-#max_KMOM = wp(0.01) 
-max_KMOM = wp(0.015)
+max_KMOM = wp(0.01) 
+#max_KMOM = wp(0.015)
 
 
 ###############################################################################

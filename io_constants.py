@@ -20,6 +20,10 @@ con_Rd = wp(287.058)
 con_cp = wp(1005 )
 con_kappa = wp(con_Rd/con_cp)
 
+# MOISTURE
+# latent heat of evaporation [J kg-1]
+con_Lh = wp(2264E3) 
+
 
 # RADIATION
 solar_constant_0 = wp(1365)

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190616
+Last modified:      20190628
 License:            MIT
 
 SPATIAL DISCRETIZATION
@@ -253,6 +253,7 @@ class TendencyFactory:
     def temperature(self, GRF,
                     dPOTTdt, POTT, UFLX, VFLX,
                     COLP, POTTVB, WWIND, COLP_NEW,
+                    PHI, PHIVB, KHEAT, RHO, RHOVB, SSHFLX,
                     dPOTTdt_TURB, dPOTTdt_RAD):
         """
         """
@@ -261,12 +262,14 @@ class TendencyFactory:
                     GRF['POTT_dif_coef'],
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
                     POTTVB, WWIND, COLP_NEW,
+                    PHI, PHIVB, KHEAT, RHO, RHOVB, SSHFLX,
                     dPOTTdt_TURB, dPOTTdt_RAD)
         elif self.target == CPU:
             POTT_tendency_cpu(GRF['A'], GRF['dsigma'],
                     GRF['POTT_dif_coef'],
                     dPOTTdt, POTT, UFLX, VFLX, COLP,
                     POTTVB, WWIND, COLP_NEW,
+                    PHI, PHIVB, KHEAT, RHO, RHOVB, SSHFLX,
                     dPOTTdt_TURB, dPOTTdt_RAD)
 
 
@@ -274,7 +277,7 @@ class TendencyFactory:
     def moisture(self, GRF,
                 dQVdt, dQVdt_TURB, QV, dQCdt, QC, UFLX, VFLX,
                 COLP, WWIND, COLP_NEW,
-                PHI, PHIVB, KHEAT, RHO, RHOVB, SQVFLX):
+                PHI, PHIVB, KHEAT, RHO, RHOVB, SLHFLX):
         """
         """
         if self.target == GPU:
@@ -282,13 +285,13 @@ class TendencyFactory:
                     GRF['moist_dif_coef'],
                     dQVdt, dQVdt_TURB, QV, dQCdt, QC, UFLX, VFLX, COLP,
                     WWIND, COLP_NEW,
-                    PHI, PHIVB, KHEAT, RHO, RHOVB, SQVFLX)
+                    PHI, PHIVB, KHEAT, RHO, RHOVB, SLHFLX)
         elif self.target == CPU:
             moist_tendency_cpu(GRF['A'], GRF['dsigma'],
                     GRF['moist_dif_coef'],
                     dQVdt, dQVdt_TURB, QV, dQCdt, QC, UFLX, VFLX, COLP,
                     WWIND, COLP_NEW,
-                    PHI, PHIVB, KHEAT, RHO, RHOVB, SQVFLX)
+                    PHI, PHIVB, KHEAT, RHO, RHOVB, SLHFLX)
 
 
 

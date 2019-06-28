@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190623
+Last modified:      20190628
 License:            MIT
 
 Setup and store model fields. Have each field in memory (for CPU)
@@ -66,7 +66,7 @@ class ModelFields:
             self.set(initialize_fields(GR, **self.get(fields_to_init)))
             ## TODO
             #self.host['QV'][:,:,:] = np.arange(0,GR.nz)/GR.nz
-            #self.host['SQVFLX'][:,:,0] = 0.
+            #self.host['SLHFLX'][:,:,0] = 0.
 
             ###################################################################
             ## INITIALIZE PROCESSES
@@ -306,7 +306,6 @@ def allocate_fields(GR):
     ### 2 SURFACE FIELDS 
     #######################################################################
     #######################################################################
-
     # 1 if grid point is ocean [-]
     'OCEANMASK':     {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp_int},
     # depth of soil [m]
@@ -339,9 +338,93 @@ def allocate_fields(GR):
     'SMOMYFLX':      {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface sensible heat flux (pointing towards atmosphere) [W m-2]
     'SSHFLX':        {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
-    # surface moisture flux (pointing towards atmosphere) [kg m-2 s-1]
-    'SQVFLX':        {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    # surface latent heat flux (pointing towards atmosphere) [W m-2]
+    'SLHFLX':        {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+
+
+    #######################################################################
+    #######################################################################
+    ### 3 TURBULENCE FIELDS
+    #######################################################################
+    #######################################################################
+    # UFLX change due to turbulent fluxes [??]
+    'dUFLXdt_TURB':  {'stgx':1,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # VFLX change due to turbulent fluxes [??]
+    'dVFLXdt_TURB':  {'stgx':0,'stgy':1,'dimz':GR.nz ,'dtype':wp},
+    # potential temperature change due to turbulent fluxes [K s-1]
+    'dPOTTdt_TURB':  {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # QV change due to turbulence [kg kg-1 s-1]
+    'dQVdt_TURB':    {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # QC change due to turbulence [kg kg-1 s-1]
+    'dQCdt_TURB':    {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # turbulenc exchange coefficient for heat and moisture 
+    'KHEAT':         {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+    # turbulent exchange coefficient for momentum
+    'KMOM':          {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+
+
+    #######################################################################
+    #######################################################################
+    ### 4 RADIATION FIELDS
+    #######################################################################
+    #######################################################################
+    # net shortwave flux pointing into surface [W m-2]
+    'SWFLXNET':      {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+    # net longwave flux pointing into surface [W m-2]
+    'LWFLXNET':      {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+    # potential temperature change due to radiation [K s-1]
+    'dPOTTdt_RAD':   {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # solar zenith angle
+    'SOLZEN':        {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    # cos solar zenith angle
+    'MYSUN':         {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    # incoming shortwave at TOA
+    'SWINTOA':       {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    # upward component of longwave flux [W m-2]
+    'LWFLXUP':       {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+    # downward component of longwave flux [W m-2]
+    'LWFLXDO':       {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+    # diffuse downward component of shortwave flux [W m-2]
+    'SWDIFFLXDO':    {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+    # direct downward component of shortwave flux [W m-2]
+    'SWDIRFLXDO':    {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+    # upward component of shortwave flux [W m-2]
+    'SWFLXUP':       {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+    # downward component of shortwave flux [W m-2]
+    'SWFLXDO':       {'stgx':0,'stgy':0,'dimz':GR.nzs,'dtype':wp},
+    # longwave flux divergence [W m-2]
+    'LWFLXDIV':      {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # shortwave flux divergence [W m-2]
+    'SWFLXDIV':      {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # total flux divergence (longwave + shortwave) [W m-2]
+    'TOTFLXDIV':     {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+
+
+    #######################################################################
+    #######################################################################
+    ### 5 MOISTURE FIELDS
+    #######################################################################
+    #######################################################################
+    # specific water vapor content [kg kg-1]
+    'QV':            {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # specific water vapor content [kg kg-1] last time level
+    'QV_OLD':        {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # change of specific water vapor content with time [kg kg-1 s-1]
+    'dQVdt':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # specific cloud water content [kg kg-1]
+    'QC':            {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # specific cloud water content [kg kg-1] last time level
+    'QC_OLD':        {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # change of specific cloud water content with time [kg kg-1 s-1]
+    'dQCdt':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # change of QV due to microphysics [kg kg-1 s-1]
+    'dQVdt_MIC':     {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # change of QC due to microphysics [kg kg-1 s-1]
+    'dQCdt_MIC':     {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # potential temperature change due to microphysics [K s-1]
+    'dPOTTdt_MIC':   {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     }
+
     for key,set in fdict.items():
         dimx = GR.nx + 2*GR.nb
         if set['stgx']:
@@ -352,134 +435,4 @@ def allocate_fields(GR):
         dimz = set['dimz']
         f[key] = np.full( ( dimx, dimy, dimz ), np.nan, dtype=set['dtype'] )
 
-
-
-    #######################################################################
-    #######################################################################
-    ### 3 TURBULENCE FIELDS
-    #######################################################################
-    #######################################################################
-    # UFLX change due to turbulent fluxes [??]
-    f['dUFLXdt_TURB']     = np.full(
-                            ( GR.nxs+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
-                              np.nan, dtype=wp)
-    # VFLX change due to turbulent fluxes [??]
-    f['dVFLXdt_TURB']     = np.full(
-                            ( GR.nx+2*GR.nb, GR.nys+2*GR.nb, GR.nz  ), 
-                              np.nan, dtype=wp)
-    # potential temperature change due to turbulent fluxes [K s-1]
-    f['dPOTTdt_TURB']     = np.full(
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
-                              np.nan, dtype=wp)
-    # QV change due to turbulence [kg kg-1 s-1]
-    f['dQVdt_TURB']       = np.full(
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
-                              np.nan, dtype=wp)
-    # QC change due to turbulence [kg kg-1 s-1]
-    f['dQCdt_TURB']       = np.full(
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
-                              np.nan, dtype=wp)
-    # turbulenc exchange coefficient for heat and moisture 
-    f['KHEAT']        = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ), 
-                          np.nan, dtype=wp) 
-    # turbulent exchange coefficient for momentum
-    f['KMOM']         = np.full(
-                        ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ), 
-                          np.nan, dtype=wp) 
-
-    #######################################################################
-    #######################################################################
-    ### 4 RADIATION FIELDS
-    #######################################################################
-    #######################################################################
-    # net shortwave flux pointing into surface [W m-2]
-    f['SWFLXNET']        = np.full(
-                                ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
-                                    np.nan, dtype=wp)
-    # net longwave flux pointing into surface [W m-2]
-    f['LWFLXNET']        = np.full(
-                                ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
-                                    np.nan, dtype=wp)
-    # potential temperature change due to radiation [K s-1]
-    f['dPOTTdt_RAD']     = np.full(
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ), 
-                              np.nan, dtype=wp)
-    if i_radiation:
-        # solar zenith angle
-        f['SOLZEN']          = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1      ),
-                                        np.nan, dtype=wp)
-        # cos solar zenith angle
-        f['MYSUN']           = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1      ),
-                                        np.nan, dtype=wp)
-        # incoming shortwave at TOA
-        f['SWINTOA']         = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, 1      ),
-                                        np.nan, dtype=wp)
-        # TODO: Add comments
-        f['LWFLXUP']         = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
-                                        np.nan, dtype=wp)
-        f['LWFLXDO']         = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
-                                        np.nan, dtype=wp)
-        f['SWDIFFLXDO']      = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
-                                        np.nan, dtype=wp)
-        f['SWDIRFLXDO']      = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
-                                        np.nan, dtype=wp)
-        f['SWFLXUP']         = np.full(
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
-                                        np.nan, dtype=wp)
-        f['SWFLXDO']         = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nzs ),
-                                        np.nan, dtype=wp)
-        f['LWFLXDIV']        = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ),
-                                        np.nan, dtype=wp)
-        f['SWFLXDIV']        = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ),
-                                        np.nan, dtype=wp)
-        f['TOTFLXDIV']       = np.full( 
-                            ( GR.nx+2*GR.nb, GR.ny+2*GR.nb, GR.nz  ),
-                                        np.nan, dtype=wp)
-
-
-    #######################################################################
-    #######################################################################
-    ### 5 MOISTURE FIELDS
-    #######################################################################
-    #######################################################################
-    # specific water vapor content [kg kg-1]
-    f['QV']          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    # specific water vapor content [kg kg-1] last time level
-    f['QV_OLD']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    # change of specific water vapor content with time [kg kg-1 s-1]
-    f['dQVdt']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    # specific cloud water content [kg kg-1]
-    f['QC']          = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    # specific cloud water content [kg kg-1] last time level
-    f['QC_OLD']      = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    # change of specific cloud water content with time [kg kg-1 s-1]
-    f['dQCdt']       = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    # change of QV due to microphysics [kg kg-1 s-1]
-    f['dQVdt_MIC']   = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    # change of QC due to microphysics [kg kg-1 s-1]
-    f['dQCdt_MIC']   = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-    # potential temperature change due to microphysics [K s-1]
-    f['dPOTTdt_MIC'] = np.full( ( GR.nx +2*GR.nb, GR.ny +2*GR.nb, GR.nz  ), 
-                        np.nan, dtype=wp)
-
     return(f)
-

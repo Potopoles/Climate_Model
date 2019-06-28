@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190618
+Last modified:      20190628
 License:            MIT
 
 Write fields to nc file.
@@ -81,8 +81,8 @@ def output_to_NC(GR, F):
     field_names = ['UWIND', 'VWIND', 'WIND', 'POTT', 'TAIR',
                    'PHI', 'PAIR', 'RHO', 'COLP', 'QV', 'QC', 'dQVdt',
                    'dQVdt_TURB', 'dUFLXdt_TURB', 'dVFLXdt_TURB',
-                   'KMOM', 'KHEAT',
-                   'SMOMXFLX', 'SMOMYFLX', 'SSHFLX', 'SQVFLX',
+                   'dPOTTdt_TURB', 'KMOM', 'KHEAT',
+                   'SMOMXFLX', 'SMOMYFLX', 'SSHFLX', 'SLHFLX',
                    'KMOM_dUWINDdz', 'KMOM_dVWINDdz']
     for field_name in field_names:
         if output_fields[field_name]:

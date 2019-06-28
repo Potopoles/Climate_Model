@@ -4,13 +4,13 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190609
+Last modified:      20190628
 License:            MIT
 
 Set up computational and geographical grid for simulation.
 Grid class:
     - Contains all grid parameters and is passed to almost all functions
-    (except compiled njit/cuda.jit functions)
+      (except compiled njit/cuda.jit functions)
     - Also contains coriolis parameter
 ###############################################################################
 """
@@ -23,7 +23,6 @@ from namelist import (nz, nb,
                       lat0_deg, lat1_deg, dlat_deg,
                       CFL,
                       i_load_from_restart, i_restart_nth_day,
-                      i_curved_earth,
                       i_out_nth_hour, i_sim_n_days,
                       GMT_initialization)
 from io_read_namelist import (wp_int, wp, gpu_enable, CPU, GPU,
@@ -210,26 +209,16 @@ class Grid:
             self.dyis = self.exchange_BC(self.dyis)
             self.dy = self.dlat_rad*con_rE
 
-            if not i_curved_earth:
-                maxdx = np.max(self.dx[self.ii,self.jj])
-                self.dx[self.ii,self.jj] = maxdx
-
             self.A = np.full( (self.nx+2*self.nb,self.ny+2*self.nb, 1),
                                 np.nan, dtype=wp)
             for i in self.i:
                 for j in self.j:
                     self.A[i,j,0] = lat_lon_recangle_area(self.lat_rad[i,j,0],
-                            self.dlon_rad_1D, self.dlat_rad_1D, i_curved_earth)
+                            self.dlon_rad_1D, self.dlat_rad_1D)
             self.A = self.exchange_BC(self.A)
-
-            if i_curved_earth:
-                print('fraction of earth covered: ' +
-                        str(np.round(np.sum(
-                        self.A[self.ii,self.jj,0])/(4*np.pi*con_rE**2),2)))
-            else:
-                print('fraction of cylinder covered: ' +
-                        str(np.round(np.sum(
-                        self.A[self.ii,self.jj,0])/(2*np.pi**2*con_rE**2),2)))
+            print('fraction of earth covered: ' +
+                    str(np.round(np.sum(
+                    self.A[self.ii,self.jj,0])/(4*np.pi*con_rE**2),2)))
 
             # CORIOLIS FORCE
             self.corf    = np.full(
@@ -356,13 +345,7 @@ class Grid:
         return(FIELD)
 
 
-
-
-def lat_lon_recangle_area(lat,dlon,dlat, i_curved_earth):
-    if i_curved_earth:
-        A = np.cos(lat) * \
-                dlon * dlat * con_rE**2
-    else:
-        A = dlon * dlat * con_rE**2
+def lat_lon_recangle_area(lat,dlon,dlat):
+    A = np.cos(lat) * dlon * dlat * con_rE**2
     return(A)
 

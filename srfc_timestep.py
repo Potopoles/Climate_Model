@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190601
-Last modified:      20190621
+Last modified:      20190628
 License:            MIT
 
 Time step in surface scheme.
@@ -15,6 +15,7 @@ Tendencies are only implemented for 1 soil layer (nz_soil = 1)
 from numba import cuda, njit, prange
 from namelist import i_radiation, i_surface_fluxes, i_surface_SOILTEMP_tendency
 from io_read_namelist import wp, wp_str, wp_int, gpu_enable
+from io_constants import con_cp, con_Lh
 from main_grid import nx,ny,nz,nzs,nb
 if gpu_enable:
     from misc_gpu_functions import cuda_kernel_decorator
@@ -26,7 +27,8 @@ from misc_meteo_utilities import calc_specific_humidity_py
 ### DEVICE UNSPECIFIC PYTHON FUNCTIONS
 ###############################################################################
 def tendency_SOILTEMP_py(LWFLXNET_srfc, SWFLXNET_srfc,
-                         SOILCP, SOILRHO, SOILDEPTH):
+                        SSHFLX, SLHFLX,
+                        SOILCP, SOILRHO, SOILDEPTH):
 
     dSOILTEMPdt = wp(0.)
 
@@ -34,11 +36,10 @@ def tendency_SOILTEMP_py(LWFLXNET_srfc, SWFLXNET_srfc,
         dSOILTEMPdt += ( (LWFLXNET_srfc + SWFLXNET_srfc) /
                          (SOILCP * SOILRHO * SOILDEPTH) )
 
-    #dSOILTEMPdt = wp(0.0001)
+    if i_surface_fluxes: 
+        dSOILTEMPdt -= ( (SSHFLX + SLHFLX) /
+                         (SOILCP * SOILRHO * SOILDEPTH) )
 
-    #if i_microphysics > 0:
-    #    dSOILTEMPdt = dSOILTEMPdt - ( MIC.surf_evap_flx * MIC.lh_cond_water ) / \
-    #                                (CF.SOILCP * CF.SOILRHO * CF.SOILDEPTH)
     return(dSOILTEMPdt)
 
 
@@ -61,54 +62,58 @@ def calc_albedo_py(OCEANMASK, SOILTEMP):
     return(SURFALBEDSW, SURFALBEDLW)
 
 
-def calc_srfc_fluxes_py(SOILTEMP, TAIR_nz, QV_nz, WIND_nz, PSURF,
+def calc_srfc_fluxes_py(SOILTEMP, TAIR_nz, QV_nz, WIND_nz, RHO_nz, PSURF,
                         COLP, WINDX_nz, WINDY_nz, DRAGCM, DRAGCH, A):
-    # surface momentum flux in x direction
+    # surface momentum flux in x direction pointing towards atmosphere
     SMOMXFLX = - DRAGCM * WIND_nz * WINDX_nz * COLP * A
 
-    # surface momentum flux in y direction
+    # surface momentum flux in y direction pointing towards atmosphere
     SMOMYFLX = - DRAGCM * WIND_nz * WINDY_nz * COLP * A
 
-    # surface sensible heat flux
-    SSHFLX = - DRAGCH * WIND_nz * ( TAIR_nz - SOILTEMP )
+    # surface sensible heat flux pointing towards atmosphere
+    # (w'theta')*rho*con_cp [W m-2]
+    SSHFLX = - DRAGCH * WIND_nz * ( TAIR_nz - SOILTEMP ) * RHO_nz * con_cp
 
-    # surface latent heat flux
     # for QV of soil assume saturation specific humidity for SOILTEMP
     SOILQV = calc_specific_humidity(SOILTEMP, wp(100.), PSURF)
-    SQVFLX = - DRAGCH * WIND_nz * ( QV_nz - SOILQV )
-    return(SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX)
+    # surface latent heat flux pointing towards atmosphere
+    # (w'qv')*rho*con_Lh [W m-2]
+    SLHFLX = - DRAGCH * WIND_nz * ( QV_nz - SOILQV ) * RHO_nz * con_Lh
+    return(SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX)
 
 
 def run_full_timestep_py(SOILTEMP, LWFLXNET_srfc, SWFLXNET_srfc,
                          SOILCP, SOILRHO, SOILDEPTH, OCEANMASK,
-                         TAIR_nz, QV_nz, WIND_nz, PSURF,
+                         TAIR_nz, QV_nz, WIND_nz, RHO_nz, PSURF,
                          COLP, WINDX_nz, WINDY_nz, DRAGCM, DRAGCH, A, dt):
 
     # comute surface fluxes
     if i_surface_fluxes:
-        SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX = calc_srfc_fluxes(
+        SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX = calc_srfc_fluxes(
                                           SOILTEMP, TAIR_nz, QV_nz,
-                                          WIND_nz, PSURF,
+                                          WIND_nz, RHO_nz, PSURF,
                                           COLP, WINDX_nz, WINDY_nz,
                                           DRAGCM, DRAGCH, A)
     else:
         SMOMXFLX    = wp(0.)
         SMOMYFLX    = wp(0.)
         SSHFLX      = wp(0.)
-        SQVFLX      = wp(0.)
+        SLHFLX      = wp(0.)
 
     # soil temperature change
     if i_surface_SOILTEMP_tendency:
         dSOILTEMPdt     = tendency_SOILTEMP(LWFLXNET_srfc, SWFLXNET_srfc,
+                                            SSHFLX, SLHFLX,
                                             SOILCP, SOILRHO, SOILDEPTH)
     else:
         dSOILTEMPdt = wp(0.)
     SOILTEMP        = timestep_SOILTEMP(SOILTEMP, dSOILTEMPdt, dt)
+
     # update surface albedo
     SURFALBEDSW, SURFALBEDLW = calc_albedo(OCEANMASK, SOILTEMP)
     
     return(SOILTEMP, SURFALBEDSW, SURFALBEDLW,
-           SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX)
+           SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX)
 
 
 
@@ -138,22 +143,22 @@ if gpu_enable:
 def launch_cuda_kernel(SOILTEMP, LWFLXNET, SWFLXNET, SOILCP,
                        SOILRHO, SOILDEPTH, OCEANMASK,
                        SURFALBEDSW, SURFALBEDLW,
-                       TAIR, QV, WIND, PSURF, COLP,
-                       SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX,
+                       TAIR, QV, WIND, RHO, PSURF, COLP,
+                       SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX,
                        WINDX, WINDY, DRAGCM, DRAGCH, A, dt):
 
     i, j = cuda.grid(2)
     if i < nx+2*nb and j < ny+2*nb:
         ( SOILTEMP[i,j,0], SURFALBEDSW[i,j,0], SURFALBEDLW[i,j,0],
           SMOMXFLX[i,j,0], SMOMYFLX   [i,j,0], SSHFLX     [i,j,0],
-          SQVFLX  [i,j,0] ) = run_full_timestep(
+          SLHFLX  [i,j,0] ) = run_full_timestep(
                         SOILTEMP[i,j,0],
                         LWFLXNET[i,j,nzs-1],    SWFLXNET[i,j,nzs-1],
                         SOILCP[i,j,0],          SOILRHO[i,j,0],
                         SOILDEPTH[i,j,0],       OCEANMASK[i,j,0],
                         TAIR[i,j,nz-1],         QV[i,j,nz-1],
-                        WIND[i,j,nz-1],         PSURF[i,j,0],
-                        COLP[i,j,0   ],
+                        WIND[i,j,nz-1],         RHO[i,j,nz-1],
+                        PSURF[i,j,0],           COLP[i,j,0   ],
                         WINDX[i,j,nz-1],        WINDY[i,j,nz-1],
                         DRAGCM,                 DRAGCH,
                         A[i,j,0   ],            dt)
@@ -181,22 +186,22 @@ run_full_timestep = njit(run_full_timestep_py)
 def launch_numba_cpu(SOILTEMP, LWFLXNET, SWFLXNET, SOILCP,
                        SOILRHO, SOILDEPTH, OCEANMASK,
                        SURFALBEDSW, SURFALBEDLW,
-                       TAIR, QV, WIND, PSURF, COLP,
-                       SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX,
+                       TAIR, QV, WIND, RHO, PSURF, COLP,
+                       SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX,
                        WINDX, WINDY, DRAGCM, DRAGCH, A, dt):
 
     for i in prange(0,nx+2*nb):
         for j in range(0,ny+2*nb):
             ( SOILTEMP[i,j,0], SURFALBEDSW[i,j,0], SURFALBEDLW[i,j,0],
               SMOMXFLX[i,j,0], SMOMYFLX[i,j,0], SSHFLX[i,j,0],
-              SQVFLX[i,j,0] ) = run_full_timestep(
+              SLHFLX[i,j,0] ) = run_full_timestep(
                         SOILTEMP[i,j,0],
                         LWFLXNET[i,j,nzs-1],    SWFLXNET[i,j,nzs-1],
                         SOILCP[i,j,0],          SOILRHO[i,j,0],
                         SOILDEPTH[i,j,0],       OCEANMASK[i,j,0],
                         TAIR[i,j,nz-1],         QV[i,j,nz-1],
-                        WIND[i,j,nz-1],         PSURF[i,j,0],
-                        COLP[i,j,0   ],
+                        WIND[i,j,nz-1],         RHO[i,j,nz-1],
+                        PSURF[i,j,0],           COLP[i,j,0   ],
                         WINDX[i,j,nz-1],        WINDY[i,j,nz-1],
                         DRAGCM,                 DRAGCH,     
                         A[i,j,0   ],            dt)

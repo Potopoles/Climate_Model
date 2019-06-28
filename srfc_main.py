@@ -41,9 +41,9 @@ moisture_ocean = wp(np.nan)
 moisture_soil = wp(10.0)
 evapity_thresh = wp(10.)
 
-# bulk transfer coefficient for momentum
+# bulk transfer coefficient for momentum [-]
 DRAGCM = wp(0.01)
-# bulk transfer coefficient for heat and moisture
+# bulk transfer coefficient for heat and moisture [-]
 DRAGCH = wp(0.005)
 
 class Surface:
@@ -96,16 +96,16 @@ class Surface:
     def advance_timestep(self, GR, GRF, SOILTEMP, LWFLXNET, SWFLXNET,
                         SOILCP, SOILRHO, SOILDEPTH, OCEANMASK,
                         SURFALBEDSW, SURFALBEDLW, TAIR, QV, WIND,
-                        PSURF, COLP, WINDX, WINDY,
-                        SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX):
+                        RHO, PSURF, COLP, WINDX, WINDY,
+                        SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX):
 
         if self.target == GPU:
             advance_timestep_srfc_gpu[bpg, tpb_2D](SOILTEMP,
                                    LWFLXNET, SWFLXNET, SOILCP,
                                    SOILRHO, SOILDEPTH, OCEANMASK,
                                    SURFALBEDSW, SURFALBEDLW,
-                                   TAIR, QV, WIND, PSURF, COLP,
-                                   SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX,
+                                   TAIR, QV, WIND, RHO, PSURF, COLP,
+                                   SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX,
                                    WINDX, WINDY, DRAGCM, DRAGCH,
                                    GRF['A'], GR.dt)
 
@@ -115,8 +115,8 @@ class Surface:
                                    LWFLXNET, SWFLXNET, SOILCP,
                                    SOILRHO, SOILDEPTH, OCEANMASK,
                                    SURFALBEDSW, SURFALBEDLW,
-                                   TAIR, QV, WIND, PSURF, COLP,
-                                   SMOMXFLX, SMOMYFLX, SSHFLX, SQVFLX,
+                                   TAIR, QV, WIND, RHO, PSURF, COLP,
+                                   SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX,
                                    WINDX, WINDY, DRAGCM, DRAGCH,
                                    GRF['A'], GR.dt)
 

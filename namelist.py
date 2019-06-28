@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190616
+Last modified:      20190628
 License:            MIT
 
 Namelist for user input.
@@ -25,11 +25,6 @@ nb = 1
 # longitude domain
 lon0_deg = 0
 lon1_deg = 360
-
-# should earth be spherical like real earth (--> 1)
-# or should it be cylindrical without meridians
-# converging at the poles (--> 0)
-i_curved_earth = 1
 
 ###############################################################################
 # INITIAL CONDITIONS
@@ -79,14 +74,14 @@ i_UVFLX_pre_grad        = 1
 i_POTT_main_switch      = 1
 i_POTT_hor_adv          = 1
 i_POTT_vert_adv         = 1
-i_POTT_vert_turb        = 0
+i_POTT_vert_turb        = 1
 i_POTT_num_dif          = 1
-i_POTT_radiation        = 0
+i_POTT_radiation        = 1
 i_POTT_microphys        = 0
 
 # prognostics computation of moisture fields
 i_moist_main_switch     = 1
-i_moist_hor_adv         = 0
+i_moist_hor_adv         = 1
 i_moist_vert_adv        = 1
 i_moist_vert_turb       = 1
 i_moist_num_dif         = 1
@@ -97,7 +92,7 @@ i_moist_microphys       = 0
 # SURFACE
 ###############################################################################
 i_use_topo = 1
-n_topo_smooth = 20
+n_topo_smooth = 5
 i_surface_scheme = 1
 i_surface_fluxes = 1
 i_surface_SOILTEMP_tendency = 1
@@ -183,9 +178,9 @@ output_fields = {
     'SURFTEMP'      : 1,
     'SURFALBEDSW'   : 1,
     'SURFALBEDLW'   : 0,
-    'SSHFLX'        : 0,
-    'SQVFLX'        : 1,
-    'SMOMXFLX'      : 1,
+    'SSHFLX'        : 1,
+    'SLHFLX'        : 1,
+    'SMOMXFLX'      : 0,
     'SMOMYFLX'      : 1,
     # radiation fields
     # microphysics fields
@@ -193,6 +188,7 @@ output_fields = {
     'QC'            : 0,                    #vp
     'dQVdt'         : 1,
     'dQVdt_TURB'    : 0,
+    'dPOTTdt_TURB'  : 1,
     'dUFLXdt_TURB'  : 1,
     'dVFLXdt_TURB'  : 1,
     'KMOM_dUWINDdz' : 1,
@@ -205,7 +201,7 @@ output_fields = {
 
 # RESTART FILES
 i_load_from_restart = 0
-i_save_to_restart   = 0
+i_save_to_restart   = 1
 i_restart_nth_day   = 5.00
 
 ###############################################################################
@@ -225,7 +221,7 @@ output_path = '../output_ref'
 output_path = '../output_test'
 
 # in case of computation on GPU only:
-i_sync_context = 1
+i_sync_context = 0
 # makes precise computation time measurements possible
 # but also substantially slows down simulation (~20%).
 
@@ -234,7 +230,7 @@ i_sync_context = 1
 ###############################################################################
 # 1: testsuite equality
 # 2: longtime run
-i_simulation_mode = 1
+i_simulation_mode = 2
 
 # TESTSUITE EQUALITY
 if i_simulation_mode == 1:
@@ -262,7 +258,7 @@ elif i_simulation_mode == 2:
     dlat_deg = 5.0
     dlon_deg = 5.0
     output_path = '../output'
-    i_sim_n_days = 1.0*10#*365.00
+    i_sim_n_days = 1.0*365.00
     i_out_nth_hour = 1*24
     i_surface_scheme = 1
     i_turbulence = 1

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190621
+Last modified:      20190628
 License:            MIT
 
 Compare output fields of two simulations and check if they are
@@ -17,7 +17,7 @@ import xarray as xr
 
 # USER INPUT
 ####################################################################
-tolerance = 1E-5
+tolerance = 1E-4
 
 ref_path = '../output_ref'
 test_path = '../output_test'
@@ -25,7 +25,7 @@ test_path = '../output_test'
 file = 'out0002.nc'
 
 test_fields = ['UWIND','VWIND','WWIND','COLP','PHI']
-test_fields.extend(['SURFTEMP', 'SQVFLX', 'SMOMXFLX', 'SMOMYFLX',
+test_fields.extend(['SURFTEMP', 'SLHFLX', 'SMOMXFLX', 'SMOMYFLX',
                     'SURFALBEDSW'])
 test_fields.extend(['SWFLXNET', 'LWFLXNET'])
 test_fields.extend(['QV'])

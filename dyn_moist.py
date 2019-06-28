@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190609
-Last modified:      20190618
+Last modified:      20190628
 License:            MIT
 
 Computation of moisture variables (QV, QC) tendencies
@@ -24,6 +24,7 @@ from namelist import (i_moist_main_switch, i_moist_hor_adv, i_moist_vert_adv,
                       i_moist_vert_turb, i_moist_num_dif)
 from io_read_namelist import (i_moist_microphys,
                               wp, wp_int, gpu_enable)
+from io_constants import con_Lh
 from main_grid import nx,nxs,ny,nys,nz,nzs,nb
 if gpu_enable:
     from misc_gpu_functions import cuda_kernel_decorator
@@ -57,7 +58,7 @@ def add_up_tendencies_py(
 
             PHI, PHI_kp1, PHI_km1, PHIVB, PHIVB_kp1, 
             KHEAT, KHEAT_kp1, 
-            RHO, RHOVB, RHOVB_kp1, SQVFLX,
+            RHO, RHOVB, RHOVB_kp1, SLHFLX,
 
             A, dsigma, moist_dif_coef, k):
 
@@ -97,10 +98,11 @@ def add_up_tendencies_py(
                 COLP_NEW, dsigma, k)
         # VERTICAL TURBULENT TRANSPORT
         if i_moist_vert_turb:
+            surf_flux = SLHFLX / con_Lh
             dQVdt_TURB = turb_flux_tendency(
                     PHI, PHI_kp1, PHI_km1, PHIVB, PHIVB_kp1, 
                     QV, QV_kp1, QV_km1, KHEAT, KHEAT_kp1, 
-                    RHO, RHOVB, RHOVB_kp1, COLP, SQVFLX, k)
+                    RHO, RHOVB, RHOVB_kp1, COLP, surf_flux, k)
             dQVdt = dQVdt + dQVdt_TURB
 
         # NUMERICAL HORIZONTAL DIFUSION
@@ -139,7 +141,7 @@ add_up_tendencies = njit(add_up_tendencies_py, device=True, inline=True)
 def launch_cuda_kernel(A, dsigma, moist_dif_coef,
                        dQVdt, dQVdt_TURB, QV, dQCdt, QC, UFLX, VFLX, COLP,
                        WWIND, COLP_NEW,
-                       PHI, PHIVB, KHEAT, RHO, RHOVB, SQVFLX):
+                       PHI, PHIVB, KHEAT, RHO, RHOVB, SLHFLX):
 
     i, j, k = cuda.grid(3)
     if i >= nb and i < nx+nb and j >= nb and j < ny+nb:
@@ -166,7 +168,7 @@ def launch_cuda_kernel(A, dsigma, moist_dif_coef,
             PHIVB       [i  ,j  ,k+1], 
             KHEAT       [i  ,j  ,k  ], KHEAT      [i  ,j  ,k+1],
             RHO         [i  ,j  ,k  ], RHOVB      [i  ,j  ,k  ],
-            RHOVB       [i  ,j  ,k+1], SQVFLX     [i  ,j  ,0  ],
+            RHOVB       [i  ,j  ,k+1], SLHFLX     [i  ,j  ,0  ],
 
             A[i  ,j  ,0],
             dsigma[0  ,0  ,k], moist_dif_coef[0  ,0  ,k],
@@ -193,7 +195,7 @@ add_up_tendencies = njit(add_up_tendencies_py)
 def launch_numba_cpu(A, dsigma, moist_dif_coef,
                     dQVdt, dQVdt_TURB, QV, dQCdt, QC, UFLX, VFLX, COLP,
                     WWIND, COLP_NEW,
-                    PHI, PHIVB, KHEAT, RHO, RHOVB, SQVFLX):
+                    PHI, PHIVB, KHEAT, RHO, RHOVB, SLHFLX):
 
     for i in prange(nb,nx+nb):
         for j in range(nb,ny+nb):
@@ -221,7 +223,7 @@ def launch_numba_cpu(A, dsigma, moist_dif_coef,
                         PHIVB       [i  ,j  ,k+1], 
                         KHEAT       [i  ,j  ,k  ], KHEAT    [i  ,j  ,k+1],
                         RHO         [i  ,j  ,k  ], RHOVB    [i  ,j  ,k  ],
-                        RHOVB       [i  ,j  ,k+1], SQVFLX   [i  ,j  ,0  ],
+                        RHOVB       [i  ,j  ,k+1], SLHFLX   [i  ,j  ,0  ],
 
                         A           [i  ,j  ,0  ],
                         dsigma      [0  ,0  ,k  ], moist_dif_coef[0  ,0  ,k],
