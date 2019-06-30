@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190621
+Last modified:      20190629
 License:            MIT
 
 Main script of surface scheme.
@@ -73,6 +73,7 @@ class Surface:
         fields['SOILRHO']    [fields['OCEANMASK'] == 1] = rho_water
 
         fields['SOILTEMP']   [:,:,0] = (295 - np.sin(GR.lat_rad[:,:,0])**2*40)
+        fields['SOILTEMP'] -= fields['HSURF']*wp(0.0100)
 
         fields['SOILMOIST']  [fields['OCEANMASK'] == 0] = moisture_soil
         fields['SOILMOIST']  [fields['OCEANMASK'] == 1] = moisture_ocean

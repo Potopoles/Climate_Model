@@ -92,7 +92,7 @@ i_moist_microphys       = 0
 # SURFACE
 ###############################################################################
 i_use_topo = 1
-n_topo_smooth = 5
+n_topo_smooth = 10
 i_surface_scheme = 1
 i_surface_fluxes = 1
 i_surface_SOILTEMP_tendency = 1
@@ -181,28 +181,31 @@ output_fields = {
     'SSHFLX'        : 1,
     'SLHFLX'        : 1,
     'SMOMXFLX'      : 0,
-    'SMOMYFLX'      : 1,
-    # radiation fields
+    'SMOMYFLX'      : 0,
     # microphysics fields
+    'RAINRATE'      : 1,
+    'dPOTTdt_MIC'   : 1,
     'QV'            : 2,                    #vp
-    'QC'            : 0,                    #vp
+    'QC'            : 1,
+    'QR'            : 1,
     'dQVdt'         : 1,
-    'dQVdt_TURB'    : 0,
-    'dPOTTdt_TURB'  : 1,
-    'dUFLXdt_TURB'  : 1,
-    'dVFLXdt_TURB'  : 1,
-    'KMOM_dUWINDdz' : 1,
-    'KMOM_dVWINDdz' : 1,
-    'KHEAT'         : 0,
+    'dQVdt_TURB'    : 1,
+    'dPOTTdt_TURB'  : 0,
+    'dUFLXdt_TURB'  : 0,
+    'dVFLXdt_TURB'  : 0,
+    'KMOM_dUWINDdz' : 0,
+    'KMOM_dVWINDdz' : 0,
+    'KHEAT'         : 1,
     'KMOM'          : 1,
     'WVP'           : 0,
     'CWP'           : 0,
+    # radiation fields
 }
 
 # RESTART FILES
 i_load_from_restart = 0
-i_save_to_restart   = 1
-i_restart_nth_day   = 5.00
+i_save_to_restart   = 0
+i_restart_nth_day   = 1.00
 
 ###############################################################################
 # COMPUTATION SETTINGS
@@ -247,7 +250,7 @@ if i_simulation_mode == 1:
     i_turbulence = 1
     i_radiation = 1
     rad_nth_hour = 3.9
-    i_microphysics = 0
+    i_microphysics = 1
     i_save_to_restart   = 0
 
 # LONGTIME RUN
@@ -258,13 +261,13 @@ elif i_simulation_mode == 2:
     dlat_deg = 5.0
     dlon_deg = 5.0
     output_path = '../output'
-    i_sim_n_days = 1.0*365.00
+    i_sim_n_days = 1*365.00
     i_out_nth_hour = 1*24
     i_surface_scheme = 1
     i_turbulence = 1
     i_radiation = 1
     rad_nth_hour = 3.9
-    i_microphysics = 0
+    i_microphysics = 1
 
 
 ###############################################################################

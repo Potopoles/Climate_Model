@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190628
+Last modified:      20190630
 License:            MIT
 
 Setup and store model fields. Have each field in memory (for CPU)
@@ -15,12 +15,14 @@ import numpy as np
 from numba import cuda
 
 from namelist import (i_surface_scheme, nzsoil, i_turbulence,
-                      i_radiation, i_load_from_restart)
+                      i_radiation, i_load_from_restart,
+                      i_moist_main_switch, i_microphysics)
 from io_read_namelist import wp, wp_int, CPU, GPU
 from io_initial_conditions import initialize_fields
 from io_restart import load_restart_fields
 from srfc_main import Surface
 from turb_main import Turbulence
+from mic_main import Microphysics
 from rad_main import Radiation
 ###############################################################################
 
@@ -90,6 +92,13 @@ class ModelFields:
             else:
                 self.TURB = None
 
+            ## MOISTURE & MICROPHYSICS
+            if i_moist_main_switch or i_microphysics:
+                if gpu_enable:
+                    self.MIC = Microphysics(GR, self, target=GPU) 
+                else:
+                    self.MIC = Microphysics(GR, self, target=CPU) 
+
             ## RADIATION
             if i_radiation:
                 RAD = Radiation(GR)
@@ -99,16 +108,7 @@ class ModelFields:
                 self.RAD = RAD
                 self.RAD.calc_radiation(GR, self)
 
-            ## MOISTURE & MICROPHYSICS
-            # TODO reimplement
-            #if i_microphysics:
-            #    self.MIC = microphysics(GR, CF, i_microphysics,
-            #        CF.TAIR, CF.PAIR) 
-            #else:
-            #    MIC = None
 
-
-            
             if self.gpu_enable:
                 self.copy_host_to_device(GR, field_group=self.ALL_FIELDS)
             ###################################################################
@@ -326,8 +326,8 @@ def allocate_fields(GR):
     'SURFALBEDSW':   {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface albedo for longwave radiation [-]
     'SURFALBEDLW':   {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
-    ## rain rate at surface [kg m-2 s-1]
-    #'RAINRATE':      {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    # rain rate at surface [kg m-2 s-1]
+    'RAINRATE':      {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     ## accumulated rain during simulation at surface [kg m-2]
     #'ACCRAIN':       {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface momentum flux in x direction
@@ -415,6 +415,8 @@ def allocate_fields(GR):
     'QC':            {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # specific cloud water content [kg kg-1] last time level
     'QC_OLD':        {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
+    # specific rain water content [kg kg-1]
+    'QR':            {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # change of specific cloud water content with time [kg kg-1 s-1]
     'dQCdt':         {'stgx':0,'stgy':0,'dimz':GR.nz ,'dtype':wp},
     # change of QV due to microphysics [kg kg-1 s-1]

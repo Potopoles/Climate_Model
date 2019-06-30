@@ -104,6 +104,7 @@ def add_up_tendencies_py(
                     QV, QV_kp1, QV_km1, KHEAT, KHEAT_kp1, 
                     RHO, RHOVB, RHOVB_kp1, COLP, surf_flux, k)
             dQVdt = dQVdt + dQVdt_TURB
+            # TODO add turbulent transport for QC
 
         # NUMERICAL HORIZONTAL DIFUSION
         if i_moist_num_dif and (moist_dif_coef > wp(0.)):

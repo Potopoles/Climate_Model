@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190628
+Last modified:      20190630
 License:            MIT
 
 Compare output fields of two simulations and check if they are
@@ -26,9 +26,9 @@ file = 'out0002.nc'
 
 test_fields = ['UWIND','VWIND','WWIND','COLP','PHI']
 test_fields.extend(['SURFTEMP', 'SLHFLX', 'SMOMXFLX', 'SMOMYFLX',
-                    'SURFALBEDSW'])
+                    'SURFALBEDSW', 'SSHFLX'])
 test_fields.extend(['SWFLXNET', 'LWFLXNET'])
-test_fields.extend(['QV'])
+test_fields.extend(['QV', 'QC'])
 test_fields.extend(['dVFLXdt_TURB'])
 ####################################################################
 

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190628
+Last modified:      20190630
 License:            MIT
 
 Write fields to nc file.
@@ -79,11 +79,12 @@ def output_to_NC(GR, F):
     ###########################################################################
 
     field_names = ['UWIND', 'VWIND', 'WIND', 'POTT', 'TAIR',
-                   'PHI', 'PAIR', 'RHO', 'COLP', 'QV', 'QC', 'dQVdt',
+                   'PHI', 'PAIR', 'RHO', 'COLP', 'QV', 'QC', 'QR', 'dQVdt',
                    'dQVdt_TURB', 'dUFLXdt_TURB', 'dVFLXdt_TURB',
                    'dPOTTdt_TURB', 'KMOM', 'KHEAT',
                    'SMOMXFLX', 'SMOMYFLX', 'SSHFLX', 'SLHFLX',
-                   'KMOM_dUWINDdz', 'KMOM_dVWINDdz']
+                   'KMOM_dUWINDdz', 'KMOM_dVWINDdz', 'dPOTTdt_MIC',
+                   'RAINRATE']
     for field_name in field_names:
         if output_fields[field_name]:
             no_border = False
@@ -259,16 +260,14 @@ def output_to_NC(GR, F):
             SURFALBEDLW_out[0,:,:] = F.host['SURFALBEDLW'][GR.ii,GR.jj,0].T
 
 
-    # MICROPHYSICS VARIABLES
-    if i_microphysics:
-        raise NotImplementedError()
-        RH_out         = ncf.createVariable('RH', 'f4', ('time', 'level', 'lat', 'lon',) )
-        dQVdt_MIC_out  = ncf.createVariable('dQVdt_MIC', 'f4',
-                                            ('time', 'level', 'lat', 'lon',) )
-        dQCdt_MIC_out  = ncf.createVariable('dQCdt_MIC', 'f4',
-                                            ('time', 'level', 'lat', 'lon',) )
-        dPOTTdt_MIC_out=ncf.createVariable('dPOTTdt_MIC', 'f4',
-                                            ('time', 'level', 'lat', 'lon',) )
+    ## MICROPHYSICS VARIABLES
+    #if i_microphysics:
+    #    dQVdt_MIC_out  = ncf.createVariable('dQVdt_MIC', 'f4',
+    #                                        ('time', 'level', 'lat', 'lon',) )
+    #    dQCdt_MIC_out  = ncf.createVariable('dQCdt_MIC', 'f4',
+    #                                        ('time', 'level', 'lat', 'lon',) )
+    #    dPOTTdt_MIC_out=ncf.createVariable('dPOTTdt_MIC', 'f4',
+    #                                        ('time', 'level', 'lat', 'lon',) )
 
 
 
@@ -284,12 +283,12 @@ def output_to_NC(GR, F):
             #SWFLXDIV_out[-1,k,:,:] = F.host['SWFLXDIV'][GR.ii,GR.jj,k].T 
             #LWFLXDIV_out[-1,k,:,:] = F.host['LWFLXDIV'][GR.ii,GR.jj,k].T 
 
-        # MICROPHYSICS VARIABLES
-        if i_microphysics:
-            RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
-            dQVdt_MIC_out[-1,k,:,:] = F.dQVdt_MIC[GR.ii,GR.jj,k].T * 3600
-            dQCdt_MIC_out[-1,k,:,:] = F.dQCdt_MIC[GR.ii,GR.jj,k].T * 3600
-            dPOTTdt_MIC_out[-1,k,:,:] = F.dPOTTdt_MIC[GR.ii,GR.jj,k].T * 3600
+        ## MICROPHYSICS VARIABLES
+        #if i_microphysics:
+        #    RH_out[-1,k,:,:] = MIC.RH[:,:,k].T
+        #    dQVdt_MIC_out[-1,k,:,:] = F.dQVdt_MIC[GR.ii,GR.jj,k].T * 3600
+        #    dQCdt_MIC_out[-1,k,:,:] = F.dQCdt_MIC[GR.ii,GR.jj,k].T * 3600
+        #    dPOTTdt_MIC_out[-1,k,:,:] = F.dPOTTdt_MIC[GR.ii,GR.jj,k].T * 3600
 
 
 

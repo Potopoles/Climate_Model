@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190609
+Last modified:      20190630
 License:            MIT
 
 Simple global climate model, hydrostatic and on a lat-lon grid.
@@ -31,7 +31,7 @@ from datetime import timedelta
 
 from namelist import (i_time_stepping,
                     i_load_from_restart, i_save_to_restart,
-                    i_surface_scheme, i_turbulence,
+                    i_surface_scheme, i_turbulence, i_microphysics,
                     i_radiation, i_comp_mode,
                     i_microphysics)
 from io_read_namelist import (gpu_enable, CPU, GPU)
@@ -102,7 +102,6 @@ while GR.ts < GR.nts:
     GR.timer.stop('diag')
 
 
-
     ####################################################################
     # EARTH SURFACE
     ####################################################################
@@ -117,16 +116,21 @@ while GR.ts < GR.nts:
     ####################################################################
     # TURBULENCE
     ####################################################################
-    #print(np.asarray(F.device['KHEAT']))
     if i_turbulence:
         GR.timer.start('turb')
         F.TURB.compute_turbulence(GR, **F.get(F.TURB.fields_main,
                                 target=F.TURB.target))
         GR.timer.stop('turb')
 
-    #F.copy_device_to_host(GR, F.ALL_FIELDS)
-    #print(np.sum(np.isnan(np.asarray(F.device['UWIND']))))
-    #quit()
+
+    ####################################################################
+    # MICROPHYSICS
+    ####################################################################
+    if i_microphysics:
+        GR.timer.start('mic')
+        F.MIC.compute_microhpysics(GR, **F.get(F.MIC.fields_main,
+                                    target=F.MIC.target))
+        GR.timer.stop('mic')
 
 
     ####################################################################

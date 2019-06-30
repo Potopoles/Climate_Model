@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190623
+Last modified:      20190629
 License:            MIT
 
 Functions to initialize the model fields and set up an average
@@ -196,9 +196,15 @@ def load_topo(GR, HSURF):
     HSURF = GR.exchange_BC(HSURF)
 
     # smooth topography
-    tau_topo_smooth = 0.1
+    tau_smooth_min = 0.05
+    tau_smooth_max = 0.15
+    tau = np.full((GR.nx+2*GR.nb,GR.ny+2*GR.nb,1),np.nan)
+    for j in range(GR.nb,GR.nb+GR.ny):
+        tau[:,j,0] = tau_smooth_min + np.sin(GR.lat_rad[5,j])**2 * (
+                                    tau_smooth_max - tau_smooth_min)
+    
     for i in range(0,n_topo_smooth):
-        HSURF[GR.ii,GR.jj] = HSURF[GR.ii,GR.jj] + (tau_topo_smooth*
+        HSURF[GR.ii,GR.jj] = HSURF[GR.ii,GR.jj] + (tau[GR.ii,GR.jj]*
                           (  HSURF[GR.ii-1,GR.jj] + HSURF[GR.ii+1,GR.jj] +
                              HSURF[GR.ii,GR.jj-1] + HSURF[GR.ii,GR.jj+1] -
                            4*HSURF[GR.ii,GR.jj  ]))
