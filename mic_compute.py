@@ -4,15 +4,15 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190630
-Last modified:      20190630
+Last modified:      20190701
 License:            MIT
 
 Computations for microphysics scheme.
 ###############################################################################
 """
 from numba import cuda, njit, prange
-#from namelist import i_radiation, i_surface_fluxes, i_surface_SOILTEMP_tendency
-from io_read_namelist import wp, wp_str, gpu_enable
+from io_read_namelist import (i_POTT_microphys, i_moist_microphys)
+from io_read_namelist import wp, wp_str, wp_int, wp_bool, gpu_enable
 from io_constants import con_cp, con_Lh
 from main_grid import nx,ny,nz,nzs,nb
 if gpu_enable:
@@ -24,15 +24,22 @@ from misc_meteo_utilities import calc_specific_humidity_py
 ###############################################################################
 ### DEVICE UNSPECIFIC PYTHON FUNCTIONS
 ###############################################################################
-
+# kinetics of conversion from qv to qc
 qv_to_qc_rate = wp(1E-3) # [s-1]
-qr_conv_thresh = wp(2E-3) # [kg kg-1]
+# min qc above which rain is created initially
+qc_qr_conv_thresh = wp(2E-3) # [kg kg-1]
+# min qc above which rain in raining cloud is created
+qr_qr_conv_thresh = wp(2E-4) # [kg kg-1]
+# kinetics of conversion from qc to qr
 qc_to_qr_rate = wp(1E-3) # [s-1]
 
-def run_all_py(QV, QC, QR, POTT, TAIR, PAIR, RHO, dt):
+def run_all_py(QV, QC, QR, POTT, TAIR, PAIR, RHO,
+                RAIN, RAINRATE, ACCRAIN, dt, k, nz, reset_accum):
     
     # latent heat release
     LH_release = wp(0.)
+    if k == 0:
+        RAIN = wp(0.)
 
     # CONVERSION BETWEEN QV AND QC
     QV_sat = calc_specific_humidity(TAIR, wp(80.), PAIR)
@@ -49,24 +56,37 @@ def run_all_py(QV, QC, QR, POTT, TAIR, PAIR, RHO, dt):
     kinetic_factor = min( qv_to_qc_rate * dt, wp(1.) )
     Q_cond = Q_cond * kinetic_factor
 
-    QV -= Q_cond
-    QC += Q_cond
+    if i_moist_microphys:
+        QV -= Q_cond
+        QC += Q_cond
     LH_release += Q_cond * RHO * con_Lh
 
     # CONVERSION OF QC TO QR
-    if QC > qr_conv_thresh:
-        kinetic_factor = min( qc_to_qr_rate * dt, wp(1.) )
-        QR = QC * kinetic_factor
-    else:
-        QR = wp(0.)
+    if i_moist_microphys:
+        if QR > qr_qr_conv_thresh or QC > qc_qr_conv_thresh:
+            kinetic_factor = min( qc_to_qr_rate * dt, wp(1.) )
+            QR = QC * kinetic_factor
+        else:
+            QR = wp(0.)
     
-    QC -= QR
+        QC -= QR
+        RAIN += QR * RHO
+
+        if k == nz-1:
+            if reset_accum:
+                RAINRATE = wp(0.)
+            RAINRATE += RAIN
+            ACCRAIN += RAIN
+        
 
     # CHANGE OF TEMPERATURE
-    POTT += LH_release / con_cp
-    dPOTTdt_MIC = LH_release / con_cp / dt * wp(3600)
+    if i_POTT_microphys:
+        POTT += LH_release / con_cp
+        dPOTTdt_MIC = LH_release / con_cp / dt * wp(3600)
+    else:
+        dPOTTdt_MIC = wp(0.)
 
-    return(QV, QC, QR, POTT, dPOTTdt_MIC)
+    return(QV, QC, QR, POTT, dPOTTdt_MIC, RAIN, RAINRATE, ACCRAIN)
 
 
 
@@ -79,24 +99,33 @@ if gpu_enable:
     run_all = njit(run_all_py, device=True, inline=True)
 
 def launch_cuda_kernel(QV, QC, QR, POTT, TAIR, PAIR, RHO,
-                    dPOTTdt_MIC, dt):
+                    dPOTTdt_MIC, RAIN, RAINRATE, ACCRAIN, dt, reset_accum):
 
     i, j, k = cuda.grid(3)
     if i < nx+2*nb and j < ny+2*nb and k < nz:
-        ( QV[i,j,k], QC[i,j,k], QR[i,j,k],
-          POTT[i,j,k], dPOTTdt_MIC[i,j,k] ) = run_all(
-                    QV          [i,j,k],    QC          [i,j,k],
-                    QR          [i,j,k],
-                    POTT        [i,j,k],    TAIR        [i,j,k],
-                    PAIR        [i,j,k],    RHO         [i,j,k],
-                    dt
-                    )
+        kiter = 0
+
+        while kiter < nz:
+            if kiter == k:
+                ( QV[i,j,k], QC[i,j,k], QR[i,j,k],
+                  POTT[i,j,k], dPOTTdt_MIC[i,j,k],
+                  RAIN[i,j,0], RAINRATE[i,j,0], ACCRAIN[i,j,0] ) = run_all(
+                        QV          [i,j,k],    QC          [i,j,k],
+                        QR          [i,j,k],
+                        POTT        [i,j,k],    TAIR        [i,j,k],
+                        PAIR        [i,j,k],    RHO         [i,j,k],
+                        RAIN        [i,j,0],    RAINRATE    [i,j,0],
+                        ACCRAIN     [i,j,0],
+                        dt, k, nz, reset_accum)
+            kiter += 1
+            cuda.syncthreads()
 
 
 if gpu_enable:
     compute_microphysics_gpu = cuda.jit(cuda_kernel_decorator(
                     launch_cuda_kernel,
-                    non_3D={'dt':wp_str}))(
+                    non_3D={'dt':wp_str, 'k':wp_int,
+                            'nz':wp_int,'reset_accum':wp_bool}))(
                     launch_cuda_kernel)
 
 

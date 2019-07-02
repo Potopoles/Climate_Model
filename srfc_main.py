@@ -17,6 +17,9 @@ from numba import cuda
 from namelist import i_comp_mode, i_radiation, i_microphysics
 from io_read_namelist import wp, GPU, CPU, gpu_enable
 from main_grid import tpb_2D, bpg
+from srfc_namelist import (depth_soil, depth_ocean, cp_soil, cp_ocean,
+                            rho_soil, rho_water, moisture_soil,
+                            moisture_ocean, DRAGCM, DRAGCH)
 from srfc_timestep import advance_timestep_srfc_cpu
 if gpu_enable:
     from srfc_timestep import advance_timestep_srfc_gpu
@@ -24,27 +27,6 @@ from srfc_timestep import advance_timestep_srfc_cpu
 from misc_utilities import function_input_fields
 ###############################################################################
 
-###############################################################################
-# NAMELIST
-###############################################################################
-
-# constant values
-depth_soil      = wp(4   ) 
-depth_ocean     = wp(50  )
-con_cp_soil     = wp(2000) 
-con_cp_ocean    = wp(4184)
-rho_soil        = wp(3000)
-rho_water       = wp(1000)
-
-# initial values (kg/kg air equivalent)
-moisture_ocean = wp(np.nan)
-moisture_soil = wp(10.0)
-evapity_thresh = wp(10.)
-
-# bulk transfer coefficient for momentum [-]
-DRAGCM = wp(0.01)
-# bulk transfer coefficient for heat and moisture [-]
-DRAGCH = wp(0.005)
 
 class Surface:
 
@@ -66,20 +48,17 @@ class Surface:
         fields['SOILDEPTH']  [fields['OCEANMASK'] == 0] = depth_soil
         fields['SOILDEPTH']  [fields['OCEANMASK'] == 1] = depth_ocean
 
-        fields['SOILCP']     [fields['OCEANMASK'] == 0] = con_cp_soil
-        fields['SOILCP']     [fields['OCEANMASK'] == 1] = con_cp_ocean
+        fields['SOILCP']     [fields['OCEANMASK'] == 0] = cp_soil
+        fields['SOILCP']     [fields['OCEANMASK'] == 1] = cp_ocean
 
         fields['SOILRHO']    [fields['OCEANMASK'] == 0] = rho_soil
         fields['SOILRHO']    [fields['OCEANMASK'] == 1] = rho_water
 
-        fields['SOILTEMP']   [:,:,0] = (295 - np.sin(GR.lat_rad[:,:,0])**2*40)
+        fields['SOILTEMP']   [:,:,0] = (295 - np.sin(GR.lat_rad[:,:,0])**2*30)
         fields['SOILTEMP'] -= fields['HSURF']*wp(0.0100)
 
         fields['SOILMOIST']  [fields['OCEANMASK'] == 0] = moisture_soil
         fields['SOILMOIST']  [fields['OCEANMASK'] == 1] = moisture_ocean
-
-        #fields['SOILEVAPITY'][fields['OCEANMASK'] == 0]  = 0.
-        #fields['SOILEVAPITY'][fields['OCEANMASK'] == 1]  = 1.
 
         fields['SURFALBEDSW'][fields['OCEANMASK'] == 1]  = 0.05
         fields['SURFALBEDLW'][fields['OCEANMASK'] == 1]  = 0.00
@@ -94,31 +73,33 @@ class Surface:
 
 
 
-    def advance_timestep(self, GR, GRF, SOILTEMP, LWFLXNET, SWFLXNET,
+    def advance_timestep(self, GR, GRF, SOILTEMP, SOILMOIST,
+                        LWFLXNET, SWFLXNET,
                         SOILCP, SOILRHO, SOILDEPTH, OCEANMASK,
                         SURFALBEDSW, SURFALBEDLW, TAIR, QV, WIND,
                         RHO, PSURF, COLP, WINDX, WINDY,
-                        SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX):
+                        SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX,
+                        RAIN):
 
         if self.target == GPU:
-            advance_timestep_srfc_gpu[bpg, tpb_2D](SOILTEMP,
+            advance_timestep_srfc_gpu[bpg, tpb_2D](SOILTEMP, SOILMOIST,
                                    LWFLXNET, SWFLXNET, SOILCP,
                                    SOILRHO, SOILDEPTH, OCEANMASK,
                                    SURFALBEDSW, SURFALBEDLW,
                                    TAIR, QV, WIND, RHO, PSURF, COLP,
                                    SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX,
-                                   WINDX, WINDY, DRAGCM, DRAGCH,
+                                   WINDX, WINDY, RAIN, DRAGCM, DRAGCH,
                                    GRF['A'], GR.dt)
 
 
         elif self.target == CPU:
-            advance_timestep_srfc_cpu(SOILTEMP,
+            advance_timestep_srfc_cpu(SOILTEMP, SOILMOIST,
                                    LWFLXNET, SWFLXNET, SOILCP,
                                    SOILRHO, SOILDEPTH, OCEANMASK,
                                    SURFALBEDSW, SURFALBEDLW,
                                    TAIR, QV, WIND, RHO, PSURF, COLP,
                                    SMOMXFLX, SMOMYFLX, SSHFLX, SLHFLX,
-                                   WINDX, WINDY, DRAGCM, DRAGCH,
+                                   WINDX, WINDY, RAIN, DRAGCM, DRAGCH,
                                    GRF['A'], GR.dt)
 
 

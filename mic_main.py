@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190630
-Last modified:      20190630
+Last modified:      20190701
 License:            MIT
 
 Main script of microphysics.
@@ -23,9 +23,7 @@ if gpu_enable:
 ###############################################################################
 # NAMELIST
 ###############################################################################
-#RH_init = wp(60) # [%]
-#qv_to_qc_rate = 1E-3
-#qc_to_qr_rate = 1E-5
+RH_init = wp(60) # [%]
 
 class Microphysics:
 
@@ -34,8 +32,9 @@ class Microphysics:
 
         self.target = target
 
-        #self.fields_init = function_input_fields(self.initial_conditions)
-        #self.initial_conditions(GR, **F.get(self.fields_init, target=CPU))
+        # set up initial QV profile
+        self.fields_init = function_input_fields(self.initial_conditions)
+        self.initial_conditions(GR, **F.get(self.fields_init, target=CPU))
 
         self.fields_main = function_input_fields(self.compute_microhpysics)
 
@@ -50,22 +49,26 @@ class Microphysics:
         ### specific cloud liquid water content
 
     def compute_microhpysics(self, GR, QV, QC, QR, POTT, TAIR,
-                            PAIR, RHO, dPOTTdt_MIC):
+                            PAIR, RHO, dPOTTdt_MIC, RAIN, RAINRATE, ACCRAIN):
         if self.target == GPU:
             compute_microphysics_gpu[bpg, tpb](QV, QC, QR, POTT, TAIR,
-                                                PAIR, RHO,
-                                                dPOTTdt_MIC, GR.dt)
+                                            PAIR, RHO, dPOTTdt_MIC,
+                                            RAIN, RAINRATE, ACCRAIN, GR.dt,
+                                            GR.ts % GR.i_out_nth_ts == 1)
 
         #elif self.target == CPU:
         #    compute_microphysics_cpu(QV, QC, TAIR)
 
 
-    #def initial_conditions(self, GR, TAIR, PAIR, QV):
-    #    for i in range(0,nx+2*nb):
-    #        for j in range(0,ny+2*nb):
-    #            for k in range(0,nz):
-    #                QV[i,j,k] = calc_specific_humidity_py(TAIR[i,j,k],
-    #                                                RH_init, PAIR[i,j,k])
+    def initial_conditions(self, GR, TAIR, PAIR, QV, RAINRATE, ACCRAIN):
+        for i in range(0,nx+2*nb):
+            for j in range(0,ny+2*nb):
+                for k in range(0,nz):
+                    QV[i,j,k] = calc_specific_humidity_py(TAIR[i,j,k],
+                                                    RH_init, PAIR[i,j,k])
+                ACCRAIN[i,j,0] = wp(0.) 
+                RAINRATE[i,j,0] = wp(0.) 
+        GR.exchange_BC(QV)
             
 
     #def calc_microphysics(self, GR, WIND, SOIL, TAIR, PAIR, RHO, PHIVB):

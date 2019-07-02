@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190525
-Last modified:      20190630
+Last modified:      20190701
 License:            MIT
 
 Setup and store model fields. Have each field in memory (for CPU)
@@ -13,13 +13,14 @@ and if GPU enabled also on GPU.
 """
 import numpy as np
 from numba import cuda
+from scipy.interpolate import interp2d
 
 from namelist import (i_surface_scheme, nzsoil, i_turbulence,
-                      i_radiation, i_load_from_restart,
-                      i_moist_main_switch, i_microphysics)
+                      i_radiation, i_load_from_restart, i_load_from_IC,
+                      i_moist_main_switch, i_microphysics,)
 from io_read_namelist import wp, wp_int, CPU, GPU
 from io_initial_conditions import initialize_fields
-from io_restart import load_restart_fields
+from io_restart import load_existing_fields 
 from srfc_main import Surface
 from turb_main import Turbulence
 from mic_main import Microphysics
@@ -40,7 +41,7 @@ class ModelFields:
     def __init__(self, GR, gpu_enable):
 
         if i_load_from_restart:
-            loaded_F = load_restart_fields(GR)
+            loaded_F = load_existing_fields(GR, directory='restart')
             self.__dict__ = loaded_F.__dict__
             self.device = {}
             if self.gpu_enable:
@@ -52,12 +53,12 @@ class ModelFields:
             self.host   = {}
             self.device = {}
 
-            self.host = allocate_fields(GR)
+            self.host, self.fdict = allocate_fields(GR)
             self.set_field_groups()
 
 
             ###################################################################
-            ## INITIALIZE FIELDS
+            ## DEFAULT INITIAL CONDITIONS
             ###################################################################
             ## DYNAMICS
             fields_to_init = ['POTTVB', 'WWIND', 'HSURF',
@@ -66,38 +67,29 @@ class ModelFields:
                             'UWIND', 'VWIND', 'WIND', 'RHO',
                             'PHI', 'PHIVB', 'QV', 'QC']
             self.set(initialize_fields(GR, **self.get(fields_to_init)))
-            ## TODO
-            #self.host['QV'][:,:,:] = np.arange(0,GR.nz)/GR.nz
-            #self.host['SLHFLX'][:,:,0] = 0.
 
-            ###################################################################
-            ## INITIALIZE PROCESSES
-            ###################################################################
+            if gpu_enable:
+                target=GPU
+            else:
+                target=CPU
 
             ## SURFACE
             if i_surface_scheme:
-                if gpu_enable:
-                    self.SURF = Surface(GR, self, target=GPU)
-                else:
-                    self.SURF = Surface(GR, self, target=CPU)
+                self.SURF = Surface(GR, self, target=target)
             else:
                 self.SURF = None
 
             ## TURBULENCE 
             if i_turbulence:
-                if gpu_enable:
-                    self.TURB = Turbulence(GR, target=GPU) 
-                else:
-                    self.TURB = Turbulence(GR, target=CPU) 
+                self.TURB = Turbulence(GR, target=target) 
             else:
                 self.TURB = None
 
             ## MOISTURE & MICROPHYSICS
             if i_moist_main_switch or i_microphysics:
-                if gpu_enable:
-                    self.MIC = Microphysics(GR, self, target=GPU) 
-                else:
-                    self.MIC = Microphysics(GR, self, target=CPU) 
+                self.MIC = Microphysics(GR, self, target=target) 
+            else:
+                self.MIC = None
 
             ## RADIATION
             if i_radiation:
@@ -109,6 +101,59 @@ class ModelFields:
                 self.RAD.calc_radiation(GR, self)
 
 
+            ###################################################################
+            ## LOAD INITIAL CONDITIONS
+            ###################################################################
+            non_IC_fields = ['HSURF', 'OCEANMASK', 'ACCRAIN']
+            
+            if i_load_from_IC:
+                IC_F = load_existing_fields(GR.IC, directory='IC')
+                #### exceptions
+                IC_F.host['SOILMOIST'][
+                    np.isnan(IC_F.host['SOILMOIST'])] = wp(0.)
+                #### exceptions
+                for field_name, fd in self.fdict.items():
+                    if field_name in non_IC_fields:
+                        continue
+                    ii = GR.ii
+                    jj = GR.jj
+                    ii_IC = GR.IC.ii
+                    jj_IC = GR.IC.jj
+                    if fd['stgx']:
+                        ii = GR.iis
+                        ii_IC = GR.IC.iis
+                        x = GR.lon_is_rad[ii,GR.nb,0]
+                        y = GR.lat_is_rad[GR.nb,jj,0]
+                        x_IC = GR.IC.lon_is_rad[ii_IC,GR.nb,0]
+                        y_IC = GR.IC.lat_is_rad[GR.nb,jj_IC,0]
+                    elif fd['stgy']:
+                        jj = GR.jjs
+                        jj_IC = GR.IC.jjs
+                        x = GR.lon_js_rad[ii,GR.nb,0]
+                        y = GR.lat_js_rad[GR.nb,jj,0]
+                        x_IC = GR.IC.lon_js_rad[ii_IC,GR.nb,0]
+                        y_IC = GR.IC.lat_js_rad[GR.nb,jj_IC,0]
+                    else:
+                        x = GR.lon_rad[ii,GR.nb,0]
+                        y = GR.lat_rad[GR.nb,jj,0]
+                        x_IC = GR.IC.lon_rad[ii_IC,GR.nb,0]
+                        y_IC = GR.IC.lat_rad[GR.nb,jj_IC,0]
+
+                    for k in range(fd['dimz']):
+                        layer_IC = IC_F.host[field_name][ii_IC,jj_IC,k].squeeze()
+                        intrp = interp2d(y_IC.squeeze(),
+                                        x_IC.squeeze(),layer_IC)
+                        layer = intrp(y.squeeze(), x.squeeze()) 
+                        self.host[field_name][ii,jj,k] = layer
+
+                    GR.exchange_BC(self.host[field_name])
+
+                #### exceptions
+                self.host['SOILMOIST'][self.host['OCEANMASK']==1] = np.nan
+                #### exceptions
+
+
+            # if necessary, copy fields to gpu
             if self.gpu_enable:
                 self.copy_host_to_device(GR, field_group=self.ALL_FIELDS)
             ###################################################################
@@ -326,10 +371,12 @@ def allocate_fields(GR):
     'SURFALBEDSW':   {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface albedo for longwave radiation [-]
     'SURFALBEDLW':   {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    # rain at surface during time step [kg m-2]
+    'RAIN':          {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # rain rate at surface [kg m-2 s-1]
     'RAINRATE':      {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
-    ## accumulated rain during simulation at surface [kg m-2]
-    #'ACCRAIN':       {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
+    # accumulated rain during simulation at surface [kg m-2]
+    'ACCRAIN':       {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
     # surface momentum flux in x direction
     # (pointing towards atmosphere) [???]
     'SMOMXFLX':      {'stgx':0,'stgy':0,'dimz':1     ,'dtype':wp},
@@ -437,4 +484,4 @@ def allocate_fields(GR):
         dimz = set['dimz']
         f[key] = np.full( ( dimx, dimy, dimz ), np.nan, dtype=set['dtype'] )
 
-    return(f)
+    return(f, fdict)

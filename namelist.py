@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190628
+Last modified:      20190701
 License:            MIT
 
 Namelist for user input.
@@ -77,7 +77,7 @@ i_POTT_vert_adv         = 1
 i_POTT_vert_turb        = 1
 i_POTT_num_dif          = 1
 i_POTT_radiation        = 1
-i_POTT_microphys        = 0
+i_POTT_microphys        = 1
 
 # prognostics computation of moisture fields
 i_moist_main_switch     = 1
@@ -85,7 +85,7 @@ i_moist_hor_adv         = 1
 i_moist_vert_adv        = 1
 i_moist_vert_turb       = 1
 i_moist_num_dif         = 1
-i_moist_microphys       = 0
+i_moist_microphys       = 1
 
 
 ###############################################################################
@@ -176,6 +176,7 @@ output_fields = {
     'RHO'           : 0,
     # surface fields
     'SURFTEMP'      : 1,
+    'SOILMOIST'     : 1,
     'SURFALBEDSW'   : 1,
     'SURFALBEDLW'   : 0,
     'SSHFLX'        : 1,
@@ -183,11 +184,13 @@ output_fields = {
     'SMOMXFLX'      : 0,
     'SMOMYFLX'      : 0,
     # microphysics fields
+    'RAIN'          : 1,
     'RAINRATE'      : 1,
+    'ACCRAIN'       : 1,
     'dPOTTdt_MIC'   : 1,
     'QV'            : 2,                    #vp
     'QC'            : 1,
-    'QR'            : 1,
+    'QR'            : 0,
     'dQVdt'         : 1,
     'dQVdt_TURB'    : 1,
     'dPOTTdt_TURB'  : 0,
@@ -195,7 +198,7 @@ output_fields = {
     'dVFLXdt_TURB'  : 0,
     'KMOM_dUWINDdz' : 0,
     'KMOM_dVWINDdz' : 0,
-    'KHEAT'         : 1,
+    'KHEAT'         : 0,
     'KMOM'          : 1,
     'WVP'           : 0,
     'CWP'           : 0,
@@ -203,9 +206,13 @@ output_fields = {
 }
 
 # RESTART FILES
-i_load_from_restart = 0
-i_save_to_restart   = 0
+i_load_from_restart = 1
+i_save_to_restart   = 1
 i_restart_nth_day   = 1.00
+
+# LOAD FROM INITIAL condition
+i_load_from_IC      = 0
+IC_file_name        = '../IC/3.0_3.0_032.pkl'
 
 ###############################################################################
 # COMPUTATION SETTINGS
@@ -256,13 +263,14 @@ if i_simulation_mode == 1:
 # LONGTIME RUN
 elif i_simulation_mode == 2:
     nz = 32
-    lat0_deg = -85
-    lat1_deg = 85
-    dlat_deg = 5.0
-    dlon_deg = 5.0
+    lat0_deg = -84
+    lat1_deg = 84
+    dlat_deg = 1.0
+    dlon_deg = 1.0
     output_path = '../output'
+    #i_sim_n_days = 1*365.00
     i_sim_n_days = 1*365.00
-    i_out_nth_hour = 1*24
+    i_out_nth_hour = 1/2*24
     i_surface_scheme = 1
     i_turbulence = 1
     i_radiation = 1
@@ -277,18 +285,18 @@ elif i_simulation_mode == 2:
 # UVFLX: important
 UVFLX_dif_coef = 0 
 # POTT: does it create instabilities and acceleration in steep terrain?
-POTT_dif_coef = 1E-6 
+POTT_dif_coef = 1E-5 
 # COLP: not tested 
 COLP_dif_coef = 0 
 # moisture: not tested 
-moist_dif_coef   = 2E-6
+moist_dif_coef   = POTT_dif_coef
 
 # automatically chose nice diffusion parameter depending on grid
 # resolution
 if dlat_deg == 10:
-    UVFLX_dif_coef = 1
+    UVFLX_dif_coef = 1.5
 elif dlat_deg == 8:
-    UVFLX_dif_coef = 1.2
+    UVFLX_dif_coef = 1.5
 elif dlat_deg == 6:
     UVFLX_dif_coef = 1.8
 elif dlat_deg == 5:
@@ -299,17 +307,15 @@ elif dlat_deg == 3:
     UVFLX_dif_coef = 3.3
 elif dlat_deg == 2:
     UVFLX_dif_coef = 5
-    POTT_dif_coef = 1E-5
 elif dlat_deg == 1.5:
     UVFLX_dif_coef = 7.5
 elif dlat_deg <= 1:
     UVFLX_dif_coef = 10
 
-POTT_dif_coef = 1E-5
-
 # TODO does it work like this? Can decrease more?
-UVFLX_dif_coef  *= 2.0
-POTT_dif_coef   *= 1.0
+UVFLX_dif_coef      *= 2.0
+POTT_dif_coef       *= 1.0
+moist_dif_coef      *= 1.0
 
 
 

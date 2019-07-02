@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190602
+Last modified:      20190701
 License:            MIT
 
 Organize computation of longwave radiation.
@@ -37,15 +37,20 @@ def org_longwave(GR, nz, nzs, dz, tair_col, rho_col, tsurf,
                 albedo_surface_LW, qc_col,
                 planck_lambdas_center, planck_dlambdas):
 
+    cloud_fact = wp(1E-2)
+    #cloud_fact = wp(0)
+    qc_col = np.minimum(qc_col, 0.002).astype(wp)
+
     #GR.timer.start('01')
     # LONGWAVE
     g_a = 0.0
     #albedo_surface_LW = 1
-    #qc_col = np.minimum(qc_col, 0.003)
     sigma_abs_gas_LW = np.repeat(sigma_abs_gas_LW_in, nz).astype(wp)
-    #sigma_abs_gas_LW = sigma_abs_gas_LW + qc_col*1E-5
+    sigma_abs_gas_LW = (sigma_abs_gas_LW + qc_col*cloud_fact).astype(wp)
+
     sigma_sca_gas_LW = np.repeat(sigma_sca_gas_LW_in, nz).astype(wp)
-    #sigma_sca_gas_LW = sigma_sca_gas_LW + qc_col*1E-5
+    #sigma_sca_gas_LW = (sigma_sca_gas_LW + qc_col*cloud_fact).astype(wp)
+
     sigma_tot_LW = sigma_abs_gas_LW + sigma_sca_gas_LW
 
     # optical thickness

@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190630
+Last modified:      20190701
 License:            MIT
 
 Write fields to nc file.
@@ -82,9 +82,9 @@ def output_to_NC(GR, F):
                    'PHI', 'PAIR', 'RHO', 'COLP', 'QV', 'QC', 'QR', 'dQVdt',
                    'dQVdt_TURB', 'dUFLXdt_TURB', 'dVFLXdt_TURB',
                    'dPOTTdt_TURB', 'KMOM', 'KHEAT',
-                   'SMOMXFLX', 'SMOMYFLX', 'SSHFLX', 'SLHFLX',
+                   'SMOMXFLX', 'SMOMYFLX', 'SSHFLX', 'SLHFLX', 'SOILMOIST',
                    'KMOM_dUWINDdz', 'KMOM_dVWINDdz', 'dPOTTdt_MIC',
-                   'RAINRATE']
+                   'RAINRATE', 'ACCRAIN', 'RAIN']
     for field_name in field_names:
         if output_fields[field_name]:
             no_border = False

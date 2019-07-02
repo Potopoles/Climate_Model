@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190509
-Last modified:      20190609
+Last modified:      20190701
 License:            MIT
 
 Load namelist and process variables if necessary such that
@@ -18,7 +18,7 @@ from namelist import (working_precision,
                     moist_dif_coef,
                     i_comp_mode, nb, lon0_deg, lon1_deg,
                     pair_top, i_time_stepping, nzsoil,
-                    i_radiation, i_surface_scheme,
+                    i_radiation, i_surface_scheme, i_microphysics,
                     i_POTT_radiation, i_POTT_microphys,
                     i_moist_microphys,
                     i_COLP_main_switch, i_UVFLX_main_switch)
@@ -43,6 +43,7 @@ if i_time_stepping == 'RK4':
 
 # working precision wp
 wp_int = np.int32
+wp_bool = 'boolean'
 if working_precision == 'float32':
     wp_str = 'float32'
     wp = np.float32
@@ -64,9 +65,9 @@ GPU = 'GPU'
 
 if i_POTT_radiation and not i_radiation:
     i_POTT_radiation = 0
-if i_POTT_microphys and not i_microphys:
+if i_POTT_microphys and not i_microphysics:
     i_POTT_microphys = 0
-if i_moist_microphys and not i_microphys:
+if i_moist_microphys and not i_microphysics:
     i_moist_microphys = 0
 
 #if i_UVFLX_main_switch and not i_COLP_main_switch:

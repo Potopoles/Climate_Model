@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190618
+Last modified:      20190701
 License:            MIT
 
 Organize computation of shortwave radiation.
@@ -27,15 +27,19 @@ from namelist import sigma_abs_gas_SW_in, sigma_sca_gas_SW_in
 def org_shortwave(nz, nzs, dz, solar_constant, rho_col, swintoa, mysun,
                     albedo_surface_SW, qc_col):
 
+    cloud_fact = 1E-7
+    qc_col = np.minimum(qc_col, 0.002)
 
     g_a = 0.0
     #mysun = 1.0
     #albedo_surface_SW = 0
-    #qc_col = np.minimum(qc_col, 0.003)
     sigma_abs_gas_SW = np.repeat(sigma_abs_gas_SW_in, nz)
-    #sigma_abs_gas_SW = sigma_abs_gas_SW + qc_col*1E-5
+    #sigma_abs_gas_SW = sigma_abs_gas_SW + qc_col*cloud_fact
+
     sigma_sca_gas_SW = np.repeat(sigma_sca_gas_SW_in, nz)
-    #sigma_sca_gas_SW = sigma_sca_gas_SW + qc_col*1E-5
+    #sigma_sca_gas_SW = sigma_sca_gas_SW + qc_col*cloud_fact
+    #print(np.max((sigma_abs_gas_SW - sigma_abs_gas_SW_in)/sigma_abs_gas_SW_in))
+
     sigma_tot_SW = sigma_abs_gas_SW + sigma_sca_gas_SW
 
     # optical thickness

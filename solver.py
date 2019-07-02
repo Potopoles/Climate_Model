@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20181001
-Last modified:      20190630
+Last modified:      20190701
 License:            MIT
 
 Simple global climate model, hydrostatic and on a lat-lon grid.
@@ -65,7 +65,7 @@ F = ModelFields(GR, gpu_enable)
 ####################################################################
 constant_fields_to_NC(GR, F)
 
-## TODO
+## TODO is this necessary?
 GR.timer.start('diag')
 Diagnostics.primary_diag(GR.GRF[Diagnostics.target],
         **F.get(
@@ -103,17 +103,6 @@ while GR.ts < GR.nts:
 
 
     ####################################################################
-    # EARTH SURFACE
-    ####################################################################
-    if i_surface_scheme:
-        GR.timer.start('srfc')
-        F.SURF.advance_timestep(GR, GR.GRF[F.SURF.target],
-                                **F.get(F.SURF.fields_timestep,
-                                target=F.SURF.target))
-        GR.timer.stop('srfc')
-
-
-    ####################################################################
     # TURBULENCE
     ####################################################################
     if i_turbulence:
@@ -134,22 +123,23 @@ while GR.ts < GR.nts:
 
 
     ####################################################################
+    # EARTH SURFACE
+    ####################################################################
+    if i_surface_scheme:
+        GR.timer.start('srfc')
+        F.SURF.advance_timestep(GR, GR.GRF[F.SURF.target],
+                                **F.get(F.SURF.fields_timestep,
+                                target=F.SURF.target))
+        GR.timer.stop('srfc')
+
+
+    ####################################################################
     # RADIATION
     ####################################################################
     if i_radiation:
         GR.timer.start('rad')
         F.RAD.launch_radiation_calc(GR, F)
         GR.timer.stop('rad')
-
-
-    ####################################################################
-    # MICROPHYSICS
-    # TODO: implement
-    ####################################################################
-    #if i_microphysics:
-    #    GR.timer.start('mic')
-    #    F.MIC.calc_microphysics(GR, WIND, SURF, TAIR, PAIR, RHO, PHIVB)
-    #    GR.timer.stop('mic')
 
 
     ####################################################################

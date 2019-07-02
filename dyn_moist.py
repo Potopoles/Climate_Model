@@ -4,7 +4,7 @@
 ###############################################################################
 Author:             Christoph Heim
 Date created:       20190609
-Last modified:      20190628
+Last modified:      20190701
 License:            MIT
 
 Computation of moisture variables (QV, QC) tendencies
@@ -104,7 +104,12 @@ def add_up_tendencies_py(
                     QV, QV_kp1, QV_km1, KHEAT, KHEAT_kp1, 
                     RHO, RHOVB, RHOVB_kp1, COLP, surf_flux, k)
             dQVdt = dQVdt + dQVdt_TURB
-            # TODO add turbulent transport for QC
+            surf_flux = wp(0.)
+            dQCdt_TURB = turb_flux_tendency(
+                    PHI, PHI_kp1, PHI_km1, PHIVB, PHIVB_kp1, 
+                    QC, QC_kp1, QC_km1, KHEAT, KHEAT_kp1, 
+                    RHO, RHOVB, RHOVB_kp1, COLP, surf_flux, k)
+            dQCdt = dQCdt + dQCdt_TURB
 
         # NUMERICAL HORIZONTAL DIFUSION
         if i_moist_num_dif and (moist_dif_coef > wp(0.)):
